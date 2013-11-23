@@ -1,0 +1,71 @@
+from casual.make.functiondefinitions import *
+
+
+Include( "$(CASUAL_BUILD_ENVIRONMENT)")
+
+
+INCLUDE_PATHS= ["include",
+    "admin/include",
+	"../common/include",
+	"../configuration/include",
+	"../xatmi/include",
+	"../serviceframework/include",
+	"$(UNITTEST_INCLUDE_PATH)",
+	"$(YAML_INCLUDE_PATH)"]
+
+LIBRARY_PATHS = ["../common/bin",
+    "../serviceframework/bin",
+	"../xatmi/bin",
+	"../configuration/bin",
+	"$(YAML_LIBRARY_PATH)",
+	"$(JSON_LIBRARY_PATH)"]
+
+SetIncludePaths( INCLUDE_PATHS)
+SetLibraryPaths( LIBRARY_PATHS)
+
+#
+# Gateway library
+#
+Compile( "source/gateway.cpp", "obj/gateway.o")
+Compile( "source/presentation_layer.cpp", "obj/presentation_layer.o")
+Compile( "source/ipc.cpp", "obj/ipc.o")
+
+LinkLibrary( "casual-gateway", 
+	["obj/gateway.o",
+	"obj/presentation_layer.o",
+	"obj/ipc.o"],
+	["casual-common",
+	"casual-sf",
+	"casual-xatmi",
+    "casual-configuration"])
+	
+#
+# Executable gateway
+#
+Compile( "source/gateway_main.cpp", "obj/gateway_main.o")
+
+LinkExecutable( "casual-gateway-tcp",
+	["obj/gateway_main.o"],
+	["casual-gateway",
+	"casual-common",
+	"casual-sf",
+	"casual-xatmi",
+    "casual-configuration"])
+
+#
+# Unittest
+#
+
+Compile( "unittest/isolated/source/test_buffer.cpp", "unittest/isolated/obj/test_buffer.o")
+
+LinkIsolatedUnittest( "casual-gateway-isolated", 
+	["unittest/isolated/obj/test_buffer.o"],
+	["casual-gateway","casual-common"] )
+	
+#
+# Install
+#
+InstallExecutable("casual-gateway-tcp","$CASUAL_HOME/bin/.")
+InstallExecutable("casual-gateway-isolated","$CASUAL_HOME/bin/.")
+InstallLibrary("casual-gateway", "$CASUAL_HOME/lib/.")
+

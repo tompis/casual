@@ -1,0 +1,101 @@
+/*
+ * state.h
+ *
+ *  Created on: 21 okt 2013
+ *      Author: dnulnets
+ */
+
+#ifndef STATE_H_
+#define STATE_H_
+
+/*
+** Casual header files
+*/
+#include "common/environment.h"
+#include "sf/namevaluepair.h"
+
+/*
+** Standard libraries
+*/
+#include <string>
+#include <map>
+#include <mutex>
+#include <regex>
+
+/*
+** Namespace casual::gateway
+*/
+namespace casual
+{
+  namespace gateway
+  {
+
+    /*
+     * The gateway configuration structure
+     */
+    namespace configuration {
+
+       /*
+        * Remote gateway configurations
+        */
+       struct RemoteGateway {
+          std::string name;
+          std::string connectioninformation;
+
+          template< typename A>
+          void serialize( A& archive)
+          {
+             archive & CASUAL_MAKE_NVP(name);
+             archive & CASUAL_MAKE_NVP(connectioninformation);
+          }
+       };
+
+       /*
+        * Local gateway configuration
+        */
+       struct Gateway {
+          std::string name="unknown";
+          std::string connectioninformation="*:55555";
+          int housekeeping = 1;
+          std::vector<RemoteGateway> remotegateways;
+
+          template< typename A>
+          void serialize( A& archive)
+          {
+             archive & CASUAL_MAKE_NVP(name);
+             archive & CASUAL_MAKE_NVP(connectioninformation);
+             archive & CASUAL_MAKE_NVP(remotegateways);
+          }
+       };
+
+    }
+
+    /*
+    ** The gateway settings structure
+    */
+    struct Settings
+    {
+      std::string configurationFile = common::file::find( common::environment::directory::domain() + "/configuration", std::regex( "gateway.(yaml|xml)" ));
+    };
+
+    /*
+     * The gateway state class
+     */
+    struct State {
+
+       /*
+        * Server UUID
+        */
+       casual::common::Uuid server_uuid = casual::common::Uuid::make();
+
+       /*
+        * The configuration
+        */
+       configuration::Gateway configuration;
+
+    };
+
+  } // broker
+} // casual
+
+#endif /* STATE_H_ */
