@@ -13,6 +13,8 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <errno.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 /*
  * STL
@@ -68,12 +70,34 @@ namespace casual
          /*
           * Constructs the endpoint
           */
-         Endpoint::Endpoint (int f, int t, int p, struct sockaddr *sa, socklen_t len)
+         Endpoint::Endpoint (int f, int t, int p, const void *sa, size_t len)
          {
             family = f;
             protocol = p;
             type = t;
-            copy_data (sa, len);
+            copyData (sa, len);
+         }
+
+         /*
+          * Copy constructor
+          */
+         Endpoint::Endpoint ( const Endpoint &other)
+         {
+            copy (other);
+         }
+
+         Endpoint& Endpoint::operator=( const Endpoint&other)
+         {
+            copy (other);
+            return *this;
+         }
+
+         void Endpoint::copy (const Endpoint &other)
+         {
+            family = other.family;
+            protocol = other.protocol;
+            type = other.type;
+            copyData (static_cast<void*>(other.m_data.get()), other.m_size);
          }
 
          /*
@@ -84,62 +108,53 @@ namespace casual
          }
 
          /*
+          * Information string builder
+          */
+         std::string Endpoint::info ()
+         {
+            switch (family) {
+               case AF_INET:
+                  return infoTCPv4();
+                  break;
+               case AF_INET6:
+                  return infoTCPv6();
+                  break;
+               default:
+                  return "Unknown";
+                  break;
+            }
+         }
+
+         std::string Endpoint::infoTCPv4 ()
+         {
+            struct sockaddr_in *pS = reinterpret_cast<struct sockaddr_in *>(m_data.get());
+            char str[INET_ADDRSTRLEN];
+
+            inet_ntop(AF_INET, &(pS->sin_addr), str, INET_ADDRSTRLEN);
+            std::stringstream sb;
+            sb << "TCPv4 " << str << ":" << ntohs (pS->sin_port);
+            return sb.str();
+         }
+
+         std::string Endpoint::infoTCPv6()
+         {
+            struct sockaddr_in6 *pS = reinterpret_cast<struct sockaddr_in6 *>(m_data.get());
+            char str[INET6_ADDRSTRLEN];
+
+            inet_ntop(AF_INET6, &(pS->sin6_addr), str, INET6_ADDRSTRLEN);
+            std::stringstream sb;
+            sb << "TCPv6 " << str << ":" << ntohs(pS->sin6_port);
+            return sb.str();
+         }
+
+         /*
           * Used by the resolver to set the data
           */
-         void Endpoint::copy_data(const void *data, std::size_t size)
+         void Endpoint::copyData(const void *data, std::size_t size)
          {
-            m_data = std::unique_ptr<void>(new char[size]);
+            m_data = std::unique_ptr<char[]>(new char[size]);
+            m_size = size;
             memcpy (m_data.get(), data, size);
-         }
-         /*---------------------------------------------------------------------------------------------
-          * Endpoints
-          *---------------------------------------------------------------------------------------------*/
-
-         /*
-          * Constructor POSIX, only for the Resolver
-          */
-         EndpointTCPv4::EndpointTCPv4 (sockaddr *sa, socklen_t len) : Endpoint (AF_INET, SOCK_STREAM, IPPROTO_TCP, sa, len)
-         {
-         }
-
-         /*
-          * Destructor
-          */
-         EndpointTCPv4::~EndpointTCPv4()
-         {
-
-         }
-
-         /*
-          * String info
-          */
-         std::string EndpointTCPv4::info()
-         {
-            return "";
-         }
-
-
-         /*
-          * Constructor POSIX, only for the Resolver
-          */
-         EndpointTCPv6::EndpointTCPv6 (sockaddr *sa, socklen_t len) : Endpoint (AF_INET6, SOCK_STREAM, IPPROTO_TCP, sa, len)
-         {
-         }
-
-         /*
-          * Destructor
-          */
-         EndpointTCPv6::~EndpointTCPv6()
-         {
-
-         }
-
-         /*
-          * String info
-          */
-         std::string EndpointTCPv6::info()
-         {
-            return "";
          }
 
          /*---------------------------------------------------------------------------------------------
@@ -165,7 +180,8 @@ namespace casual
          int Resolver::resolve(std::string connectionInfo)
          {
             struct addrinfo hints;
-            struct addrinfo *result, *rp;
+            struct addrinfo *result = nullptr;
+            struct addrinfo *rp;
             int s;
 
             /* First get rid of the old list */
@@ -189,13 +205,13 @@ namespace casual
              * Set up the hinting
              */
             memset(&hints, 0, sizeof(struct addrinfo));
-            hints.ai_family = AF_INET | AF_INET6;     /* Allow only IPv4 or IPv6 */
+            hints.ai_family = AF_UNSPEC;     /* Allow only IPv4 or IPv6 */
             hints.ai_socktype = SOCK_STREAM; /* Stream socket */
             hints.ai_flags = AI_CANONNAME;     /* For wildcard IP address */
             hints.ai_protocol = IPPROTO_TCP; /* TCP protocol */
-            hints.ai_canonname = NULL;
-            hints.ai_addr = NULL;
-            hints.ai_next = NULL;
+            hints.ai_canonname = nullptr;
+            hints.ai_addr = nullptr;
+            hints.ai_next = nullptr;
 
             /*
              * Get the address info
@@ -208,7 +224,7 @@ namespace casual
             }
 
 
-            /* Loop through all returned addreses */
+            /* Loop through all returned adresses */
             for (rp = result; rp != nullptr; rp = rp->ai_next) {
 
               /* We only support TCP over INET or INET6 */
@@ -216,19 +232,11 @@ namespace casual
 
                  if (rp->ai_protocol == IPPROTO_TCP) {
 
-                    if (rp->ai_family == AF_INET) {
+                    if (rp->ai_family == AF_INET || rp->ai_family == AF_INET6) {
 
-                       if (rp->ai_canonname!=nullptr)
-                          common::logger::information << rp->ai_canonname;
-                       listOfEndpoints.push_back(PEndpoint(new EndpointTCPv4(rp->ai_addr, rp->ai_addrlen)));
-
-                    }
-
-                    if (rp->ai_family == AF_INET6) {
-
-                       if (rp->ai_canonname!=nullptr)
-                          common::logger::information << rp->ai_canonname;
-                       listOfEndpoints.push_back(PEndpoint(new EndpointTCPv6(rp->ai_addr, rp->ai_addrlen)));
+                       Endpoint p(rp->ai_family, SOCK_STREAM, IPPROTO_TCP, rp->ai_addr, rp->ai_addrlen);
+                       common::logger::information << p.info();
+                       listOfEndpoints.push_back(p);
 
                     }
 
@@ -250,19 +258,16 @@ namespace casual
          /*
           * Constructor of the socket based on an endpoint
           */
-         Socket::Socket(PEndpoint pE)
+         Socket::Socket(Endpoint &p) : endpoint (p)
          {
-            pEndpoint = pE;
-            fd = socket (pEndpoint->family, pEndpoint->type, pEndpoint->protocol);
+            fd = socket (endpoint.family, endpoint.type, endpoint.protocol);
          }
 
          /*
           * Constructor of the socket based on a fikle descriptor
           */
-         Socket::Socket (int socket, PEndpoint pE)
+         Socket::Socket (int socket, Endpoint &p) : endpoint (p), fd (socket)
          {
-            fd = socket;
-            pEndpoint = pE;
          }
 
          /*
@@ -278,14 +283,14 @@ namespace casual
           */
          int Socket::connect ()
          {
-            return ::connect (fd, static_cast<struct sockaddr *>(pEndpoint->m_data.get()), pEndpoint->m_size);
+            return ::connect (fd, reinterpret_cast<struct sockaddr *>(endpoint.m_data.get()), endpoint.m_size);
          }
 
          /*
           * Binds to an endpoint
           */
          int Socket::bind(){
-            return ::bind (fd, static_cast<struct sockaddr *>(pEndpoint->m_data.get()), pEndpoint->m_size);
+            return ::bind (fd, reinterpret_cast<struct sockaddr *>(endpoint.m_data.get()), endpoint.m_size);
          }
 
          /*
@@ -301,14 +306,13 @@ namespace casual
           */
          PSocket Socket::accept()
          {
-            PEndpoint pE = nullptr;
             PSocket pS = nullptr;
             int new_fd = -1;
             struct sockaddr *pSockaddr = nullptr;
             socklen_t len;
 
             /* Determine the size of the socket address */
-            switch (pEndpoint->family) {
+            switch (endpoint.family) {
                case AF_INET:
                   len = sizeof (struct sockaddr_in);
                   break;
@@ -316,7 +320,7 @@ namespace casual
                   len = sizeof (struct sockaddr_in6);
                   break;
                default:
-                  common::logger::error << "Unsupported protocol family to accept connection on " << pEndpoint->info();
+                  common::logger::error << "Unsupported protocol family to accept connection on " << endpoint.info();
                   len = 0;
                   break;
             }
@@ -332,31 +336,17 @@ namespace casual
 
                /* Create the endpoint of the connection */
                if (n>=0) {
-                  switch (pEndpoint->family) {
-                     case AF_INET:
-                        pE = PEndpoint(new EndpointTCPv4 (pSockaddr, len));
-                        break;
-                     case AF_INET6:
-                        pE = PEndpoint(new EndpointTCPv6 (pSockaddr, len));
-                        break;
-                     default:
-                        break;
-                  }
-
-                  /* Create the socket */
-                  pS = PSocket(new Socket (n, pE));
-
+                  Endpoint p(AF_INET, SOCK_STREAM, IPPROTO_TCP, pSockaddr, len);
+                  pS = PSocket(new Socket (n, p));
                } else {
-
-                  common::logger::error << "Unable to accept connection on " << pEndpoint->info() << " => " << strerror (errno);
-
+                  common::logger::error << "Unable to accept connection on " << endpoint.info() << " => " << strerror (errno);
                }
 
                /* Free the container */
                free (pSockaddr);
 
             } else {
-               common::logger::error << "Unable to allocate memory for accepting connection on " << pEndpoint->info();
+               common::logger::error << "Unable to allocate memory for accepting connection on " << endpoint.info();
             }
 
             /* Back with the socket */

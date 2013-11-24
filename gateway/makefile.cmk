@@ -57,9 +57,11 @@ LinkExecutable( "casual-gateway-tcp",
 #
 
 Compile( "unittest/isolated/source/test_buffer.cpp", "unittest/isolated/obj/test_buffer.o")
+Compile( "unittest/isolated/source/test_ipc.cpp", "unittest/isolated/obj/test_ipc.o")
 
 LinkIsolatedUnittest( "casual-gateway-isolated", 
-	["unittest/isolated/obj/test_buffer.o"],
+	["unittest/isolated/obj/test_buffer.o",
+	"unittest/isolated/obj/test_ipc.o"],
 	["casual-gateway","casual-common"] )
 	
 #

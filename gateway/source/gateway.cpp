@@ -143,7 +143,9 @@ namespace casual
        if (resolver.resolve (m_state.configuration.connectioninformation)<0) {
           common::logger::error << "Unable to resolve address";
        }
-
+       if (resolver.resolve ("localhost:12345")<0) {
+          common::logger::error << "Unable to resolve address";
+       }
     }
         
   } // gateway

@@ -75,6 +75,7 @@ namespace casual
              * Friends to the endpoints
              */
             friend class Socket;
+            friend class Resolver;
 
          public:
 
@@ -84,9 +85,15 @@ namespace casual
             virtual ~Endpoint ();
 
             /*
+             * Copy constructor
+             */
+            Endpoint ( const Endpoint &other);
+            Endpoint& operator=( const Endpoint&other);
+
+            /*
              * Information of the endpoint in string format
              */
-            virtual std::string info() = 0;
+            std::string info();
 
          protected:
 
@@ -95,12 +102,12 @@ namespace casual
              *
              * family, type, protocol and socket address
              */
-            Endpoint (int f, int t, int p, struct sockaddr *sa, socklen_t len);
+            Endpoint (int f, int t, int p, const void *sa, size_t len);
 
             /*
              * The POSIX data
              */
-            std::unique_ptr<void> m_data;
+            std::unique_ptr<char[]> m_data;
             std::size_t m_size;
             int family;
             int protocol;
@@ -109,80 +116,22 @@ namespace casual
          private:
 
             /*
+             * Information string builders for various families
+             */
+            std::string infoTCPv4();
+            std::string infoTCPv6();
+
+            /*
              * POSIX helper function that copies address info
              */
-            void copy_data(const void *data, std::size_t size);
-         };
-
-         typedef std::shared_ptr<Endpoint> PEndpoint;
-
-         /*
-          * Endpoint TCPv4
-          */
-         class EndpointTCPv4 : public Endpoint {
+            void copyData(const void *data, std::size_t size);
 
             /*
-             * Friends, so they get access to the POSIX stuff, we do not want that to be visible
+             * Copy and assignment operator helper
              */
-            friend class Resolver;
-            friend class Socket;
-
-         public:
-
-            /*
-             * Destructor
-             */
-            ~EndpointTCPv4();
-
-            /*
-             * Information of the endpoint in string format
-             */
-            std::string info();
-
-         private:
-
-            /*
-             * Constructor POSIX, only for the Resolver
-             */
-            EndpointTCPv4 (sockaddr *sa, socklen_t len);
+            void copy (const Endpoint &other);
 
          };
-
-         typedef std::shared_ptr<EndpointTCPv4> PEndpointTCPv4;
-
-         /*
-          * Endpoint TCPv6
-          */
-         class EndpointTCPv6 : public Endpoint {
-
-            /*
-             * Friends, so they get access to the POSIX stuff, we do not want that to be visible
-             */
-            friend class Resolver;
-            friend class Socket;
-
-         public:
-
-            /*
-             * Destructor
-             */
-            ~EndpointTCPv6();
-
-            /*
-             * Information of the endpoint in string format
-             */
-            std::string info();
-
-         private:
-
-            /*
-             * Constructor POSIX, only for the Resolver
-             */
-            EndpointTCPv6 (sockaddr *sa, socklen_t len);
-
-         };
-
-         typedef std::shared_ptr<EndpointTCPv6> PEndpointTCPv6;
 
          /*
           * The network service resolver
@@ -194,8 +143,8 @@ namespace casual
             /*
              * Iterators
              */
-            typedef std::list<PEndpoint>::iterator iterator;
-            typedef std::list<PEndpoint>::const_iterator const_iterator;
+            typedef std::list<Endpoint>::iterator iterator;
+            typedef std::list<Endpoint>::const_iterator const_iterator;
 
             /*
              * iterators for traversing the list of endpoints valid for the url resolved
@@ -219,7 +168,7 @@ namespace casual
          private:
 
             /* List of all possible endpoints */
-            std::list<PEndpoint> listOfEndpoints;
+            std::list<Endpoint> listOfEndpoints;
 
          };
 
@@ -233,7 +182,7 @@ namespace casual
          class Socket {
 
          public:
-            Socket(PEndpoint pEndpoint);
+            Socket(Endpoint &p);
             ~Socket();
 
             /*
@@ -270,7 +219,7 @@ namespace casual
             /*
              * Socket created from a file descriptor
              */
-            Socket (int fd, PEndpoint pE);
+            Socket (int fd, Endpoint &p);
 
          private:
 
@@ -282,7 +231,7 @@ namespace casual
             /*
              * Socket endpoint
              */
-            PEndpoint pEndpoint;
+            Endpoint endpoint;
          };
 
       }
