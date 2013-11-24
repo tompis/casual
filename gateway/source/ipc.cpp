@@ -12,10 +12,12 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <errno.h>
 
 /*
  * STL
  */
+#include <cstring>
 #include <string>
 #include <utility>
 #include <thread>
@@ -66,7 +68,7 @@ namespace casual
          /*
           * Constructs the endpoint
           */
-         Endpoint::Endpoint (int f, int t, int p, sockaddr *sa, socklen_t len)
+         Endpoint::Endpoint (int f, int t, int p, struct sockaddr *sa, socklen_t len)
          {
             family = f;
             protocol = p;
@@ -109,6 +111,15 @@ namespace casual
          }
 
          /*
+          * String info
+          */
+         std::string EndpointTCPv4::info()
+         {
+            return "";
+         }
+
+
+         /*
           * Constructor POSIX, only for the Resolver
           */
          EndpointTCPv6::EndpointTCPv6 (sockaddr *sa, socklen_t len) : Endpoint (AF_INET6, SOCK_STREAM, IPPROTO_TCP, sa, len)
@@ -121,6 +132,14 @@ namespace casual
          EndpointTCPv6::~EndpointTCPv6()
          {
 
+         }
+
+         /*
+          * String info
+          */
+         std::string EndpointTCPv6::info()
+         {
+            return "";
          }
 
          /*---------------------------------------------------------------------------------------------
@@ -229,12 +248,21 @@ namespace casual
           *---------------------------------------------------------------------------------------------*/
 
          /*
-          * Constructor of the socket
+          * Constructor of the socket based on an endpoint
           */
          Socket::Socket(PEndpoint pE)
          {
             pEndpoint = pE;
             fd = socket (pEndpoint->family, pEndpoint->type, pEndpoint->protocol);
+         }
+
+         /*
+          * Constructor of the socket based on a fikle descriptor
+          */
+         Socket::Socket (int socket, PEndpoint pE)
+         {
+            fd = socket;
+            pEndpoint = pE;
          }
 
          /*
@@ -245,37 +273,104 @@ namespace casual
             close();
          }
 
+         /*
+          * Connects to an endpoint
+          */
          int Socket::connect ()
          {
             return ::connect (fd, static_cast<struct sockaddr *>(pEndpoint->m_data.get()), pEndpoint->m_size);
          }
 
+         /*
+          * Binds to an endpoint
+          */
          int Socket::bind(){
             return ::bind (fd, static_cast<struct sockaddr *>(pEndpoint->m_data.get()), pEndpoint->m_size);
          }
 
+         /*
+          * Listens for incoming connections
+          */
          int Socket::listen(int backlog)
          {
             return ::listen (fd, backlog);
          }
 
+         /*
+          * Accepts incoming connections
+          */
          PSocket Socket::accept()
          {
-            sockaddr *pData = static_cast<sockaddr*>(malloc (pEndpoint->m_size));
+            PEndpoint pE = nullptr;
+            PSocket pS = nullptr;
+            int new_fd = -1;
+            struct sockaddr *pSockaddr = nullptr;
             socklen_t len;
-            int n = ::accept (fd, pData, &len);
-            if (n<0) {
-               free (pData);
-               return nullptr;
-            } else {
-               PEndpoint pE = PEndpoint(new Endpoint (pEndpoint->family, pEndpoint->type, pEndpoint->protocol, pData, len));
-               PSocket pS = PSocket(new Socket (pE));
-               free (pData);
+
+            /* Determine the size of the socket address */
+            switch (pEndpoint->family) {
+               case AF_INET:
+                  len = sizeof (struct sockaddr_in);
+                  break;
+               case AF_INET6:
+                  len = sizeof (struct sockaddr_in6);
+                  break;
+               default:
+                  common::logger::error << "Unsupported protocol family to accept connection on " << pEndpoint->info();
+                  len = 0;
+                  break;
             }
+
+            /* Valid address length */
+            if (len>0) {
+
+               /* Allocate the address container */
+               pSockaddr = static_cast<struct sockaddr *>(malloc (len));
+
+               /* Accept the call */
+               int n = ::accept (fd, pSockaddr, &len);
+
+               /* Create the endpoint of the connection */
+               if (n>=0) {
+                  switch (pEndpoint->family) {
+                     case AF_INET:
+                        pE = PEndpoint(new EndpointTCPv4 (pSockaddr, len));
+                        break;
+                     case AF_INET6:
+                        pE = PEndpoint(new EndpointTCPv6 (pSockaddr, len));
+                        break;
+                     default:
+                        break;
+                  }
+
+                  /* Create the socket */
+                  pS = PSocket(new Socket (n, pE));
+
+               } else {
+
+                  common::logger::error << "Unable to accept connection on " << pEndpoint->info() << " => " << strerror (errno);
+
+               }
+
+               /* Free the container */
+               free (pSockaddr);
+
+            } else {
+               common::logger::error << "Unable to allocate memory for accepting connection on " << pEndpoint->info();
+            }
+
+            /* Back with the socket */
+            return pS;
          }
 
+         /*
+          * Closes a connection
+          */
          int Socket::close()
          {
+            /*
+             * TODO: Should we do a shutdown instead? Determine this later, if needed
+             */
             return ::close (fd);
          }
       }

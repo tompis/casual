@@ -83,6 +83,11 @@ namespace casual
              */
             virtual ~Endpoint ();
 
+            /*
+             * Information of the endpoint in string format
+             */
+            virtual std::string info() = 0;
+
          protected:
 
             /*
@@ -90,7 +95,7 @@ namespace casual
              *
              * family, type, protocol and socket address
              */
-            Endpoint (int f, int t, int p, sockaddr *sa, socklen_t len);
+            Endpoint (int f, int t, int p, struct sockaddr *sa, socklen_t len);
 
             /*
              * The POSIX data
@@ -120,6 +125,7 @@ namespace casual
              * Friends, so they get access to the POSIX stuff, we do not want that to be visible
              */
             friend class Resolver;
+            friend class Socket;
 
          public:
 
@@ -127,6 +133,11 @@ namespace casual
              * Destructor
              */
             ~EndpointTCPv4();
+
+            /*
+             * Information of the endpoint in string format
+             */
+            std::string info();
 
          private:
 
@@ -148,6 +159,7 @@ namespace casual
              * Friends, so they get access to the POSIX stuff, we do not want that to be visible
              */
             friend class Resolver;
+            friend class Socket;
 
          public:
 
@@ -155,6 +167,11 @@ namespace casual
              * Destructor
              */
             ~EndpointTCPv6();
+
+            /*
+             * Information of the endpoint in string format
+             */
+            std::string info();
 
          private:
 
@@ -222,11 +239,38 @@ namespace casual
             /*
              * Standard socket functions
              */
+
+            /*
+             * Close the socket
+             */
             int close();
+
+            /*
+             * Conect to the current endpoint
+             */
             int connect ();
+
+            /*
+             * Bind the socket to an endpoint
+             */
             int bind();
+
+            /*
+             * Listen to an bound socket
+             */
             int listen(int backlog = SOMAXCONN);
+
+            /*
+             * Accept incoming connection and return a new socket
+             */
             PSocket accept();
+
+         protected:
+
+            /*
+             * Socket created from a file descriptor
+             */
+            Socket (int fd, PEndpoint pE);
 
          private:
 
