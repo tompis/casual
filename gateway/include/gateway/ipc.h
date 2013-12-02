@@ -2,7 +2,7 @@
  * ipc.h
  *
  *  Created on: 28 okt 2013
- *      Author: tomas
+ *      Author: Tomas Stenlund
  */
 
 #ifndef CASUAL_GATEWAY_IPC_H_
@@ -32,6 +32,10 @@ namespace casual
    {
       namespace ipc
       {
+
+         /**********************************************************************\
+          *  Signal
+         \**********************************************************************/
 
          /*
           * Simplified IPC signalling
@@ -65,6 +69,10 @@ namespace casual
             std::mutex m_mutex;
 
          };
+
+         /**********************************************************************\
+          *  Endpoint
+         \**********************************************************************/
 
          /*
           * The basic endpoint
@@ -133,6 +141,10 @@ namespace casual
 
          };
 
+         /**********************************************************************\
+          *  Resolver
+         \**********************************************************************/
+
          /*
           * The network service resolver
           */
@@ -156,14 +168,20 @@ namespace casual
              * Constructs and destroys the resolver
              */
             Resolver() = default;
+            Resolver (std::string connectionString);
             ~Resolver() = default;
 
             /*
              * Resolves a connection string to one or several endpoints. Use the iterator to traverse the list
              *
-             * Returns 0 on success.
+             * Returns number of endpoints this connection resolved to or less than zero on failure.
              */
             int resolve (std::string connectionString);
+
+            /*
+             * Return with a list
+             */
+            std::list<Endpoint> &get();
 
          private:
 
@@ -171,6 +189,13 @@ namespace casual
             std::list<Endpoint> listOfEndpoints;
 
          };
+
+         /**********************************************************************\
+          *  Socket
+         \**********************************************************************/
+
+         /* Pre definition */
+         class SocketEventHandler;
 
          /*
           * Socket
@@ -182,8 +207,18 @@ namespace casual
          class Socket {
 
          public:
+
+            /*
+             * Constructors and destructors
+             */
             Socket(Endpoint &p);
             ~Socket();
+
+            /*
+             * No copy and assignment possible with sockets
+             */
+            Socket (const Socket &other) = delete;
+            Socket &operator=(const Socket &other) = delete;
 
             /*
              * Standard socket functions
@@ -214,6 +249,28 @@ namespace casual
              */
             PSocket accept();
 
+            /*
+             * Other socket functions
+             */
+            Endpoint &getEndpoint ();
+
+            /*
+             * Add handlers
+             */
+            void setEventHandler(std::unique_ptr<SocketEventHandler> &pSEH);
+
+            /*
+             * Polls the socket.
+             *
+             * Returns 0 on timeout, 1 on event occured and -1 on error
+             */
+            int poll(int timeout);
+
+            /*
+             * Executes a handler based on the event mask
+             */
+             int handle (int events);
+
          protected:
 
             /*
@@ -232,6 +289,43 @@ namespace casual
              * Socket endpoint
              */
             Endpoint endpoint;
+
+            /*
+             * Socket event handlers
+             */
+            std::unique_ptr<SocketEventHandler> pEventHandler = nullptr;
+
+         };
+
+         /**********************************************************************\
+          *  SocketEventHandler
+         \**********************************************************************/
+
+         /* Base class for the event handler for a socket */
+         class SocketEventHandler {
+
+         public:
+
+            /*
+             * Create and destroys a socket handler
+             */
+            SocketEventHandler() = default;
+            virtual ~SocketEventHandler() = default;
+
+            /*
+             * Types this handler handles
+             */
+            virtual int events() = 0;
+
+            /*
+             * The handle function
+             */
+            int handle (int events, Socket &socket);
+            virtual int dataCanBeRead (int events, Socket &socket);
+            virtual int dataCanBeWritten (int events, Socket &socket);
+            virtual int dataHangup (int events, Socket &socket);
+            virtual int dataError (int events, Socket &socket);
+
          };
 
       }

@@ -16,7 +16,8 @@
 // temp
 #include <iostream>
 #include <fstream>
-
+#include <thread>
+#include <mutex>
 
 
 namespace casual
@@ -33,6 +34,9 @@ namespace casual
                {
                   struct Context
                   {
+                     /* Mutex for requiring the logfile for output */
+                     std::mutex logmutex;
+
                      static Context& instance()
                      {
                         static Context singleton;
@@ -86,6 +90,8 @@ namespace casual
                      void log( std::ostream& out, const int priority, const std::string& message)
                      {
                         //syslog( priority, "%s - %s", m_prefix.c_str(), message.c_str());
+
+                        std::lock_guard<std::mutex> lock (logmutex);
 
                         out <<
                            common::chronology::local() <<

@@ -6,15 +6,14 @@
  */
 
 #include <sys/types.h>
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <unistd.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <poll.h>
 
 /*
  * STL
@@ -25,6 +24,7 @@
 #include <thread>
 #include <condition_variable>
 #include <memory>
+#include <algorithm>
 
 /*
  * Casual common
@@ -42,9 +42,9 @@ namespace casual
       namespace ipc
       {
 
-         /*---------------------------------------------------------------------------------------------
-          * The signal class
-          *---------------------------------------------------------------------------------------------*/
+         /**********************************************************************\
+          *  Signal
+         \**********************************************************************/
 
          /*
           * Wait for the signal
@@ -63,9 +63,9 @@ namespace casual
             m_conditionVariable.notify_all();
          }
 
-         /*---------------------------------------------------------------------------------------------
-          * The basic_endpoint class
-          *---------------------------------------------------------------------------------------------*/
+         /**********************************************************************\
+          *  Endpoint
+         \**********************************************************************/
 
          /*
           * Constructs the endpoint
@@ -132,7 +132,7 @@ namespace casual
 
             inet_ntop(AF_INET, &(pS->sin_addr), str, INET_ADDRSTRLEN);
             std::stringstream sb;
-            sb << "TCPv4 " << str << ":" << ntohs (pS->sin_port);
+            sb << str << ":" << ntohs (pS->sin_port);
             return sb.str();
          }
 
@@ -143,7 +143,7 @@ namespace casual
 
             inet_ntop(AF_INET6, &(pS->sin6_addr), str, INET6_ADDRSTRLEN);
             std::stringstream sb;
-            sb << "TCPv6 " << str << ":" << ntohs(pS->sin6_port);
+            sb << str << ":" << ntohs(pS->sin6_port);
             return sb.str();
          }
 
@@ -157,9 +157,9 @@ namespace casual
             memcpy (m_data.get(), data, size);
          }
 
-         /*---------------------------------------------------------------------------------------------
-          * The Resolver class
-          *---------------------------------------------------------------------------------------------*/
+         /**********************************************************************\
+          *  Resolver
+         \**********************************************************************/
 
          /*
           * The iterator functions
@@ -172,6 +172,16 @@ namespace casual
          Resolver::iterator Resolver::end()
          {
             return listOfEndpoints.end();
+         }
+
+         Resolver::Resolver (std::string connectionString)
+         {
+            resolve (connectionString);
+         }
+
+         std::list<Endpoint> &Resolver::get()
+         {
+            return listOfEndpoints;
          }
 
          /*
@@ -251,23 +261,62 @@ namespace casual
            return listOfEndpoints.size();
          }
 
-         /*---------------------------------------------------------------------------------------------
-          * The Socket class
-          *---------------------------------------------------------------------------------------------*/
+         /**********************************************************************\
+          *  Socket
+         \**********************************************************************/
 
          /*
           * Constructor of the socket based on an endpoint
           */
          Socket::Socket(Endpoint &p) : endpoint (p)
          {
-            fd = socket (endpoint.family, endpoint.type, endpoint.protocol);
+            fd = ::socket (endpoint.family, endpoint.type, endpoint.protocol);
+            if (fd<0) {
+               common::logger::error << "Unable to create socket for " << endpoint.info() << " : " << ::strerror(errno);
+            } else {
+
+               /* Set socket options */
+               int on = 1;
+               int n = ::setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&on), sizeof(int));
+               if (n<0) {
+                  common::logger::error << "Unable to force socket to reuse address " << endpoint.info() << " : " << ::strerror(errno);
+                  ::close (fd);
+                  fd = -1;
+               } else {
+                  /* Set it nonblocking */
+                  int flags  = fcntl(fd,F_GETFL, 0);
+                  int rc = fcntl(fd,F_SETFL, flags | O_NONBLOCK);
+                  if (rc < 0)
+                  {
+                     common::logger::error << "Unable to set socket as nonblocking " << endpoint.info() << " : " << ::strerror(errno);
+                     ::close (fd);
+                     fd = -1;
+                  }
+               }
+            }
          }
 
          /*
-          * Constructor of the socket based on a fikle descriptor
+          * Constructor of the socket based on a file descriptor
           */
          Socket::Socket (int socket, Endpoint &p) : endpoint (p), fd (socket)
          {
+            int on = 1;
+            int n = ::setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&on), sizeof(int));
+            if (n<0) {
+               common::logger::error << "Unable to force socket to reuse address " << endpoint.info() << " : " << ::strerror(errno);
+               ::close (fd);
+               fd = -1;
+            } else {
+               /* Always make it nonblocking */
+               int flags  = fcntl(fd,F_GETFL, 0);
+               int rc = fcntl(fd,F_SETFL, flags | O_NONBLOCK);
+               if (rc < 0)
+               {
+                  common::logger::error << "Unable to set socket as nonblocking " << endpoint.info() << " : " << ::strerror(errno);
+                  fd = -1;
+               }
+            }
          }
 
          /*
@@ -275,7 +324,8 @@ namespace casual
           */
          Socket::~Socket()
          {
-            close();
+            if (fd>=0)
+               close();
          }
 
          /*
@@ -283,14 +333,26 @@ namespace casual
           */
          int Socket::connect ()
          {
-            return ::connect (fd, reinterpret_cast<struct sockaddr *>(endpoint.m_data.get()), endpoint.m_size);
+            int n = -1;
+            if (fd>=0) {
+               n = ::connect (fd, reinterpret_cast<struct sockaddr *>(endpoint.m_data.get()), endpoint.m_size);
+            } else {
+               common::logger::error << "Unable to connect to socket, it is invalid";
+            }
+            return n;
          }
 
          /*
           * Binds to an endpoint
           */
          int Socket::bind(){
-            return ::bind (fd, reinterpret_cast<struct sockaddr *>(endpoint.m_data.get()), endpoint.m_size);
+            int n = -1;
+            if (fd>=0) {
+               n = ::bind (fd, reinterpret_cast<struct sockaddr *>(endpoint.m_data.get()), endpoint.m_size);
+            } else {
+               common::logger::error << "Unable to bind socket, it is invalid";
+            }
+            return n;
          }
 
          /*
@@ -298,7 +360,8 @@ namespace casual
           */
          int Socket::listen(int backlog)
          {
-            return ::listen (fd, backlog);
+            int n = ::listen (fd, backlog);
+            return n;
          }
 
          /*
@@ -336,21 +399,33 @@ namespace casual
 
                /* Create the endpoint of the connection */
                if (n>=0) {
-                  Endpoint p(AF_INET, SOCK_STREAM, IPPROTO_TCP, pSockaddr, len);
+                  Endpoint p(endpoint.family, endpoint.type, endpoint.protocol, pSockaddr, len);
                   pS = PSocket(new Socket (n, p));
-               } else {
-                  common::logger::error << "Unable to accept connection on " << endpoint.info() << " => " << strerror (errno);
                }
 
                /* Free the container */
                free (pSockaddr);
 
-            } else {
-               common::logger::error << "Unable to allocate memory for accepting connection on " << endpoint.info();
             }
 
             /* Back with the socket */
             return pS;
+         }
+
+         /*
+          * Return with the endpoint
+          */
+         Endpoint &Socket::getEndpoint()
+         {
+            return endpoint;
+         }
+
+         /*
+          * Add the event handler
+          */
+         void Socket::setEventHandler(std::unique_ptr<SocketEventHandler> &pSEH)
+         {
+            pEventHandler = std::move (pSEH);
          }
 
          /*
@@ -363,6 +438,116 @@ namespace casual
              */
             return ::close (fd);
          }
+
+         /*
+          * Polls the socket and return 0 on timeout, -1 on error and 1 if an event occured
+          */
+         int Socket::poll(int timeout)
+         {
+            int ready = -1; /* Error */
+
+            /* Do we have any socketeventhandler? */
+            if (pEventHandler != nullptr) {
+
+               /* Make the poll mask */
+               struct pollfd client[1];
+               client[0].fd = fd;
+               client[0].events = pEventHandler->events();
+               client[0].revents = 0;
+
+               /* Wait for some data */
+               ready = ::poll (client, 1, timeout);
+               if (ready == 1) {
+                  pEventHandler->handle (client[0].revents, *this);
+               } else {
+                  if (ready < 0) {
+                     common::logger::warning << "Polling " << endpoint.info() << " caused error => " << strerror (errno);
+                  }
+               }
+            }
+
+            return ready;
+         }
+
+         /*
+          * Handles an event on the socket
+          */
+         int Socket::handle (int events)
+         {
+            int ready = -1; /* Error */
+
+            /* Do we have any socketeventhandler? */
+            if (pEventHandler != nullptr) {
+               ready = 1;
+               pEventHandler->handle (events, *this);
+            }
+
+            return ready;
+         }
+
+         /**********************************************************************\
+          *  SocketEventHandler
+         \**********************************************************************/
+
+         /*
+          * The socket event handler dispatcher
+          */
+         int SocketEventHandler::handle(int events, Socket &socket)
+         {
+            int handled = 0;
+
+            /* Data is ready */
+            if ((events & POLLIN) != 0) {
+               handled |= dataCanBeRead (events, socket);
+            }
+
+            /* Data can be written */
+            if ((events & POLLOUT) != 0) {
+               handled |= dataCanBeWritten (events, socket);
+            }
+
+            /* Error */
+            if ((events & (POLLERR | POLLNVAL)) != 0) {
+               handled |= dataError (events, socket);
+            }
+
+            /* Hung up */
+            if ((events & POLLHUP) != 0) {
+               handled |= dataHangup (events, socket);
+            }
+
+            /* Flags to say what we handled */
+            return handled;
+         }
+
+
+         /*
+          * Base implementation, so we don't require an implementation for all
+          */
+         int SocketEventHandler::dataCanBeRead(int events, Socket &socket)
+         {
+            common::logger::warning << "Unimplemented data read event";
+            return 0;
+         }
+
+         int SocketEventHandler::dataCanBeWritten(int events, Socket &socket)
+         {
+            common::logger::warning << "Unimplemented data write event";
+            return 0;
+         }
+
+         int SocketEventHandler::dataError(int events, Socket &socket)
+         {
+            common::logger::warning << "Unimplemented error event";
+            return 0;
+         }
+
+         int SocketEventHandler::dataHangup(int events, Socket &socket)
+         {
+            common::logger::warning << "Unimplemented hangup event";
+            return 0;
+         }
+
       }
    }
 }
