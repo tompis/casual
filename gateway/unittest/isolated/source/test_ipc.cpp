@@ -42,6 +42,63 @@ namespace casual
    {
       namespace ipc
       {
+
+         /* Test handler */
+         class IPSERVERHandler1 : public SocketEventHandler {
+
+            /* A socket */
+            std::shared_ptr<Socket> pS;
+
+         public:
+
+            /* Only POLLIN events */
+            int events () const { return POLLIN; };
+
+            /* Handle incoming connections */
+            int dataCanBeRead (int events, Socket &socket)
+            {
+               common::logger::information << "SERVER: Incoming connection";
+               pS = socket.accept();
+               if (pS==0L) {
+                  common::logger::information << "SERVER: Incoming connection not accepted";
+               } else {
+                  common::logger::information << "SERVER: Incoming connection accepted";
+               }
+            }
+
+            /* Cleanup */
+            ~IPSERVERHandler1()
+            {
+               EXPECT_TRUE(pS != 0L);
+               pS->close();
+            }
+         };
+
+         class IPCLIENTHandler1 : public SocketEventHandler {
+
+         private:
+
+            int client_connected = 0;
+
+         public:
+
+            /* Only POLLIN events */
+            int events () const { return POLLOUT; };
+
+            /* Handle write is possible */
+            int dataCanBeWritten (int events, Socket &socket)
+            {
+               common::logger::information << "CLIENT: Connected";
+               client_connected = 1;
+            }
+
+            /* Destructor */
+            ~IPCLIENTHandler1()
+            {
+               EXPECT_TRUE (client_connected == 1);
+            }
+         };
+
          TEST( casual_gateway_ipc_socket, ipc_resolve)
          {
             common::logger::information << "TEST : casual_gateway_ipc_socket.ipc_resolve";
@@ -50,7 +107,7 @@ namespace casual
             /* Loopback interface */
             int n = resolver.get().size();
             if (n>0) {
-               Endpoint &p = *resolver.begin();
+               Endpoint p = *resolver.begin();
                std::string s = p.info();
                EXPECT_TRUE(s == "127.0.0.1:80");
             }
@@ -65,7 +122,7 @@ namespace casual
             /* IPv6 loopback */
             int n = resolver.get().size();
             if (n>0) {
-               Endpoint &p = *resolver.begin();
+               Endpoint p = *resolver.begin();
                std::string s = p.info();
                EXPECT_TRUE(s == "::1:80");
             }
@@ -80,7 +137,7 @@ namespace casual
             /* Loopback interface and tcpmux service */
             int n = resolver.get().size();
             if (n>0) {
-               Endpoint &p = *resolver.begin();
+               Endpoint p = *resolver.begin();
                std::string s = p.info();
                EXPECT_TRUE(s == "127.0.0.1:1");
             }
@@ -106,7 +163,7 @@ namespace casual
             /* Loopback interface */
             int n = resolver.get().size();
             if (n>0) {
-               Endpoint &p = *resolver.begin();
+               Endpoint p = *resolver.begin();
                Socket s(p);
                n = s.bind();
                EXPECT_TRUE(n==0);
@@ -123,7 +180,7 @@ namespace casual
             /* IPv6 loopback */
             int n = resolver.get().size();
             if (n>0) {
-               Endpoint &p = *resolver.begin();
+               Endpoint p = *resolver.begin();
                Socket s(p);
                n = s.bind();
                EXPECT_TRUE(n==0);
@@ -136,71 +193,15 @@ namespace casual
          {
             common::logger::information << "TEST : casual_gateway_ipc_socket.ipc_connect_ipv4thread";
 
-            /* Test handler */
-            class IPV4SERVERHandler : public SocketEventHandler {
-
-               /* A socket */
-               std::shared_ptr<Socket> pS;
-
-            public:
-
-               /* Only POLLIN events */
-               int events () { return POLLIN; };
-
-               /* Handle incoming connections */
-               int dataCanBeRead (int events, Socket &socket)
-               {
-                  common::logger::information << "SERVER: Incoming connection";
-                  pS = socket.accept();
-                  if (pS==0L) {
-                     common::logger::information << "SERVER: Incoming connection not accepted";
-                  } else {
-                     common::logger::information << "SERVER: Incoming connection accepted";
-                  }
-               }
-
-               /* Cleanup */
-               ~IPV4SERVERHandler()
-               {
-                  EXPECT_TRUE(pS != 0L);
-                  pS->close();
-               }
-            };
-
-            class IPV4CLIENTHandler : public SocketEventHandler {
-
-            private:
-
-               int client_connected = 0;
-
-            public:
-
-               /* Only POLLIN events */
-               int events () { return POLLOUT; };
-
-               /* Handle write is possible */
-               int dataCanBeWritten (int events, Socket &socket)
-               {
-                  common::logger::information << "CLIENT: Connected";
-                  client_connected = 1;
-               }
-
-               /* Destructor */
-               ~IPV4CLIENTHandler()
-               {
-                  EXPECT_TRUE (client_connected == 1);
-               }
-            };
-
-            std::unique_ptr<SocketEventHandler> pServerHandler = std::unique_ptr<SocketEventHandler>(new IPV4SERVERHandler ());
-            std::unique_ptr<SocketEventHandler> pClientHandler = std::unique_ptr<SocketEventHandler>(new IPV4CLIENTHandler ());
+            std::unique_ptr<SocketEventHandler> pServerHandler = std::unique_ptr<SocketEventHandler>(new IPSERVERHandler1 ());
+            std::unique_ptr<SocketEventHandler> pClientHandler = std::unique_ptr<SocketEventHandler>(new IPCLIENTHandler1 ());
 
             Resolver resolver ("127.0.0.1:11234");
             int resolved = resolver.get().size();
             if (resolved>0) {
 
                /* Initialize the testbed */
-               Endpoint &p = *resolver.begin();
+               Endpoint p = *resolver.begin();
                Socket source(p);
                source.setEventHandler (pServerHandler);
                common::logger::information << "SERVER: Server socket bound";
@@ -248,71 +249,15 @@ namespace casual
          {
             common::logger::information << "TEST : casual_gateway_ipc_socket.ipc_connect_ipv6thread";
 
-            /* Test handler */
-            class IPV4SERVERHandler : public SocketEventHandler {
-
-               /* A socket */
-               std::shared_ptr<Socket> pS;
-
-            public:
-
-               /* Only POLLIN events */
-               int events () { return POLLIN; };
-
-               /* Handle incoming connections */
-               int dataCanBeRead (int events, Socket &socket)
-               {
-                  common::logger::information << "SERVER: Incoming connection";
-                  pS = socket.accept();
-                  if (pS==0L) {
-                     common::logger::information << "SERVER: Incoming connection not accepted";
-                  } else {
-                     common::logger::information << "SERVER: Incoming connection accepted";
-                  }
-               }
-
-               /* Cleanup */
-               ~IPV4SERVERHandler()
-               {
-                  EXPECT_TRUE(pS != 0L);
-                  pS->close();
-               }
-            };
-
-            class IPV4CLIENTHandler : public SocketEventHandler {
-
-            private:
-
-               int client_connected = 0;
-
-            public:
-
-               /* Only POLLIN events */
-               int events () { return POLLOUT; };
-
-               /* Handle write is possible */
-               int dataCanBeWritten (int events, Socket &socket)
-               {
-                  common::logger::information << "CLIENT: Connected";
-                  client_connected = 1;
-               }
-
-               /* Destructor */
-               ~IPV4CLIENTHandler()
-               {
-                  EXPECT_TRUE (client_connected == 1);
-               }
-            };
-
-            std::unique_ptr<SocketEventHandler> pServerHandler = std::unique_ptr<SocketEventHandler>(new IPV4SERVERHandler ());
-            std::unique_ptr<SocketEventHandler> pClientHandler = std::unique_ptr<SocketEventHandler>(new IPV4CLIENTHandler ());
+            std::unique_ptr<SocketEventHandler> pServerHandler = std::unique_ptr<SocketEventHandler>(new IPSERVERHandler1 ());
+            std::unique_ptr<SocketEventHandler> pClientHandler = std::unique_ptr<SocketEventHandler>(new IPCLIENTHandler1 ());
 
             Resolver resolver ("::1:11234");
             int resolved = resolver.get().size();
             if (resolved>0) {
 
                /* Initialize the testbed */
-               Endpoint &p = *resolver.begin();
+               Endpoint p = *resolver.begin();
                Socket source(p);
                source.setEventHandler (pServerHandler);
                common::logger::information << "SERVER: Server socket bound";

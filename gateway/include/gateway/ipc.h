@@ -155,14 +155,13 @@ namespace casual
             /*
              * Iterators
              */
-            typedef std::list<Endpoint>::iterator iterator;
             typedef std::list<Endpoint>::const_iterator const_iterator;
 
             /*
              * iterators for traversing the list of endpoints valid for the url resolved
              */
-            iterator begin();
-            iterator end();
+            const_iterator begin();
+            const_iterator end();
 
             /*
              * Constructs and destroys the resolver
@@ -181,7 +180,7 @@ namespace casual
             /*
              * Return with a list
              */
-            std::list<Endpoint> &get();
+            const std::list<Endpoint> &get() const;
 
          private:
 
@@ -194,17 +193,17 @@ namespace casual
           *  Socket
          \**********************************************************************/
 
-         /* Pre definition */
+         /* Pre declaration */
          class SocketEventHandler;
+         class SocketGroup;
 
          /*
           * Socket
           */
-
-         class Socket;
-         typedef std::shared_ptr<Socket> PSocket;
-
          class Socket {
+
+            /* Friends */
+            friend SocketGroup;
 
          public:
 
@@ -247,29 +246,25 @@ namespace casual
             /*
              * Accept incoming connection and return a new socket
              */
-            PSocket accept();
+            std::unique_ptr<Socket> accept();
 
             /*
              * Other socket functions
              */
-            Endpoint &getEndpoint ();
+            Endpoint getEndpoint ();
 
             /*
-             * Add handlers
+             * Add handler, ownership is taken
              */
             void setEventHandler(std::unique_ptr<SocketEventHandler> &pSEH);
 
             /*
              * Polls the socket.
              *
-             * Returns 0 on timeout, 1 on event occured and -1 on error
+             * Returns 0 on timeout, 1 on event occured and -1 on error and calls the eventhandler
+             * for the socket.
              */
             int poll(int timeout);
-
-            /*
-             * Executes a handler based on the event mask
-             */
-             int handle (int events);
 
          protected:
 
@@ -277,6 +272,21 @@ namespace casual
              * Socket created from a file descriptor
              */
             Socket (int fd, Endpoint &p);
+
+            /*
+             * Get a hold on the file descriptor
+             */
+            int getSocket() const;
+
+            /*
+             * Return with the eventhandler, ownership is maintained
+             */
+            const SocketEventHandler *getEventHandler() const;
+
+            /*
+             * Executes a handler based on the event mask
+             */
+             int handle (int events);
 
          private:
 
@@ -313,19 +323,65 @@ namespace casual
             virtual ~SocketEventHandler() = default;
 
             /*
-             * Types this handler handles
-             */
-            virtual int events() = 0;
-
-            /*
              * The handle function
              */
             int handle (int events, Socket &socket);
+
+            /*
+             * Types this handler handles
+             */
+            virtual int events() const = 0;
+
+         protected:
+
+            /*
+             * Handlers
+             */
             virtual int dataCanBeRead (int events, Socket &socket);
             virtual int dataCanBeWritten (int events, Socket &socket);
             virtual int dataHangup (int events, Socket &socket);
             virtual int dataError (int events, Socket &socket);
 
+         };
+
+         /**********************************************************************\
+          *  SocketGroup
+         \**********************************************************************/
+
+         class SocketGroup {
+
+         public:
+
+            SocketGroup() = default;
+            ~SocketGroup() = default;
+
+            /*
+             * Polls all sockets
+             *
+             * Returns 0 on timeout, 1 on event occured and -1 on errorued and calls the eventhandler for all
+             * sockets in the group.
+             */
+            int poll(int timeout);
+
+            /*
+             * Add a socket, ownership is not taken
+             */
+            void addSocket(Socket *pSocket);
+            void removeSocket (Socket *pSocket);
+
+         protected:
+         private:
+
+            /*
+             * Creates a poll filter for the POSIX poll
+             */
+            void generatePollFilter();
+
+            /* List of all sockets in the group */
+            std::list<Socket *> listOfSockets;
+
+            /* Poll filter */
+            std::unique_ptr<struct pollfd[]> clients;
          };
 
       }

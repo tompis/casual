@@ -164,12 +164,12 @@ namespace casual
          /*
           * The iterator functions
           */
-         Resolver::iterator Resolver::begin()
+         Resolver::const_iterator Resolver::begin()
          {
             return listOfEndpoints.begin();
          }
 
-         Resolver::iterator Resolver::end()
+         Resolver::const_iterator Resolver::end()
          {
             return listOfEndpoints.end();
          }
@@ -179,7 +179,7 @@ namespace casual
             resolve (connectionString);
          }
 
-         std::list<Endpoint> &Resolver::get()
+         const std::list<Endpoint> &Resolver::get() const
          {
             return listOfEndpoints;
          }
@@ -367,9 +367,9 @@ namespace casual
          /*
           * Accepts incoming connections
           */
-         PSocket Socket::accept()
+         std::unique_ptr<Socket> Socket::accept()
          {
-            PSocket pS = nullptr;
+            std::unique_ptr<Socket> pS = nullptr;
             int new_fd = -1;
             struct sockaddr *pSockaddr = nullptr;
             socklen_t len;
@@ -400,7 +400,7 @@ namespace casual
                /* Create the endpoint of the connection */
                if (n>=0) {
                   Endpoint p(endpoint.family, endpoint.type, endpoint.protocol, pSockaddr, len);
-                  pS = PSocket(new Socket (n, p));
+                  pS = std::unique_ptr<Socket>(new Socket (n, p));
                }
 
                /* Free the container */
@@ -415,7 +415,7 @@ namespace casual
          /*
           * Return with the endpoint
           */
-         Endpoint &Socket::getEndpoint()
+         Endpoint Socket::getEndpoint()
          {
             return endpoint;
          }
@@ -446,7 +446,7 @@ namespace casual
          {
             int ready = -1; /* Error */
 
-            /* Do we have any socketeventhandler? */
+            /* Do we have a socketeventhandler? */
             if (pEventHandler != nullptr) {
 
                /* Make the poll mask */
@@ -483,6 +483,22 @@ namespace casual
             }
 
             return ready;
+         }
+
+         /*
+          * Returns with the socket descriptor
+          */
+         int Socket::getSocket () const
+         {
+            return fd;
+         }
+
+         /*
+          * Returns with the eventhandler, remain ownership of handler
+          */
+         const SocketEventHandler *Socket::getEventHandler() const
+         {
+            return pEventHandler.get();
          }
 
          /**********************************************************************\
@@ -546,6 +562,50 @@ namespace casual
          {
             common::logger::warning << "Unimplemented hangup event";
             return 0;
+         }
+
+         /**********************************************************************\
+          *  SocketGroup
+         \**********************************************************************/
+
+         /*
+          * Polls all events from all sockets in the group and call each sockets handle function
+          */
+         int SocketGroup::poll (int timeout)
+         {
+
+         }
+
+         void SocketGroup::generatePollFilter()
+         {
+            int n = 0;
+            clients.reset (new struct pollfd[listOfSockets.size()]);
+
+            for_each(listOfSockets.begin(),listOfSockets.end(),[&](Socket* socket)
+            {
+               clients[n].fd = socket->getSocket();
+               clients[n].events = socket->getEventHandler()->events();
+               clients[n].revents = 0;
+               n++;
+            });
+
+         }
+         /*
+          * Adds a socket to the group and regenerate the event flag array
+          */
+         void SocketGroup::addSocket (Socket *pSocket)
+         {
+            listOfSockets.push_back(pSocket);
+            generatePollFilter();
+         }
+
+         /*
+          * Remove a socket from the group and regenerate the envet flag array
+          */
+         void SocketGroup::removeSocket (Socket *pSocket)
+         {
+            listOfSockets.remove(pSocket);
+            generatePollFilter();
          }
 
       }
