@@ -214,7 +214,7 @@ namespace casual
             ~Socket();
 
             /*
-             * No copy and assignment possible with sockets
+             * No copy and assignment possible with sockets, there can only be one!
              */
             Socket (const Socket &other) = delete;
             Socket &operator=(const Socket &other) = delete;
@@ -224,22 +224,22 @@ namespace casual
              */
 
             /*
-             * Close the socket
+             * Close the socket, returns -1 on error, zero otherwise
              */
             int close();
 
             /*
-             * Conect to the current endpoint
+             * Conect to the current endpoint, returns -1 on error, zero otherwise
              */
             int connect ();
 
             /*
-             * Bind the socket to an endpoint
+             * Bind the socket to an endpoint, returns -1 on error, zero otherwise
              */
             int bind();
 
             /*
-             * Listen to an bound socket
+             * Listen to an bound socket, returns -1 on error, zero otherwise
              */
             int listen(int backlog = SOMAXCONN);
 
@@ -265,6 +265,16 @@ namespace casual
              * for the socket.
              */
             int poll(int timeout);
+
+            /*
+             * write data
+             */
+            int write (void *pData, int size);
+
+            /*
+             * read data
+             */
+            int read (void *pData, int size);
 
          protected:
 

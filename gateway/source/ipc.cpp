@@ -458,7 +458,7 @@ namespace casual
                /* Wait for some data */
                ready = ::poll (client, 1, timeout);
                if (ready == 1) {
-                  pEventHandler->handle (client[0].revents, *this);
+                  handle (client[0].revents);
                } else {
                   if (ready < 0) {
                      common::logger::warning << "Polling " << endpoint.info() << " caused error => " << strerror (errno);
@@ -500,6 +500,23 @@ namespace casual
          {
             return pEventHandler.get();
          }
+
+         /*
+          * write data
+          */
+         int Socket::write (void *pData, int size)
+         {
+            return ::send (fd, pData, size, 0);
+         }
+
+         /*
+          * read data
+          */
+         int Socket::read (void *pData, int size)
+         {
+            return ::recv (fd, pData, size, 0);
+         }
+
 
          /**********************************************************************\
           *  SocketEventHandler
@@ -573,9 +590,37 @@ namespace casual
           */
          int SocketGroup::poll (int timeout)
          {
+            int ready = -1;
 
+            /* Only poll if we got any sockets */
+            if (listOfSockets.size()>0) {
+
+               /* Wait for something to happen on the poll filters */
+               ready = ::poll (clients.get(), listOfSockets.size(), timeout);
+               if (ready > 0) {
+                  int n = 0;
+
+                  /* Loop through all clients to see if anything has happened */
+                  std::for_each(listOfSockets.begin(), listOfSockets.end(),
+                        [&](Socket *pSocket) {
+                           if (clients[n].revents!=0)
+                              pSocket->handle (clients[n].revents);
+                           }
+                  );
+
+               } else {
+                  if (ready < 0) {
+                     common::logger::warning << "Polling socketgroup caused error => " << strerror (errno);
+                  }
+               }
+            }
+
+            return ready;
          }
 
+         /*
+          * Generates an array of poll filters
+          */
          void SocketGroup::generatePollFilter()
          {
             int n = 0;
@@ -584,12 +629,16 @@ namespace casual
             for_each(listOfSockets.begin(),listOfSockets.end(),[&](Socket* socket)
             {
                clients[n].fd = socket->getSocket();
-               clients[n].events = socket->getEventHandler()->events();
+               if (socket->getEventHandler()!=0)
+                  clients[n].events = socket->getEventHandler()->events();
+               else
+                  clients[n].events = 0;
                clients[n].revents = 0;
                n++;
             });
 
          }
+
          /*
           * Adds a socket to the group and regenerate the event flag array
           */
