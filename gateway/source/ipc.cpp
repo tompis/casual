@@ -30,6 +30,7 @@
  * Casual common
  */
 #include "common/logger.h"
+#include "gateway/std14.h"
 #include "gateway/ipc.h"
 
 /*
@@ -268,18 +269,18 @@ namespace casual
          /*
           * Constructor of the socket based on an endpoint
           */
-         Socket::Socket(Endpoint &p) : endpoint (p)
+         Socket::Socket(Endpoint &p) : pEndpoint (std::make_unique<Endpoint>(p))
          {
-            fd = ::socket (endpoint.family, endpoint.type, endpoint.protocol);
+            fd = ::socket (pEndpoint->family, pEndpoint->type, pEndpoint->protocol);
             if (fd<0) {
-               common::logger::error << "Unable to create socket for " << endpoint.info() << " : " << ::strerror(errno);
+               common::logger::error << "Unable to create socket for " << pEndpoint->info() << " : " << ::strerror(errno);
             } else {
 
                /* Set socket options */
                int on = 1;
                int n = ::setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&on), sizeof(int));
                if (n<0) {
-                  common::logger::error << "Unable to force socket to reuse address " << endpoint.info() << " : " << ::strerror(errno);
+                  common::logger::error << "Unable to force socket to reuse address " << pEndpoint->info() << " : " << ::strerror(errno);
                   ::close (fd);
                   fd = -1;
                } else {
@@ -288,7 +289,7 @@ namespace casual
                   int rc = fcntl(fd,F_SETFL, flags | O_NONBLOCK);
                   if (rc < 0)
                   {
-                     common::logger::error << "Unable to set socket as nonblocking " << endpoint.info() << " : " << ::strerror(errno);
+                     common::logger::error << "Unable to set socket as nonblocking " << pEndpoint->info() << " : " << ::strerror(errno);
                      ::close (fd);
                      fd = -1;
                   }
@@ -299,21 +300,32 @@ namespace casual
          /*
           * Constructor of the socket based on a file descriptor
           */
-         Socket::Socket (int socket, Endpoint &p) : endpoint (p), fd (socket)
+         Socket::Socket (int socket, Endpoint *p)
          {
+            /* Copy the endpoint if we got one */
+            if (p!=nullptr)
+               pEndpoint = std::make_unique<Endpoint>(*p);
+            else
+               pEndpoint = nullptr;
+
+            /* Set up the file descriptor */
+            fd = socket;
+
+            /* Set the reuseaddress option on the socket */
             int on = 1;
             int n = ::setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&on), sizeof(int));
             if (n<0) {
-               common::logger::error << "Unable to force socket to reuse address " << endpoint.info() << " : " << ::strerror(errno);
+               common::logger::error << "Unable to force socket to reuse address " << pEndpoint->info() << " : " << ::strerror(errno);
                ::close (fd);
                fd = -1;
             } else {
+
                /* Always make it nonblocking */
                int flags  = fcntl(fd,F_GETFL, 0);
                int rc = fcntl(fd,F_SETFL, flags | O_NONBLOCK);
                if (rc < 0)
                {
-                  common::logger::error << "Unable to set socket as nonblocking " << endpoint.info() << " : " << ::strerror(errno);
+                  common::logger::error << "Unable to set socket as nonblocking " << pEndpoint->info() << " : " << ::strerror(errno);
                   fd = -1;
                }
             }
@@ -335,7 +347,7 @@ namespace casual
          {
             int n = -1;
             if (fd>=0) {
-               n = ::connect (fd, reinterpret_cast<struct sockaddr *>(endpoint.m_data.get()), endpoint.m_size);
+               n = ::connect (fd, reinterpret_cast<struct sockaddr *>(pEndpoint->m_data.get()), pEndpoint->m_size);
             } else {
                common::logger::error << "Unable to connect to socket, it is invalid";
             }
@@ -348,7 +360,7 @@ namespace casual
          int Socket::bind(){
             int n = -1;
             if (fd>=0) {
-               n = ::bind (fd, reinterpret_cast<struct sockaddr *>(endpoint.m_data.get()), endpoint.m_size);
+               n = ::bind (fd, reinterpret_cast<struct sockaddr *>(pEndpoint->m_data.get()), pEndpoint->m_size);
             } else {
                common::logger::error << "Unable to bind socket, it is invalid";
             }
@@ -370,42 +382,46 @@ namespace casual
          std::unique_ptr<Socket> Socket::accept()
          {
             std::unique_ptr<Socket> pS = nullptr;
-            int new_fd = -1;
             struct sockaddr *pSockaddr = nullptr;
-            socklen_t len;
+            socklen_t len = 0;
+            int new_fd = -1;
 
-            /* Determine the size of the socket address */
-            switch (endpoint.family) {
-               case AF_INET:
-                  len = sizeof (struct sockaddr_in);
-                  break;
-               case AF_INET6:
-                  len = sizeof (struct sockaddr_in6);
-                  break;
-               default:
-                  common::logger::error << "Unsupported protocol family to accept connection on " << endpoint.info();
-                  len = 0;
-                  break;
-            }
-
-            /* Valid address length */
-            if (len>0) {
-
-               /* Allocate the address container */
-               pSockaddr = static_cast<struct sockaddr *>(malloc (len));
-
-               /* Accept the call */
-               int n = ::accept (fd, pSockaddr, &len);
-
-               /* Create the endpoint of the connection */
-               if (n>=0) {
-                  Endpoint p(endpoint.family, endpoint.type, endpoint.protocol, pSockaddr, len);
-                  pS = std::unique_ptr<Socket>(new Socket (n, p));
+            /* Determine the size of the socket address, we can only do this if we have an enpoint */
+            if (pEndpoint != nullptr) {
+               switch (pEndpoint->family) {
+                  case AF_INET:
+                     len = sizeof (struct sockaddr_in);
+                     break;
+                  case AF_INET6:
+                     len = sizeof (struct sockaddr_in6);
+                     break;
+                  default:
+                     common::logger::error << "Unsupported protocol family to accept connection on " << pEndpoint->info();
+                     break;
                }
 
-               /* Free the container */
-               free (pSockaddr);
+               /* Valid address length */
+               if (len>0) {
 
+                  /* Allocate the address container */
+                  pSockaddr = static_cast<struct sockaddr *>(malloc (len));
+
+                  /* Accept the call */
+                  int n = ::accept (fd, pSockaddr, &len);
+
+                  /* Create the endpoint of the connection */
+                  if (n>=0) {
+                     Endpoint *p = nullptr;
+                     if (pEndpoint != nullptr) {
+                        p = new Endpoint(pEndpoint->family, pEndpoint->type, pEndpoint->protocol, pSockaddr, len);
+                     }
+                     pS = std::unique_ptr<Socket>(new Socket (n, p));
+                  }
+
+                  /* Free the container */
+                  free (pSockaddr);
+
+               }
             }
 
             /* Back with the socket */
@@ -415,9 +431,9 @@ namespace casual
          /*
           * Return with the endpoint
           */
-         Endpoint Socket::getEndpoint()
+         Endpoint *Socket::getEndpoint()
          {
-            return endpoint;
+            return pEndpoint.get();
          }
 
          /*
@@ -461,7 +477,10 @@ namespace casual
                   handle (client[0].revents);
                } else {
                   if (ready < 0) {
-                     common::logger::warning << "Polling " << endpoint.info() << " caused error => " << strerror (errno);
+                     if (pEndpoint != nullptr)
+                        common::logger::warning << "Polling " << pEndpoint->info() << " caused error => " << strerror (errno);
+                     else
+                        common::logger::warning << "Polling caused error => " << strerror (errno);
                   }
                }
             }
@@ -517,6 +536,70 @@ namespace casual
             return ::recv (fd, pData, size, 0);
          }
 
+         /**********************************************************************\
+          *  SocketPair
+         \**********************************************************************/
+
+         /*
+          * Constructor of a socketpair
+          */
+         SocketPair::SocketPair ()
+         {
+            int fd[2]; /* The sockets */
+
+            ::socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
+            if (fd<0) {
+               common::logger::error << "Unable to create a socketpair for : " << ::strerror(errno);
+            } else {
+
+               /* Set it nonblocking */
+               int flags  = fcntl(fd[0],F_GETFL, 0);
+               int rc = fcntl(fd[0],F_SETFL, flags | O_NONBLOCK);
+               if (rc < 0)
+               {
+                  common::logger::error << "Unable to set the socketpair side A as nonblocking  : " << ::strerror(errno);
+                  ::close (fd[0]);
+               }
+
+               flags  = fcntl(fd[1],F_GETFL, 0);
+               rc = fcntl(fd[1],F_SETFL, flags | O_NONBLOCK);
+               if (rc < 0)
+               {
+                  common::logger::error << "Unable to set the socketpair side B as nonblocking  : " << ::strerror(errno);
+                  ::close (fd[1]);
+               }
+
+               /* Create the socketwrappers */
+               pA = std::unique_ptr<Socket>(new Socket(fd[0]));
+               pB = std::unique_ptr<Socket>(new Socket(fd[0]));
+
+               // It does not work with the make_unique :-(, no friend with socket
+               //pA = std::make_unique<Socket>(fd[0]);
+               //pB = std::make_unique<Socket>(fd[1]);
+
+            }
+         }
+
+         /*
+          * Destroys socketpair
+          */
+         SocketPair::~SocketPair()
+         {
+         }
+
+         /*
+          * Getters for the socketpair A and B side
+          */
+         Socket *SocketPair::getSocketA () const
+         {
+            /* Create the sockets */
+            return pA.get();
+         }
+
+         Socket *SocketPair::getSocketB () const
+         {
+            return pB.get();
+         }
 
          /**********************************************************************\
           *  SocketEventHandler

@@ -40,13 +40,13 @@ namespace casual
         */
        struct RemoteGateway {
           std::string name;
-          std::string connectioninformation;
+          std::string endpoint;
 
           template< typename A>
           void serialize( A& archive)
           {
              archive & CASUAL_MAKE_NVP(name);
-             archive & CASUAL_MAKE_NVP(connectioninformation);
+             archive & CASUAL_MAKE_NVP(endpoint);
           }
        };
 
@@ -55,7 +55,7 @@ namespace casual
         */
        struct Gateway {
           std::string name="unknown";
-          std::string connectioninformation="*:55555";
+          std::string endpoint="*:55555";
           int housekeeping = 1;
           std::vector<RemoteGateway> remotegateways;
 
@@ -63,7 +63,7 @@ namespace casual
           void serialize( A& archive)
           {
              archive & CASUAL_MAKE_NVP(name);
-             archive & CASUAL_MAKE_NVP(connectioninformation);
+             archive & CASUAL_MAKE_NVP(endpoint);
              archive & CASUAL_MAKE_NVP(remotegateways);
           }
        };

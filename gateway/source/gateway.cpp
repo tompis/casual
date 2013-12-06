@@ -140,7 +140,7 @@ namespace casual
        common::logger::information << "Gateway " << m_state.configuration.name << " starting up";
 
        common::ipc::Resolver resolver;
-       if (resolver.resolve (m_state.configuration.connectioninformation)<0) {
+       if (resolver.resolve (m_state.configuration.endpoint)<0) {
           common::logger::error << "Unable to resolve address";
        }
        if (resolver.resolve ("localhost:12345")<0) {

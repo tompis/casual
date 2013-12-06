@@ -79,9 +79,7 @@ namespace casual
           */
          class Endpoint {
 
-            /*
-             * Friends to the endpoints
-             */
+            /* Friends, so we can encapsulate posix much more */
             friend class Socket;
             friend class Resolver;
 
@@ -103,7 +101,7 @@ namespace casual
              */
             std::string info();
 
-         protected:
+         private:
 
             /*
              * Constructor, only for friends.
@@ -120,8 +118,6 @@ namespace casual
             int family;
             int protocol;
             int type;
-
-         private:
 
             /*
              * Information string builders for various families
@@ -196,16 +192,18 @@ namespace casual
          /* Pre declaration */
          class SocketEventHandler;
          class SocketGroup;
+         class SocketPair;
 
          /*
           * Socket
           */
          class Socket {
 
-            /* Friends */
-            friend SocketGroup;
-
          public:
+
+            /* Friends, so we can encapsulate posix much more */
+            friend SocketGroup;
+            friend SocketPair;
 
             /*
              * Constructors and destructors
@@ -251,7 +249,7 @@ namespace casual
             /*
              * Other socket functions
              */
-            Endpoint getEndpoint ();
+            Endpoint *getEndpoint ();
 
             /*
              * Add handler, ownership is taken
@@ -276,12 +274,12 @@ namespace casual
              */
             int read (void *pData, int size);
 
-         protected:
+         private:
 
             /*
-             * Socket created from a file descriptor
+             * Socket created from a file descriptor, we maybe dont have an endpoint if so set it to null.
              */
-            Socket (int fd, Endpoint &p);
+            Socket (int fd, Endpoint *p = nullptr);
 
             /*
              * Get a hold on the file descriptor
@@ -298,8 +296,6 @@ namespace casual
              */
              int handle (int events);
 
-         private:
-
             /*
              * Socket file descriptor
              */
@@ -308,12 +304,44 @@ namespace casual
             /*
              * Socket endpoint
              */
-            Endpoint endpoint;
+            std::unique_ptr<Endpoint> pEndpoint;
 
             /*
              * Socket event handlers
              */
             std::unique_ptr<SocketEventHandler> pEventHandler = nullptr;
+
+         };
+
+         /**********************************************************************\
+          *  SocketPair
+         \**********************************************************************/
+
+         class SocketPair {
+
+         public:
+
+            /*
+             * Constructor and destructor
+             */
+            SocketPair ();
+            ~SocketPair();
+
+            /*
+             * Getters for the socketpair A and B side
+             */
+            Socket *getSocketA () const;
+            Socket *getSocketB () const;
+
+         protected:
+
+         private:
+
+            /*
+             * Sockets
+             */
+            std::unique_ptr<Socket> pA = nullptr;
+            std::unique_ptr<Socket> pB = nullptr;
 
          };
 
