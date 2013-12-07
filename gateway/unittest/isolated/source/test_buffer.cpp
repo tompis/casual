@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-#include "gateway/presentation_layer.h"
+#include "gateway/wire.h"
 #include "common/marshal.h"
 
 #include <vector>

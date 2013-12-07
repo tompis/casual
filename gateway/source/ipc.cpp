@@ -2,7 +2,7 @@
  * ipc.cpp
  *
  *  Created on: 9 nov 2013
- *      Author: tomas
+ *      Author: Tomas Stenlund
  */
 
 #include <sys/types.h>
@@ -573,7 +573,7 @@ namespace casual
                pA = std::unique_ptr<Socket>(new Socket(fd[0]));
                pB = std::unique_ptr<Socket>(new Socket(fd[0]));
 
-               // It does not work with the make_unique :-(, no friend with socket
+               // It does not work with the make_unique template :-(, template is not a friend with the socket
                //pA = std::make_unique<Socket>(fd[0]);
                //pB = std::make_unique<Socket>(fd[1]);
 
@@ -590,15 +590,15 @@ namespace casual
          /*
           * Getters for the socketpair A and B side
           */
-         Socket *SocketPair::getSocketA () const
+         std::unique_ptr<Socket> SocketPair::getSocketA ()
          {
             /* Create the sockets */
-            return pA.get();
+            return std::move (pA);
          }
 
-         Socket *SocketPair::getSocketB () const
+         std::unique_ptr<Socket> SocketPair::getSocketB ()
          {
-            return pB.get();
+            return std::move (pB);
          }
 
          /**********************************************************************\
@@ -624,12 +624,12 @@ namespace casual
 
             /* Error */
             if ((events & (POLLERR | POLLNVAL)) != 0) {
-               handled |= dataError (events, socket);
+               handled |= error (events, socket);
             }
 
             /* Hung up */
             if ((events & POLLHUP) != 0) {
-               handled |= dataHangup (events, socket);
+               handled |= hangup (events, socket);
             }
 
             /* Flags to say what we handled */
@@ -652,13 +652,13 @@ namespace casual
             return 0;
          }
 
-         int SocketEventHandler::dataError(int events, Socket &socket)
+         int SocketEventHandler::error(int events, Socket &socket)
          {
             common::logger::warning << "Unimplemented error event";
             return 0;
          }
 
-         int SocketEventHandler::dataHangup(int events, Socket &socket)
+         int SocketEventHandler::hangup(int events, Socket &socket)
          {
             common::logger::warning << "Unimplemented hangup event";
             return 0;

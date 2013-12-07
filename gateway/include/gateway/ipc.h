@@ -328,10 +328,10 @@ namespace casual
             ~SocketPair();
 
             /*
-             * Getters for the socketpair A and B side
+             * Getters for the socketpair A and B side, moves the ownership!!!!
              */
-            Socket *getSocketA () const;
-            Socket *getSocketB () const;
+            std::unique_ptr<Socket> getSocketA ();
+            std::unique_ptr<Socket> getSocketB ();
 
          protected:
 
@@ -342,43 +342,6 @@ namespace casual
              */
             std::unique_ptr<Socket> pA = nullptr;
             std::unique_ptr<Socket> pB = nullptr;
-
-         };
-
-         /**********************************************************************\
-          *  SocketEventHandler
-         \**********************************************************************/
-
-         /* Base class for the event handler for a socket */
-         class SocketEventHandler {
-
-         public:
-
-            /*
-             * Create and destroys a socket handler
-             */
-            SocketEventHandler() = default;
-            virtual ~SocketEventHandler() = default;
-
-            /*
-             * The handle function
-             */
-            int handle (int events, Socket &socket);
-
-            /*
-             * Types this handler handles
-             */
-            virtual int events() const = 0;
-
-         protected:
-
-            /*
-             * Handlers
-             */
-            virtual int dataCanBeRead (int events, Socket &socket);
-            virtual int dataCanBeWritten (int events, Socket &socket);
-            virtual int dataHangup (int events, Socket &socket);
-            virtual int dataError (int events, Socket &socket);
 
          };
 
@@ -420,6 +383,42 @@ namespace casual
 
             /* Poll filter */
             std::unique_ptr<struct pollfd[]> clients;
+         };
+
+         /**********************************************************************\
+          *  SocketEventHandler
+         \**********************************************************************/
+
+         class SocketEventHandler {
+
+         public:
+
+            /*
+             * Create and destroys a socket handler
+             */
+            SocketEventHandler() = default;
+            virtual ~SocketEventHandler() = default;
+
+            /*
+             * The handle function
+             */
+            int handle (int events, Socket &socket);
+
+            /*
+             * Types this handler handles
+             */
+            virtual int events() const = 0;
+
+         protected:
+
+            /*
+             * Functions that gets called whenever an event occurs for the socket
+             */
+            virtual int dataCanBeRead (int events, Socket &socket);
+            virtual int dataCanBeWritten (int events, Socket &socket);
+            virtual int hangup (int events, Socket &socket);
+            virtual int error (int events, Socket &socket);
+
          };
 
       }

@@ -27,12 +27,12 @@ SetLibraryPaths( LIBRARY_PATHS)
 # Gateway library
 #
 Compile( "source/gateway.cpp", "obj/gateway.o")
-Compile( "source/presentation_layer.cpp", "obj/presentation_layer.o")
+Compile( "source/wire.cpp", "obj/wire.o")
 Compile( "source/ipc.cpp", "obj/ipc.o")
 
 LinkLibrary( "casual-gateway", 
 	["obj/gateway.o",
-	"obj/presentation_layer.o",
+	"obj/wire.o",
 	"obj/ipc.o"],
 	["casual-common",
 	"casual-sf",

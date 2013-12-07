@@ -12,7 +12,7 @@
 #include "common/types.h"
 #include "common/uuid.h"
 
-#include "gateway/presentation_layer.h"
+#include "gateway/wire.h"
 
 /*
  * STL
