@@ -30,6 +30,7 @@
  * Casual common
  */
 #include "common/logger.h"
+#include "common/marshal.h"
 #include "gateway/std14.h"
 #include "gateway/ipc.h"
 #include "gateway/listener.h"
@@ -50,7 +51,7 @@ namespace casual
        *  ConnectHandler
       \**********************************************************************/
 
-      ConnectHandler::ConnectHandler (GatewayState &ls) : state (ls)
+      ConnectHandler::ConnectHandler (GatewayState &ls) : gatewayState (ls)
       {
       }
 
@@ -70,7 +71,7 @@ namespace casual
       {
          std::unique_ptr<common::ipc::Socket> pS;
 
-         common::logger::information << "SERVER: Incoming connection";
+         common::logger::information << "SERVER: Incoming connection, event = " << events;
 
          /* Accept the connection */
          pS = socket.accept();
@@ -82,33 +83,33 @@ namespace casual
 
          /* Add an eventhandler to the socket */
          std::unique_ptr<common::ipc::SocketEventHandler> pRL;
-         pRL.reset (new RegisterHandler(state));
+         pRL.reset (new RegisterHandler(gatewayState));
          pS->setEventHandler (pRL);
 
          /* Add the socket to the group and continue with the business */
          std::shared_ptr<common::ipc::Socket> pP = std::shared_ptr<common::ipc::Socket>(pS.release());
-         state.listOfAcceptedConnections.push_back (pP);
+         gatewayState.listOfAcceptedConnections.push_back (pP);
 
          /* Add the socket to the group that we are polling */
-         state.socketGroupServer.addSocket(pP);
+         gatewayState.socketGroupServer.addSocket(pP);
       }
 
       /**********************************************************************\
-       *  Register
+       *  BaseHandler
       \**********************************************************************/
 
-      RegisterHandler::RegisterHandler (GatewayState &ls) : state (ls)
+      BaseHandler::BaseHandler (GatewayState &ls) : gatewayState (ls)
       {
       }
 
-      RegisterHandler::~RegisterHandler()
+      BaseHandler::~BaseHandler()
       {
       }
 
       /*
        * Types this handler handles
        */
-      int RegisterHandler::events() const
+      int BaseHandler::events() const
       {
          /* We only handle normal priority data */
          return POLLRDNORM | POLLWRNORM;
@@ -117,7 +118,7 @@ namespace casual
       /*
        * Reads the message
        */
-      bool RegisterHandler::readMessage ()
+      bool BaseHandler::readMessage ()
       {
          bool complete = false;
          int byte_to_read;
@@ -153,7 +154,7 @@ namespace casual
       /*
        * Header is 'C', 'A', 'S', 'L', 4 bytes length, i.e. total 8 bytes
        */
-      bool RegisterHandler::locateHeader ()
+      bool BaseHandler::locateHeader ()
       {
          bool found = false;
 
@@ -171,7 +172,8 @@ namespace casual
                         found = true;
                         message_size = ntohl (*(reinterpret_cast<uint32_t *>(&buffer[position+4])));
                         position +=8;
-                        message.resize (message_size);
+                        if (message.size()>message_size)
+                           message.resize (message_size);
                         message_read = 0;
 
                      } else {
@@ -203,7 +205,7 @@ namespace casual
       /*
        * Gets called whenever there is data to be read from the socket.
        */
-      int RegisterHandler::dataCanBeRead (int events, common::ipc::Socket &socket)
+      int BaseHandler::dataCanBeRead (int events, common::ipc::Socket &socket)
       {
          /* Read as much data as possible, i.e. try always to fill up the buffer */
          int numberOfBytes = 0;
@@ -218,10 +220,10 @@ namespace casual
             if (state == wait_for_header) {
 
                /* Locate the header in the data stream */
-               common::logger::information << "Trying to locate header 'CASL' - Buffer size = " << buffer_size << " position = " << position;
+               common::logger::information << "BASEHANDLER : Trying to locate header 'CASL' - Buffer size = " << buffer_size << " position = " << position;
                if (locateHeader ())
                {
-                  common::logger::information << "Header located, message size = " << message_size;
+                  common::logger::information << "BASEHANDLER : Header located, message size = " << message_size;
 
                   /* Change state */
                   state = read_message;
@@ -231,15 +233,15 @@ namespace casual
             /* Are we in message read state */
             if (state == read_message) {
 
-               common::logger::information << "Reading message buffer size = " << buffer_size << " position " << position;
-               common::logger::information << "Reading message current message size " << message_read << " need " << message_size;
+               common::logger::information << "BASEHANDLER : Reading message buffer size = " << buffer_size << " position " << position;
+               common::logger::information << "BASEHANDLER : Reading message current message size " << message_read << " need " << message_size;
                if (readMessage ()) {
-                  common::logger::information << "Message is completed, message size = " << message_size;
+                  common::logger::information << "BASEHANDLER : Message is completed, message size = " << message_size;
 
                   /* Change state */
                   state = message_complete;
                } else {
-                  common::logger::information << "Message is not complete, message_size = " << message_size << " message_read = " << message_read;
+                  common::logger::information << "BASEHANDLER : Message is not complete, message_size = " << message_size << " message_read = " << message_read;
                }
 
             }
@@ -248,7 +250,7 @@ namespace casual
             if (state == message_complete) {
 
             }
-               common::logger::information << "Handle message, message size = " << message_size;
+               common::logger::information << "BASEHANDLER : Handle message, message size = " << message_size;
                handleMessage ();
 
                /* Change state */
@@ -264,13 +266,13 @@ namespace casual
                if (errno == EINTR) {
 
                   /* Inerrupted */
-                  common::logger::information << "RegisterHandler : Interrupted";
+                  common::logger::information << "BASEHANDLER : Interrupted";
 
                } else {
-                  common::logger::warning << "RegisterHandler : Error during socket read " << errno << "=>" << strerror (errno);
+                  common::logger::warning << "BASEHANDLER : Error during socket read " << errno << "=>" << strerror (errno);
                }
             } else {
-               common::logger::information << "RegisterHandler : Would block " << errno << "=>" << strerror (errno);
+               common::logger::information << "BASEHANDLER : Would block " << errno << "=>" << strerror (errno);
             }
          }
 
@@ -286,10 +288,38 @@ namespace casual
       /*
        * Gets called whenever data can be written to the buffer
        */
-      int RegisterHandler::dataCanBeWritten (int events, common::ipc::Socket &socket)
+      int BaseHandler::dataCanBeWritten (int events, common::ipc::Socket &socket)
       {
       }
 
+      /**********************************************************************\
+       *  RegisterHandler
+      \**********************************************************************/
+
+      /*
+       * Creates the register handler
+       */
+      RegisterHandler::RegisterHandler(GatewayState &state) : BaseHandler (state)
+      {
+
+      }
+
+      /*
+       * Destroys the registerhandler
+       */
+      RegisterHandler::~RegisterHandler()
+      {
+      }
+
+      /*
+       * Handle the incoming message
+       */
+      bool RegisterHandler::handleMessage()
+      {
+         common::logger::information << "REGISTERHANDLER : Incoming message";
+         /* Register the client, and change the sockets handler */
+         return true;
+      }
    }
 }
 

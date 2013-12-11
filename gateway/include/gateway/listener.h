@@ -11,6 +11,7 @@
 /*
  * Casual
  */
+#include "common/marshal.h"
 #include "gateway/ipc.h"
 
 /*
@@ -31,6 +32,7 @@ namespace casual
 
         /*
          * List of all sockets that are connected, by we are waiting for a register
+         * message from the client to announce its name and services
          */
         std::list<std::shared_ptr<common::ipc::Socket>> listOfAcceptedConnections;
 
@@ -70,23 +72,23 @@ namespace casual
      private:
 
         /* The state */
-        GatewayState &state;
+        GatewayState &gatewayState;
 
      };
 
      /**********************************************************************\
-      *  The register eventhandler
+      *  The base eventhandler
      \**********************************************************************/
 
-     class RegisterHandler : public common::ipc::SocketEventHandler {
+     class BaseHandler : public common::ipc::SocketEventHandler {
 
      public:
 
         /*
          * Constructors destructors
          */
-        RegisterHandler (GatewayState &ls);
-        ~RegisterHandler();
+        BaseHandler (GatewayState &ls);
+        virtual ~BaseHandler();
 
         /*
          * Types this handler handles
@@ -117,17 +119,17 @@ namespace casual
          * Virtual function that gets called when a complete message has arrived. Returns true if the message
          * has been processed.
          */
-        bool handleMessage();
+        virtual bool handleMessage() = 0;
 
      private:
 
-        /* Message information */
+        /* Message state machine */
         enum { wait_for_header, read_message, message_complete } state = wait_for_header;
 
         /* Data buffer */
-        const int maxBufferSize = 1024; /* Maximum size of the buffer */
+        static const int maxBufferSize = 1024; /* Maximum size of the buffer */
         char buffer [maxBufferSize]; /* The actual buffer */
-        int position = 0;
+        int position = 0;  /* Position in the buffer, where our cursor is located */
         int buffer_size = 0; /* Current buffer size */
 
         /* Message buffer */
@@ -135,10 +137,31 @@ namespace casual
         int message_read = 0; /* Currently read bytes of the message */
         common::binary_type message; /* The actual mesage */
 
-        /* Message */
-
         /* The state */
-        GatewayState &state;
+        GatewayState &gatewayState;
+
+     };
+
+     /**********************************************************************\
+      *  The base eventhandler
+     \**********************************************************************/
+
+     class RegisterHandler : public BaseHandler {
+
+     public:
+
+        /*
+         * Constructors destructors
+         */
+        RegisterHandler (GatewayState &ls);
+        ~RegisterHandler();
+
+     protected:
+
+        /*
+         * The function that handles registrations of gateways.
+         */
+        bool handleMessage();
 
      };
 
