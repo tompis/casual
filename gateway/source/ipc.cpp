@@ -675,20 +675,34 @@ namespace casual
          {
             int ready = -1;
 
+            /*
+             * Work on a copy of the socketlist so it is allowed to alter the content of the socketgroup
+             * during poll and eventhandling.
+             */
+            std::list<std::shared_ptr<Socket>> localListOfSockets(listOfSockets);
+
+            /* Generate a pollfilter, could be pre generated or dirty. We only regenreate it if it is dirty. */
+            if (dirty) {
+               generatePollFilter();
+               dirty = false;
+            }
+
             /* Only poll if we got any sockets */
-            if (listOfSockets.size()>0) {
+            if (localListOfSockets.size()>0) {
 
                /* Wait for something to happen on the poll filters */
-               ready = ::poll (clients.get(), listOfSockets.size(), timeout);
+               ready = ::poll (clients.get(), localListOfSockets.size(), timeout);
                if (ready > 0) {
                   int n = 0;
 
                   /* Loop through all clients to see if anything has happened */
-                  std::for_each(listOfSockets.begin(), listOfSockets.end(),
-                        [&](Socket *pSocket) {
+                  std::for_each(localListOfSockets.begin(), localListOfSockets.end(),
+                        [&](std::shared_ptr<Socket> pSocket)
+                        {
                            if (clients[n].revents!=0)
                               pSocket->handle (clients[n].revents);
-                           }
+                           n++;
+                        }
                   );
 
                } else {
@@ -698,6 +712,7 @@ namespace casual
                }
             }
 
+            /*  Report back how many sockets got fired in this polling sweep */
             return ready;
          }
 
@@ -709,35 +724,38 @@ namespace casual
             int n = 0;
             clients.reset (new struct pollfd[listOfSockets.size()]);
 
-            for_each(listOfSockets.begin(),listOfSockets.end(),[&](Socket* socket)
+            /* For every socket in the group add it to the pollfilter */
+            std::for_each(listOfSockets.begin(),listOfSockets.end(),[&](std::shared_ptr<Socket> pSocket)
             {
-               clients[n].fd = socket->getSocket();
-               if (socket->getEventHandler()!=0)
-                  clients[n].events = socket->getEventHandler()->events();
+               clients[n].fd = pSocket->getSocket();
+               if (pSocket->getEventHandler()!=0)
+                  clients[n].events = pSocket->getEventHandler()->events();
                else
                   clients[n].events = 0;
                clients[n].revents = 0;
                n++;
             });
 
+            /* We have regenerated the poll structure, we are no longer dirty */
+            dirty = false;
          }
 
          /*
           * Adds a socket to the group and regenerate the event flag array
           */
-         void SocketGroup::addSocket (Socket *pSocket)
+         void SocketGroup::addSocket (std::shared_ptr<Socket>  pSocket)
          {
             listOfSockets.push_back(pSocket);
-            generatePollFilter();
+            dirty = true;
          }
 
          /*
           * Remove a socket from the group and regenerate the envet flag array
           */
-         void SocketGroup::removeSocket (Socket *pSocket)
+         void SocketGroup::removeSocket (std::shared_ptr<Socket>  pSocket)
          {
             listOfSockets.remove(pSocket);
-            generatePollFilter();
+            dirty = true;
          }
 
       }

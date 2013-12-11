@@ -51,6 +51,12 @@ namespace casual
             ~Signal() = default;
 
             /*
+             * No copy and assignment possible with sockets, there can only be one!
+             */
+            Signal (const Signal &other) = delete;
+            Signal &operator=(const Signal &other) = delete;
+
+            /*
              * Wait for the signal
              */
             void wait();
@@ -149,6 +155,13 @@ namespace casual
          public:
 
             /*
+             * Constructs and destroys the resolver
+             */
+            Resolver() = default;
+            Resolver (std::string connectionString);
+            ~Resolver() = default;
+
+            /*
              * Iterators
              */
             typedef std::list<Endpoint>::const_iterator const_iterator;
@@ -160,11 +173,10 @@ namespace casual
             const_iterator end();
 
             /*
-             * Constructs and destroys the resolver
+             * No copy and assignment possible with sockets, there can only be one!
              */
-            Resolver() = default;
-            Resolver (std::string connectionString);
-            ~Resolver() = default;
+            Resolver (const Resolver &other) = delete;
+            Resolver &operator=(const Resolver &other) = delete;
 
             /*
              * Resolves a connection string to one or several endpoints. Use the iterator to traverse the list
@@ -328,6 +340,12 @@ namespace casual
             ~SocketPair();
 
             /*
+             * No copy and assignment possible with sockets, there can only be one!
+             */
+            SocketPair (const SocketPair &other) = delete;
+            SocketPair &operator=(const SocketPair &other) = delete;
+
+            /*
              * Getters for the socketpair A and B side, moves the ownership!!!!
              */
             std::unique_ptr<Socket> getSocketA ();
@@ -357,6 +375,12 @@ namespace casual
             ~SocketGroup() = default;
 
             /*
+             * No copy and assignment possible with sockets, there can only be one!
+             */
+            SocketGroup (const SocketGroup &other) = delete;
+            SocketGroup &operator=(const SocketGroup &other) = delete;
+
+            /*
              * Polls all sockets
              *
              * Returns 0 on timeout, 1 on event occured and -1 on errorued and calls the eventhandler for all
@@ -367,8 +391,8 @@ namespace casual
             /*
              * Add a socket, ownership is not taken
              */
-            void addSocket(Socket *pSocket);
-            void removeSocket (Socket *pSocket);
+            void addSocket(std::shared_ptr<Socket> pSocket);
+            void removeSocket (std::shared_ptr<Socket> pSocket);
 
          protected:
          private:
@@ -378,10 +402,15 @@ namespace casual
              */
             void generatePollFilter();
 
-            /* List of all sockets in the group */
-            std::list<Socket *> listOfSockets;
+            /*
+             * List of all sockets in the group
+             */
+            std::list<std::shared_ptr<Socket>> listOfSockets;
 
-            /* Poll filter */
+            /*
+             * Poll structure
+             */
+            bool dirty = false;
             std::unique_ptr<struct pollfd[]> clients;
          };
 
@@ -398,6 +427,12 @@ namespace casual
              */
             SocketEventHandler() = default;
             virtual ~SocketEventHandler() = default;
+
+            /*
+             * No copy and assignment possible with sockets, there can only be one!
+             */
+            SocketEventHandler (const SocketEventHandler &other) = delete;
+            SocketEventHandler &operator=(const SocketEventHandler &other) = delete;
 
             /*
              * The handle function
