@@ -92,6 +92,11 @@ namespace casual
          public:
 
             /*
+             * Normal constructor, empty endpoint
+             */
+            Endpoint () = default;
+
+            /*
              * Destructor
              */
             virtual ~Endpoint ();
@@ -119,11 +124,11 @@ namespace casual
             /*
              * The POSIX data
              */
-            std::unique_ptr<char[]> m_data;
-            std::size_t m_size;
-            int family;
-            int protocol;
-            int type;
+            std::unique_ptr<char[]> m_data = nullptr;
+            std::size_t m_size = 0;
+            int family = AF_INET;
+            int protocol = IPPROTO_TCP;
+            int type = SOCK_STREAM;
 
             /*
              * Information string builders for various families
@@ -383,7 +388,7 @@ namespace casual
             /*
              * Polls all sockets
              *
-             * Returns 0 on timeout, 1 on event occured and -1 on errorued and calls the eventhandler for all
+             * Returns 0 on timeout, 1 on event occured and -1 on error and calls the eventhandler for all
              * sockets in the group.
              */
             int poll(int timeout);

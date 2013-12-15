@@ -12,6 +12,7 @@
  * Casual
  */
 #include "common/marshal.h"
+#include "gateway/wire.h"
 #include "gateway/ipc.h"
 
 /*
@@ -21,61 +22,6 @@ namespace casual
 {
   namespace gateway
   {
-     /**********************************************************************\
-      *  GatewayState
-     \**********************************************************************/
-
-     /*
-      * Holds the state of the listener thread
-      */
-     struct GatewayState {
-
-        /*
-         * List of all sockets that are connected, by we are waiting for a register
-         * message from the client to announce its name and services
-         */
-        std::list<std::shared_ptr<common::ipc::Socket>> listOfAcceptedConnections;
-
-        /*
-         * The socketgroup we are polling for the listener and register service
-         */
-         common::ipc::SocketGroup socketGroupServer;
-
-     };
-
-     /**********************************************************************\
-      *  The listeners eventhandler
-     \**********************************************************************/
-
-     class ConnectHandler : public common::ipc::SocketEventHandler {
-
-     public:
-
-        /*
-         * Constructors destructors
-         */
-        ConnectHandler (GatewayState &ls);
-        ~ConnectHandler();
-
-        /*
-         * Types this handler handles
-         */
-        int events() const;
-
-     protected:
-
-        /*
-         * Functions that gets called whenever an event occurs for the socket
-         */
-        int dataCanBeRead (int events, common::ipc::Socket &socket);
-
-     private:
-
-        /* The state */
-        GatewayState &gatewayState;
-
-     };
-
      /**********************************************************************\
       *  The base eventhandler
      \**********************************************************************/
@@ -87,13 +33,18 @@ namespace casual
         /*
          * Constructors destructors
          */
-        BaseHandler (GatewayState &ls);
+        BaseHandler ();
         virtual ~BaseHandler();
 
         /*
          * Types this handler handles
          */
         int events() const;
+
+        /*
+         * Writes messages to the other end
+         */
+        bool writeMessage (common::binary_type &message);
 
      protected:
 
@@ -121,14 +72,29 @@ namespace casual
          */
         virtual bool handleMessage() = 0;
 
+        /*
+         * Fill the write buffer from the list of messages
+         */
+        bool fillWriteBuffer();
+
+        /*
+         * Fills the buffer and then writes it to the socket until there is no more data in the buffer or the
+         * message list or if the socket is full
+         */
+        bool writeAll(common::ipc::Socket &socket);
+
      private:
+
+        /*
+         * Reader area
+         */
 
         /* Message state machine */
         enum { wait_for_header, read_message, message_complete } state = wait_for_header;
 
         /* Data buffer */
         static const int maxBufferSize = 1024; /* Maximum size of the buffer */
-        char buffer [maxBufferSize]; /* The actual buffer */
+        std::unique_ptr<char[]> buffer;
         int position = 0;  /* Position in the buffer, where our cursor is located */
         int buffer_size = 0; /* Current buffer size */
 
@@ -137,8 +103,54 @@ namespace casual
         int message_read = 0; /* Currently read bytes of the message */
         common::binary_type message; /* The actual mesage */
 
-        /* The state */
-        GatewayState &gatewayState;
+        /*
+         * Writer area
+         */
+
+        /* Holds the message and the current write position */
+        class Buffer {
+
+        public:
+
+           /*
+            * Constructor and destructor
+            */
+           Buffer (common::binary_type &message);
+           ~Buffer () = default;
+
+           /*
+            * Returns with the current buffer
+            */
+           const void *getBuffer ();
+
+           /*
+            * Returns with the number of bytes left in the buffer
+            */
+           int getSize();
+
+           /*
+            * Move cursor
+            */
+           void moveCursor(int move);
+
+        private:
+
+           /*
+            * Internal data
+            */
+           casual::common::marshal::output::NWBOBinary buffer;
+           int position;
+        };
+
+        /* List of messages to be sent */
+        std::list<std::unique_ptr<Buffer>> listOfMessages;
+
+        /* The write buffer */
+        bool possibleToWrite = false;
+        static const int maxWriteBufferSize = 1024; /* Maximum size of the buffer */
+        std::unique_ptr<char[]> writeBuffer; /* The actual buffer */
+        int writePosition = 0;  /* Position in the buffer, where our cursor is located */
+        int writeBuffer_size = 0; /* Current buffer size */
 
      };
 
@@ -146,15 +158,15 @@ namespace casual
       *  The base eventhandler
      \**********************************************************************/
 
-     class RegisterHandler : public BaseHandler {
+     class ServerHandler : public BaseHandler {
 
      public:
 
         /*
          * Constructors destructors
          */
-        RegisterHandler (GatewayState &ls);
-        ~RegisterHandler();
+        ServerHandler ();
+        ~ServerHandler();
 
      protected:
 

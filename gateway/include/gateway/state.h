@@ -22,6 +22,8 @@
 #include <mutex>
 #include <regex>
 
+#include "gateway/ipc.h"
+
 /*
 ** Namespace casual::gateway
 */
@@ -56,7 +58,7 @@ namespace casual
        struct Gateway {
           std::string name="unknown";
           std::string endpoint="*:55555";
-          int housekeeping = 1;
+          int housekeeping = 10;
           std::vector<RemoteGateway> remotegateways;
 
           template< typename A>
@@ -92,6 +94,12 @@ namespace casual
         * The configuration
         */
        configuration::Gateway configuration;
+
+       /*
+        * Master socket
+        */
+       common::ipc::Endpoint endpointMaster; /* The endpoint to our tcp main server */
+       std::shared_ptr<common::ipc::Socket> socketMaster = nullptr; /* The socket to our tcp main server */
 
     };
 

@@ -5,6 +5,16 @@
 //!     Author: dnulnets
 //!
 
+#include <sys/types.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <poll.h>
+
 /*
 ** Standard casual header files
 */
@@ -16,8 +26,10 @@
 #include "common/message_dispatch.h"
 #include "common/signal.h"
 
+#include "gateway/std14.h"
 #include "gateway/gateway.h"
 #include "gateway/ipc.h"
+#include "gateway/master.h"
 
 #include "sf/archive_maker.h"
 
@@ -79,8 +91,7 @@ namespace casual
     /*
     ** Gateway constructor
     */ 
-    Gateway::Gateway()
-      : m_gatewayQueueFile("/tmp/casual/gateway")
+    Gateway::Gateway() : m_gatewayQueueFile("/tmp/casual/gateway")
     {
     }
     
@@ -115,7 +126,7 @@ namespace casual
     }
 
     /*
-     * SHuts down the gateway nicely
+     * Shuts down the gateway nicely
      */
     void Gateway::shutdown ()
     {
@@ -139,13 +150,23 @@ namespace casual
        reader >> CASUAL_MAKE_NVP(gateway);
        common::logger::information << "Gateway " << m_state.configuration.name << " starting up";
 
-       common::ipc::Resolver resolver;
-       if (resolver.resolve (m_state.configuration.endpoint)<0) {
-          common::logger::error << "Unable to resolve address";
-       }
-       if (resolver.resolve ("localhost:12345")<0) {
-          common::logger::error << "Unable to resolve address";
-       }
+       /*
+        * Set up the gateway
+        */
+       boot();
+
+       MasterState ms(m_state);
+       MasterThread mt(ms);
+       mt.start();
+       std::chrono::milliseconds dura( 10000 );
+       std::this_thread::sleep_for( dura );
+       mt.stop();
+
+       /*
+        * Shutdown the gateway
+        */
+       shutdown();
+
     }
         
   } // gateway

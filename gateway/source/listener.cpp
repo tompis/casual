@@ -31,6 +31,7 @@
  */
 #include "common/logger.h"
 #include "common/marshal.h"
+#include "gateway/wire.h"
 #include "gateway/std14.h"
 #include "gateway/ipc.h"
 #include "gateway/listener.h"
@@ -44,62 +45,19 @@ namespace casual
    {
 
       /**********************************************************************\
-       *  ListenerState
-      \**********************************************************************/
-
-      /**********************************************************************\
-       *  ConnectHandler
-      \**********************************************************************/
-
-      ConnectHandler::ConnectHandler (GatewayState &ls) : gatewayState (ls)
-      {
-      }
-
-      ConnectHandler::~ConnectHandler()
-      {
-      }
-
-      /*
-       * Types this handler handles
-       */
-      int ConnectHandler::events() const
-      {
-         return POLLIN;
-      }
-
-      int ConnectHandler::dataCanBeRead (int events, common::ipc::Socket &socket)
-      {
-         std::unique_ptr<common::ipc::Socket> pS;
-
-         common::logger::information << "SERVER: Incoming connection, event = " << events;
-
-         /* Accept the connection */
-         pS = socket.accept();
-         if (pS==0L) {
-            common::logger::warning << "SERVER: Incoming connection not accepted";
-         } else {
-            common::logger::information << "SERVER: Incoming connection accepted";
-         }
-
-         /* Add an eventhandler to the socket */
-         std::unique_ptr<common::ipc::SocketEventHandler> pRL;
-         pRL.reset (new RegisterHandler(gatewayState));
-         pS->setEventHandler (pRL);
-
-         /* Add the socket to the group and continue with the business */
-         std::shared_ptr<common::ipc::Socket> pP = std::shared_ptr<common::ipc::Socket>(pS.release());
-         gatewayState.listOfAcceptedConnections.push_back (pP);
-
-         /* Add the socket to the group that we are polling */
-         gatewayState.socketGroupServer.addSocket(pP);
-      }
-
-      /**********************************************************************\
        *  BaseHandler
       \**********************************************************************/
 
-      BaseHandler::BaseHandler (GatewayState &ls) : gatewayState (ls)
+      BaseHandler::BaseHandler ()
       {
+         /*
+          * Allocate the read and write buffers
+          */
+         buffer = std::unique_ptr<char[]>(new char[maxBufferSize]);
+         writeBuffer = std::unique_ptr<char[]>(new char[maxWriteBufferSize]);
+         writeBuffer_size = buffer_size = position = writePosition = message_size = message_read = 0;
+         possibleToWrite = false;
+         state = wait_for_header;
       }
 
       BaseHandler::~BaseHandler()
@@ -116,7 +74,7 @@ namespace casual
       }
 
       /*
-       * Reads the message
+       * Reads the message. Returns true if the message is completely read, false otherwise.
        */
       bool BaseHandler::readMessage ()
       {
@@ -152,15 +110,16 @@ namespace casual
       }
 
       /*
-       * Header is 'C', 'A', 'S', 'L', 4 bytes length, i.e. total 8 bytes
+       * Header is 'C', 'A', 'S', 'L', 4 bytes length, i.e. total 8 bytes. Returns true if the header was located
+       * and false otherwise.
        */
       bool BaseHandler::locateHeader ()
       {
          bool found = false;
 
-         /* We need at least 8 characters to locate the message, loop until we find it. It is called message
-          * synchronization. Try to locate the magic string "CASL" */
-         while (buffer_size - position >= 8 && !found) {
+         /* We need at least 12 characters to locate the message header, loop until we find it. It is called message
+          * synchronization. Try to locate the magic string "CASL" followed by message size */
+         while (buffer_size - position >= 12 && !found) {
 
             /* Locate the header magic number */
             if(buffer[position] == 'C') {
@@ -170,8 +129,8 @@ namespace casual
 
                         /* Header found, get the length of the message */
                         found = true;
-                        message_size = ntohl (*(reinterpret_cast<uint32_t *>(&buffer[position+4])));
-                        position +=8;
+                        message_size = casual::common::marshal::__htonll (*(reinterpret_cast<uint64_t *>(&buffer[position+4])));
+                        position +=12;
                         if (message.size()>message_size)
                            message.resize (message_size);
                         message_read = 0;
@@ -220,10 +179,10 @@ namespace casual
             if (state == wait_for_header) {
 
                /* Locate the header in the data stream */
-               common::logger::information << "BASEHANDLER : Trying to locate header 'CASL' - Buffer size = " << buffer_size << " position = " << position;
+               common::logger::information << "BASEHANDLER::read : Trying to locate header 'CASL' - Buffer size = " << buffer_size << " position = " << position;
                if (locateHeader ())
                {
-                  common::logger::information << "BASEHANDLER : Header located, message size = " << message_size;
+                  common::logger::information << "BASEHANDLER::read : Header located, message size = " << message_size;
 
                   /* Change state */
                   state = read_message;
@@ -233,15 +192,15 @@ namespace casual
             /* Are we in message read state */
             if (state == read_message) {
 
-               common::logger::information << "BASEHANDLER : Reading message buffer size = " << buffer_size << " position " << position;
-               common::logger::information << "BASEHANDLER : Reading message current message size " << message_read << " need " << message_size;
+               common::logger::information << "BASEHANDLER::read : Reading message buffer size = " << buffer_size << " position " << position;
+               common::logger::information << "BASEHANDLER::read : Reading message current message size " << message_read << " need " << message_size;
                if (readMessage ()) {
-                  common::logger::information << "BASEHANDLER : Message is completed, message size = " << message_size;
+                  common::logger::information << "BASEHANDLER::read : Message is completed, message size = " << message_size;
 
                   /* Change state */
                   state = message_complete;
                } else {
-                  common::logger::information << "BASEHANDLER : Message is not complete, message_size = " << message_size << " message_read = " << message_read;
+                  common::logger::information << "BASEHANDLER::read : Message is not complete, message_size = " << message_size << " message_read = " << message_read;
                }
 
             }
@@ -250,7 +209,7 @@ namespace casual
             if (state == message_complete) {
 
             }
-               common::logger::information << "BASEHANDLER : Handle message, message size = " << message_size;
+               common::logger::information << "BASEHANDLER::read : Handle message, message size = " << message_size;
                handleMessage ();
 
                /* Change state */
@@ -266,13 +225,13 @@ namespace casual
                if (errno == EINTR) {
 
                   /* Inerrupted */
-                  common::logger::information << "BASEHANDLER : Interrupted";
+                  common::logger::information << "BASEHANDLER::read : Interrupted";
 
                } else {
-                  common::logger::warning << "BASEHANDLER : Error during socket read " << errno << "=>" << strerror (errno);
+                  common::logger::warning << "BASEHANDLER::read : Error during socket read " << errno << "=>" << strerror (errno);
                }
             } else {
-               common::logger::information << "BASEHANDLER : Would block " << errno << "=>" << strerror (errno);
+               common::logger::information << "BASEHANDLER::read : Would block " << errno << "=>" << strerror (errno);
             }
          }
 
@@ -286,10 +245,194 @@ namespace casual
       }
 
       /*
+       * Move data from the list of messages to the write buffer. Return true if any data was moved, false
+       * otherwise.
+       */
+      bool BaseHandler::fillWriteBuffer ()
+      {
+         int numberOfBytes, numberOfBytesToMove;
+         const void *pData;
+         bool bDataMoved = false;
+
+         /*
+          * Fill up the write bufferwith all messages waiting in the queue until all messages are written or
+          * the buffer is full.
+          */
+         while (writeBuffer_size < maxWriteBufferSize && listOfMessages.size()>0) {
+
+            /*
+             * First message always
+             */
+            numberOfBytes = listOfMessages.front()->getSize();
+            pData = listOfMessages.front()->getBuffer();
+
+            /*
+             * Calculate the number of bytes we can take from the message
+             */
+            numberOfBytesToMove = maxWriteBufferSize - writeBuffer_size;
+            if (numberOfBytesToMove > numberOfBytes)
+               numberOfBytesToMove = numberOfBytes;
+
+            /*
+             * Move the data, size and cursor of the message
+             */
+            bDataMoved = true;
+            memcpy (&writeBuffer[writeBuffer_size], pData, numberOfBytesToMove);
+            writeBuffer_size += numberOfBytesToMove;
+            listOfMessages.front()->moveCursor (numberOfBytesToMove);
+
+            /*
+             * If no more data in the message. Get rid of it from the list of messages to send.
+             */
+            listOfMessages.front()->moveCursor (numberOfBytesToMove);
+            if (listOfMessages.front()->getSize()==0) {
+               listOfMessages.pop_front();
+            }
+
+            /*
+             * Do it again if the write buffer is not full and we have more messages
+             */
+         }
+
+         /*
+          * All is well
+          */
+         return bDataMoved;
+      }
+
+      /*
+       * Fills the buffer and then writes it to the socket until there is no more data in the buffer or the
+       * message list or if the socket is full. Returns true if any data was written, false otherwise.
+       */
+      bool BaseHandler::writeAll(common::ipc::Socket &socket)
+      {
+         bool bWrite = false;
+
+         /* Fill up the buffer */
+         if (possibleToWrite)
+            fillWriteBuffer();
+
+         /* Only if we can write to the socket */
+         while (possibleToWrite && writeBuffer_size-writePosition>0) {
+
+            /* Write to the socket */
+            common::logger::information << "BASEHANDLER::write : Write buffer size=" << writeBuffer_size << " position=" << writePosition << " towrite=" << writeBuffer_size - writePosition;
+            int bytesWritten = socket.write(&writeBuffer[writePosition], writeBuffer_size-writePosition);
+            common::logger::information << "BASEHANDLER::write : Wrote size=" << bytesWritten;
+            if (bytesWritten>=0) {
+
+               /* Data was written */
+               bWrite = true;
+
+               /* Did we write all? If not the socket is probably full */
+               if (writeBuffer_size-writePosition != bytesWritten)
+                  possibleToWrite = false;
+
+               /* Advance the position */
+               writePosition += bytesWritten;
+
+               /* Are we at the end ? If so we need to fille it up with more data if we got any */
+               if (writePosition == writeBuffer_size) {
+                  writePosition = writeBuffer_size = 0;
+               }
+
+            } else {
+
+               /*
+                * Handle the error cases
+                */
+               if (errno != EAGAIN && errno != EWOULDBLOCK) {
+                  if (errno == EINTR) {
+
+                     /* Interrupted */
+                     common::logger::information << "BASEHANDLER::write : Interrupted";
+
+                  } else {
+                     common::logger::warning << "BASEHANDLER::write : Error during socket write " << errno << "=>" << strerror (errno);
+                  }
+               } else {
+                  possibleToWrite = false;
+                  common::logger::information << "BASEHANDLER::write : Would block " << errno << "=>" << strerror (errno);
+               }
+            }
+
+            /* Try to fill the buffer */
+            if (possibleToWrite)
+               fillWriteBuffer();
+         }
+
+         /* Return true if we wrote anything out through the socket */
+         return bWrite;
+      }
+
+      /*
        * Gets called whenever data can be written to the buffer
        */
       int BaseHandler::dataCanBeWritten (int events, common::ipc::Socket &socket)
       {
+         common::logger::information << "BASEHANDLER::write : Data can be written";
+
+         possibleToWrite = true;
+
+         /*
+          * Write data if we got any
+          */
+         writeAll(socket);
+      }
+
+      /*
+       * Write message
+       */
+      bool BaseHandler::writeMessage (common::binary_type &message)
+      {
+         common::logger::information << "BASEHANDLER::write : Write a message";
+
+         /*
+          * Add the message to the list
+          */
+         std::unique_ptr<Buffer> local = std::make_unique<Buffer>(message);
+         listOfMessages.push_back(std::move (local));
+
+         /*
+          * Write everything, hmm, how to handle this?
+          */
+         /* writeAll(); */
+
+      }
+
+      /**********************************************************************\
+       *  BaseHandler::Buffer
+      \**********************************************************************/
+      BaseHandler::Buffer::Buffer (common::binary_type &message)
+      {
+         int header = 0x4341534c;
+         buffer << header;
+         buffer << message;
+         position = 0;
+      }
+
+      /*
+       * Return the buffer for its current location
+       */
+      const void *BaseHandler::Buffer::getBuffer()
+      {
+         return static_cast<const void *>(&buffer.get()[position]);
+      }
+
+      /*
+       * Returns with the current size of the buffer
+       */
+      int BaseHandler::Buffer::getSize()
+      {
+         return buffer.get().size() - position;
+      }
+
+      /*
+       * Moves the cursor
+       */
+      void BaseHandler::Buffer::moveCursor(int move)
+      {
+         position += move;
       }
 
       /**********************************************************************\
@@ -299,7 +442,7 @@ namespace casual
       /*
        * Creates the register handler
        */
-      RegisterHandler::RegisterHandler(GatewayState &state) : BaseHandler (state)
+      ServerHandler::ServerHandler()
       {
 
       }
@@ -307,14 +450,14 @@ namespace casual
       /*
        * Destroys the registerhandler
        */
-      RegisterHandler::~RegisterHandler()
+      ServerHandler::~ServerHandler()
       {
       }
 
       /*
        * Handle the incoming message
        */
-      bool RegisterHandler::handleMessage()
+      bool ServerHandler::handleMessage()
       {
          common::logger::information << "REGISTERHANDLER : Incoming message";
          /* Register the client, and change the sockets handler */

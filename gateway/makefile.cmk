@@ -29,13 +29,15 @@ SetLibraryPaths( LIBRARY_PATHS)
 Compile( "source/gateway.cpp", "obj/gateway.o")
 Compile( "source/wire.cpp", "obj/wire.o")
 Compile( "source/listener.cpp", "obj/listener.o")
+Compile( "source/master.cpp", "obj/master.o")
 Compile( "source/ipc.cpp", "obj/ipc.o")
 
 LinkLibrary( "casual-gateway", 
 	["obj/gateway.o",
 	"obj/wire.o",
 	"obj/ipc.o",
-	"obj/listener.o"],
+	"obj/listener.o",
+	"obj/master.o"],
 	["casual-common",
 	"casual-sf",
 	"casual-xatmi",

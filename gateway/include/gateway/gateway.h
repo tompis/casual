@@ -90,6 +90,10 @@ namespace casual
       void start( const Settings& arguments);
       
     private:
+
+      /*
+       * Private constructor, this is a singleton.
+       */
       Gateway();
 
       /*
@@ -110,6 +114,7 @@ namespace casual
       common::ipc::receive::Queue& m_receiveQueue = common::ipc::getReceiveQueue();
 
     };
+
   } // broker
 } // casual
 
