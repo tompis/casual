@@ -95,12 +95,6 @@ namespace casual
         */
        configuration::Gateway configuration;
 
-       /*
-        * Master socket
-        */
-       common::ipc::Endpoint endpointMaster; /* The endpoint to our tcp main server */
-       std::shared_ptr<common::ipc::Socket> socketMaster = nullptr; /* The socket to our tcp main server */
-
     };
 
   } // broker

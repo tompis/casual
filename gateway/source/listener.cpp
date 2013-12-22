@@ -434,35 +434,6 @@ namespace casual
       {
          position += move;
       }
-
-      /**********************************************************************\
-       *  RegisterHandler
-      \**********************************************************************/
-
-      /*
-       * Creates the register handler
-       */
-      ServerHandler::ServerHandler()
-      {
-
-      }
-
-      /*
-       * Destroys the registerhandler
-       */
-      ServerHandler::~ServerHandler()
-      {
-      }
-
-      /*
-       * Handle the incoming message
-       */
-      bool ServerHandler::handleMessage()
-      {
-         common::logger::information << "REGISTERHANDLER : Incoming message";
-         /* Register the client, and change the sockets handler */
-         return true;
-      }
    }
 }
 

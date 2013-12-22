@@ -154,29 +154,6 @@ namespace casual
 
      };
 
-     /**********************************************************************\
-      *  The base eventhandler
-     \**********************************************************************/
-
-     class ServerHandler : public BaseHandler {
-
-     public:
-
-        /*
-         * Constructors destructors
-         */
-        ServerHandler ();
-        ~ServerHandler();
-
-     protected:
-
-        /*
-         * The function that handles registrations of gateways.
-         */
-        bool handleMessage();
-
-     };
-
   }
 }
 

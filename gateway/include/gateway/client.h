@@ -1,12 +1,12 @@
 /*
- * master.h
+ * client.h
  *
- *  Created on: 15 dec 2013
+ *  Created on: 16 dec 2013
  *      Author: tomas
  */
 
-#ifndef MASTER_H_
-#define MASTER_H_
+#ifndef CLIENT_H_
+#define CLIENT_H_
 
 #include <thread>
 
@@ -27,14 +27,14 @@ namespace casual
   {
 
      /*
-      * The state of the master thread
+      * The state of the Client thread
       */
-     struct MasterState {
+     struct ClientState {
 
         /*
          * Initializer
          */
-        MasterState (State &s);
+        ClientState (State &s);
 
         /*
          * The global gateway state
@@ -48,42 +48,34 @@ namespace casual
         bool bInitialized = false;
 
         /*
-         * If the master thread is running
+         * If the Client thread is running
          */
         bool bRunning = false;
-
-        /*
-         * Master socket
-         */
-        common::ipc::Endpoint endpoint;
-        std::shared_ptr<common::ipc::Socket> socket;
-
-        /*
-         * List of all sockets that are connected and where we are waiting for a register
-         * message from the client to announce its name and services so we know which thread
-         * to start.
-         */
-        std::list<std::shared_ptr<common::ipc::Socket>> listOfAcceptedConnections;
 
         /*
          * The socketgroup we are polling for the listener and register service
          */
          common::ipc::SocketGroup socketGroupServer;
+
+         /*
+          * Our main socket
+          */
      };
 
      /*
       * The thread that listens to incoming TCP connections
       */
-     class MasterThread
+     class ClientThread
      {
 
      public:
 
         /*
-         * Constructor andf destructor
+         * Constructor andf destructor, takes the gateway state as a parameter
          */
-        MasterThread (State &ms);
-        ~MasterThread ();
+        ClientThread (State &s);
+        ClientThread (State &s, common::ipc::Socket &socket);
+        ~ClientThread ();
 
         /*
          * Start the thread. Returns true if the thread has been started.
@@ -110,45 +102,43 @@ namespace casual
         std::unique_ptr<std::thread> thread = nullptr;
 
         /*
-         * The master state
+         * The Client state
          */
-        MasterState m_state;
+        ClientState m_state;
      };
 
      /**********************************************************************\
       *  The listeners eventhandler
      \**********************************************************************/
 
-     class MasterHandler : public common::ipc::SocketEventHandler {
+     class ClientHandler : public BaseHandler {
 
      public:
 
         /*
          * Constructors destructors
          */
-        MasterHandler (MasterState &s);
-        ~MasterHandler();
+        ClientHandler (ClientState &s);
+        ~ClientHandler();
 
         /*
-         * Types this handler handles
+         * Types of events this handler handles
          */
         int events() const;
 
      protected:
 
         /*
-         * Functions that gets called whenever an event occurs for the socket
+         * The function that handles registrations of gateways.
          */
-        int dataCanBeRead (int events, common::ipc::Socket &socket);
+        bool handleMessage();
 
      private:
 
-        /* The state */
-        MasterState &m_state;
-
+        /* The client state for the handler */
+        ClientState &m_state;
      };
   }
 }
 
-
-#endif /* MASTER_H_ */
+#endif /* CLIENT_H_ */

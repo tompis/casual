@@ -52,7 +52,6 @@ namespace casual
 
       MasterState::MasterState(State &s): m_global (s)
       {
-
       }
 
       /**********************************************************************\
@@ -63,8 +62,9 @@ namespace casual
        *  MasterHandler
       \**********************************************************************/
 
-      MasterHandler::MasterHandler (MasterState &ms) : m_state (ms)
+      MasterHandler::MasterHandler (MasterState &s) : m_state(s)
       {
+
       }
 
       MasterHandler::~MasterHandler()
@@ -91,11 +91,13 @@ namespace casual
             common::logger::warning << "MasterHandler::dataCanBeRead : Incoming connection not accepted";
          } else {
             common::logger::information << "MasterHandler::dataCanBeRead : Incoming connection accepted";
+
+            /* Start a client thread */
          }
 
          /* Add an eventhandler to the socket */
          std::unique_ptr<common::ipc::SocketEventHandler> pRL;
-         pRL.reset (new ServerHandler());
+         pRL.reset (new ClientHandler());
          pS->setEventHandler (pRL);
 
          /* Add the socket to the group and continue with the business */
@@ -110,7 +112,7 @@ namespace casual
        *  MasterThread
       \**********************************************************************/
 
-      MasterThread::MasterThread (MasterState &ms) : m_state (ms)
+      MasterThread::MasterThread (State &s) : m_state (s)
       {
          common::ipc::Resolver resolver;
 
@@ -126,7 +128,8 @@ namespace casual
          } else {
 
             /*
-             * Create the socket
+             * Create the socket, we assume the first one is the one to use for now. If this fail we should take
+             * the next in the list, but we do not do that just now. TODO!!!!
              */
             m_state.endpoint = resolver.get().front();
             m_state.socket = std::make_shared<common::ipc::Socket>(m_state.endpoint);
@@ -145,7 +148,7 @@ namespace casual
                m = m_state.socket->listen();
 
             /* All is well */
-            m_state.bInitialized = (m>=0) && (n>=0);
+            m_state.bInitialized |= (m>=0) && (n>=0);
             if (!m_state.bInitialized)
                common::logger::error << "MasterThread::MasterThread : Unable to initialized socket on " << m_state.m_global.configuration.endpoint;
          }
@@ -195,7 +198,7 @@ namespace casual
          common::logger::information << "Masterthread::stop : Start";
 
          /* Are we running ? */
-         if (thread != nullptr && m_state.bRunning) {
+         if (thread != nullptr) {
 
             /* Stop the thread */
             m_state.bRunning = false;
@@ -224,6 +227,7 @@ namespace casual
          /* Never ending loop */
          do {
 
+            /* Poll all sockets */
             status = m_state.socketGroupServer.poll(1000);
             if (status>0) {
                common::logger::information << "Masterthread::loop : Event happened";

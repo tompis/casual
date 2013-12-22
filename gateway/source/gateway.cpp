@@ -155,8 +155,10 @@ namespace casual
         */
        boot();
 
-       MasterState ms(m_state);
-       MasterThread mt(ms);
+       /*
+        * Start the master TCP server
+        */
+       MasterThread mt(m_state);
        mt.start();
        std::chrono::milliseconds dura( 10000 );
        std::this_thread::sleep_for( dura );
