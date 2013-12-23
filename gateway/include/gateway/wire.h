@@ -290,7 +290,7 @@ namespace casual
                 * We assume that the number of elements will always fit in 16 bits.
                 */
                template< typename T>
-               void write( std::vector< T>& value)
+               void write(std::vector< T>& value)
                {
                   writeIntegralU16( static_cast<uint16_t>(value.size()));
 

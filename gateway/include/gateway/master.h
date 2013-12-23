@@ -26,8 +26,13 @@ namespace casual
   namespace gateway
   {
 
+     /**********************************************************************\
+      *  The Masters State
+     \**********************************************************************/
+
      /*
-      * The state of the master thread
+      * The state of the master thread, it also holds a reference to the gateway state which is a global
+      * state.
       */
      struct MasterState {
 
@@ -37,8 +42,9 @@ namespace casual
         MasterState (State &s);
 
         /*
-         * The global gateway state
-         *
+         * The global gateway state, note that changing things in this state normally requires
+         * mutexlocking. The state has high granularity locks, so you need to check the state
+         * definition to know what to lock and not lock.
          */
         State &m_global;
 
@@ -59,20 +65,18 @@ namespace casual
         std::shared_ptr<common::ipc::Socket> socket;
 
         /*
-         * List of all sockets that are connected and where we are waiting for a register
-         * message from the client to announce its name and services so we know which thread
-         * to start.
-         */
-        std::list<std::shared_ptr<common::ipc::Socket>> listOfAcceptedConnections;
-
-        /*
          * The socketgroup we are polling for the listener and register service
          */
          common::ipc::SocketGroup socketGroupServer;
      };
 
+     /**********************************************************************\
+      *  The Masters Thread
+     \**********************************************************************/
+
      /*
-      * The thread that listens to incoming TCP connections
+      * The thread that listens to incoming TCP connections and spawns of clients
+      * that handles incoming requests.
       */
      class MasterThread
      {
@@ -91,7 +95,7 @@ namespace casual
         bool start ();
 
         /*
-         * Stop the thread. Returns true if the thread has been stopped.
+         * Stops the thread. Returns true if the thread has been stopped.
          */
         bool stop ();
 
@@ -116,18 +120,22 @@ namespace casual
      };
 
      /**********************************************************************\
-      *  The listeners eventhandler
+      *  The Masters connection eventhandler
      \**********************************************************************/
 
-     class MasterHandler : public common::ipc::SocketEventHandler {
+     /*
+      * This class handles the events for a socket in listening state and handles
+      * the event when a client is requesting a connection.
+      */
+     class MasterConnectHandler : public common::ipc::SocketEventHandler {
 
      public:
 
         /*
          * Constructors destructors
          */
-        MasterHandler (MasterState &s);
-        ~MasterHandler();
+        MasterConnectHandler (MasterState &s);
+        ~MasterConnectHandler();
 
         /*
          * Types this handler handles
@@ -137,7 +145,9 @@ namespace casual
      protected:
 
         /*
-         * Functions that gets called whenever an event occurs for the socket
+         * Functions that gets called whenever an event occurs for the socket. In this case
+         * I am only after the data can be read, because for a socket in listening state
+         * this signals that a connection request has arrived.
          */
         int dataCanBeRead (int events, common::ipc::Socket &socket);
 

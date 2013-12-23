@@ -239,6 +239,11 @@ namespace casual
              */
 
             /*
+             * Returns with the error conectetd to the socket
+             */
+            int getError ();
+
+            /*
              * Close the socket, returns -1 on error, zero otherwise
              */
             int close();
@@ -291,6 +296,11 @@ namespace casual
              */
             int read (void *pData, int size);
 
+            /*
+             * Return with the eventhandler, ownership is maintained
+             */
+            SocketEventHandler *getEventHandler() const;
+
          private:
 
             /*
@@ -302,11 +312,6 @@ namespace casual
              * Get a hold on the file descriptor
              */
             int getSocket() const;
-
-            /*
-             * Return with the eventhandler, ownership is maintained
-             */
-            const SocketEventHandler *getEventHandler() const;
 
             /*
              * Executes a handler based on the event mask
@@ -460,6 +465,11 @@ namespace casual
             virtual int error (int events, Socket &socket);
 
          };
+
+         /*
+          * Dump events
+          */
+         void dumpEvents (int events);
 
       }
    }

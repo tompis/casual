@@ -227,7 +227,6 @@ namespace casual
             /*
              * Get the address info
              */
-            common::logger::information << "Resolving " << host << ":" << service;
             s = getaddrinfo(host.c_str(), service.c_str(), &hints, &result);
             if (s != 0) {
                common::logger::error << gai_strerror(s);
@@ -246,7 +245,6 @@ namespace casual
                     if (rp->ai_family == AF_INET || rp->ai_family == AF_INET6) {
 
                        Endpoint p(rp->ai_family, SOCK_STREAM, IPPROTO_TCP, rp->ai_addr, rp->ai_addrlen);
-                       common::logger::information << p.info();
                        listOfEndpoints.push_back(p);
 
                     }
@@ -515,7 +513,7 @@ namespace casual
          /*
           * Returns with the eventhandler, remain ownership of handler
           */
-         const SocketEventHandler *Socket::getEventHandler() const
+         SocketEventHandler *Socket::getEventHandler() const
          {
             return pEventHandler.get();
          }
@@ -534,6 +532,18 @@ namespace casual
          int Socket::read (void *pData, int size)
          {
             return ::recv (fd, pData, size, 0);
+         }
+
+         /*
+          * Return with the current error
+          */
+         int Socket::getError ()
+         {
+            int err = 0;
+            socklen_t err_size;
+            if (getsockopt (getSocket(), SOL_SOCKET, SO_ERROR, &err, &err_size) == -1)
+               common::logger::warning << "Socket::getError: Getsockopt error " << strerror (errno);
+            return err;
          }
 
          /**********************************************************************\
@@ -612,16 +622,6 @@ namespace casual
          {
             int handled = 0;
 
-            /* Data is ready */
-            if ((events & POLLIN) != 0) {
-               handled |= dataCanBeRead (events, socket);
-            }
-
-            /* Data can be written */
-            if ((events & POLLOUT) != 0) {
-               handled |= dataCanBeWritten (events, socket);
-            }
-
             /* Error */
             if ((events & (POLLERR | POLLNVAL)) != 0) {
                handled |= error (events, socket);
@@ -632,10 +632,56 @@ namespace casual
                handled |= hangup (events, socket);
             }
 
+            /* Data is ready */
+            if ((events & POLLIN) != 0) {
+               handled |= dataCanBeRead (events, socket);
+            }
+
+            /* Data can be written */
+            if ((events & POLLOUT) != 0) {
+               handled |= dataCanBeWritten (events, socket);
+            }
+
             /* Flags to say what we handled */
             return handled;
          }
 
+         /*
+          * Dump event socket flags
+          */
+         void dumpEvents (int events)
+         {
+            if ((events & POLLIN) != 0) {
+               common::logger::information << "Events has POLLIN set";
+            }
+            if ((events & POLLRDNORM) != 0) {
+               common::logger::information << "Events has POLLRDNORM set";
+            }
+            if ((events & POLLRDBAND) != 0) {
+               common::logger::information << "Events has POLLRDBAND set";
+            }
+            if ((events & POLLPRI) != 0) {
+               common::logger::information << "Events has POLLPRI set";
+            }
+            if ((events & POLLOUT) != 0) {
+               common::logger::information << "Events has POLLOUT set";
+            }
+            if ((events & POLLWRNORM) != 0) {
+               common::logger::information << "Events has POLLWRNORM set";
+            }
+            if ((events & POLLWRBAND) != 0) {
+               common::logger::information << "Events has POLLWRBAND set";
+            }
+            if ((events & POLLERR) != 0) {
+               common::logger::information << "Events has POLLERR set";
+            }
+            if ((events & POLLHUP) != 0) {
+               common::logger::information << "Events has POLLHUP set";
+            }
+            if ((events & POLLNVAL) != 0) {
+               common::logger::information << "Events has POLLNVAL set";
+            }
+         }
 
          /*
           * Base implementation, so we don't require an implementation for all
@@ -654,7 +700,7 @@ namespace casual
 
          int SocketEventHandler::error(int events, Socket &socket)
          {
-            common::logger::warning << "Unimplemented error event";
+            common::logger::warning << "Unimplemented error event " << strerror (socket.getError());
             return 0;
          }
 

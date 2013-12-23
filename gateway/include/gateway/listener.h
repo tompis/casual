@@ -49,6 +49,11 @@ namespace casual
      protected:
 
         /*
+         * The events we are polling for
+         */
+        int pollEvents = POLLIN | POLLOUT;
+
+        /*
          * Functions that gets called whenever an event occurs for the socket
          */
         int dataCanBeRead (int events, common::ipc::Socket &socket);

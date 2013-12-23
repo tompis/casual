@@ -56,9 +56,12 @@ namespace casual
         * Local gateway configuration
         */
        struct Gateway {
-          std::string name="unknown";
-          std::string endpoint="*:55555";
-          int housekeeping = 10;
+          std::string name="noname";
+          std::string endpoint="0.0.0.0:55555";
+          int clientreconnecttime = 5000; /* Default 5 seconds reconnect time for clients */
+          int clienttimeout = 1000; /* Default 1 second timeout for sockets */
+          int queuetimeout = 1; /* Default 1 second timeout for queue */
+
           std::vector<RemoteGateway> remotegateways;
 
           template< typename A>
@@ -71,6 +74,12 @@ namespace casual
        };
 
     }
+
+    /*
+     * Class predeclaration
+     */
+    class ClientThread;
+    class MasterThread;
 
     /*
     ** The gateway settings structure
@@ -94,6 +103,17 @@ namespace casual
         * The configuration
         */
        configuration::Gateway configuration;
+
+       /*
+        * The master threads
+        */
+       std::unique_ptr<MasterThread> masterThread = nullptr;
+
+       /*
+        * The list of client threads
+        */
+       std::mutex listOfClientsMutex; /* Mutex to manipulate the list */
+       std::list<std::unique_ptr<ClientThread>> listOfClients;
 
     };
 

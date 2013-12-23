@@ -5,6 +5,8 @@
 //!     Author: dnulnets
 //!
 
+#include <poll.h>
+
 /*
 ** Common casual headerfiles
 */
@@ -15,8 +17,13 @@
 #include "common/uuid.h"
 #include "common/queue.h"
 
+#include "gateway/std14.h"
+#include "gateway/ipc.h"
+#include "gateway/listener.h"
 #include "gateway/state.h"
 #include "gateway/gateway.h"
+#include "gateway/master.h"
+#include "gateway/client.h"
 
 /*
 ** Standard headerfiles
@@ -33,23 +40,25 @@ using namespace casual;
 */
 int main( int argc, char** argv)
 {
-try
-{
-   gateway::Settings settings;
+   common::logger::information << "Gateway starting";
 
+   try
    {
-      common::Arguments parser;
+      gateway::Settings settings;
 
-      parser.add(
-            common::argument::directive( {"-c", "--configuration-file"}, "gateway configuration file", settings.configurationFile)
-      );
+      {
+         common::Arguments parser;
 
-      parser.parse( argc, argv);
+         parser.add(
+               common::argument::directive( {"-c", "--configuration-file"}, "gateway configuration file", settings.configurationFile)
+         );
 
-      common::environment::file::executable( parser.processName());
-   }
+         parser.parse( argc, argv);
 
-   gateway::Gateway::instance().start( settings);
+         common::environment::file::executable( parser.processName());
+      }
+
+      gateway::Gateway::instance().start( settings);
 
    } catch( ...) {
       return casual::common::error::handler();

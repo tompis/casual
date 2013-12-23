@@ -43,23 +43,25 @@ namespace casual
         State &m_global;
 
         /*
-         * If all configuration and pre initialization has been done okey
+         * The client state
          */
-        bool bInitialized = false;
+        enum {initialized, connecting, retry, failed, active} state = failed;
 
         /*
-         * If the Client thread is running
+         * Master endpoint
          */
-        bool bRunning = false;
+        common::ipc::Endpoint endpoint;
 
         /*
-         * The socketgroup we are polling for the listener and register service
+         * Master socket
          */
-         common::ipc::SocketGroup socketGroupServer;
+        std::unique_ptr<common::ipc::Socket> socket;
 
-         /*
-          * Our main socket
-          */
+        /*
+         * Message header information
+         */
+        int messageCounter = 0;
+
      };
 
      /*
@@ -71,10 +73,23 @@ namespace casual
      public:
 
         /*
-         * Constructor andf destructor, takes the gateway state as a parameter
+         * Not allowed, means nothing ...
          */
-        ClientThread (State &s);
-        ClientThread (State &s, common::ipc::Socket &socket);
+        ClientThread () = delete;
+
+        /*
+         * Creates a client to a remote gateway based on an incoming connection from the remote gateway
+         */
+        ClientThread (State &s, std::unique_ptr<common::ipc::Socket> socket);
+
+        /*
+         * Creates a client to a remote gateway based on configuration
+         */
+        ClientThread (State &s, configuration::RemoteGateway &remote);
+
+        /*
+         * Destroys the client
+         */
         ~ClientThread ();
 
         /*
@@ -90,6 +105,11 @@ namespace casual
      protected:
 
         /*
+         * Connects the socket. Returns true if the connection was initiated.
+         */
+        bool connect();
+
+        /*
          * The thread loop
          */
         void loop ();
@@ -100,11 +120,52 @@ namespace casual
          * The currently running thread
          */
         std::unique_ptr<std::thread> thread = nullptr;
+        bool run = false;
 
         /*
          * The Client state
          */
         ClientState m_state;
+     };
+
+     /**********************************************************************\
+      *  The client connect to eventhandler
+     \**********************************************************************/
+
+     class ClientConnectHandler : public common::ipc::SocketEventHandler {
+
+     public:
+
+        /*
+         * Constructors destructors
+         */
+        ClientConnectHandler (ClientState &s);
+        ~ClientConnectHandler();
+
+        /*
+         * Types of events this handler handles
+         */
+        int events() const;
+
+     protected:
+
+        /*
+         * Functions that gets called whenever an event occurs for the socket. In this case
+         * I am only after that data can be written, because for a socket when connecting
+         * this signals that a connection has been completed
+         */
+        int dataCanBeWritten (int events, common::ipc::Socket &socket);
+
+        /*
+         * Eror handling
+         */
+        int hangup (int events, common::ipc::Socket &socket);
+        int error (int events, common::ipc::Socket &socket);
+
+     private:
+
+        /* The client state for the handler */
+        ClientState &m_state;
      };
 
      /**********************************************************************\
@@ -120,11 +181,6 @@ namespace casual
          */
         ClientHandler (ClientState &s);
         ~ClientHandler();
-
-        /*
-         * Types of events this handler handles
-         */
-        int events() const;
 
      protected:
 

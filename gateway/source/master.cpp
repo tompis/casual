@@ -38,6 +38,8 @@
 #include "gateway/state.h"
 #include "gateway/listener.h"
 #include "gateway/master.h"
+#include "gateway/client.h"
+
 /*
  * Casual namespace
  */
@@ -50,42 +52,52 @@ namespace casual
        *  MasterState
       \**********************************************************************/
 
+      /*
+       * State initialization
+       */
       MasterState::MasterState(State &s): m_global (s)
       {
       }
 
       /**********************************************************************\
-       *  MasterThread
-      \**********************************************************************/
-
-      /**********************************************************************\
        *  MasterHandler
       \**********************************************************************/
 
-      MasterHandler::MasterHandler (MasterState &s) : m_state(s)
-      {
-
-      }
-
-      MasterHandler::~MasterHandler()
+      /*
+       * Master connect handler initialization
+       */
+      MasterConnectHandler::MasterConnectHandler (MasterState &s) : m_state(s)
       {
       }
 
       /*
-       * Types this handler handles
+       * Master connect handler destruction
        */
-      int MasterHandler::events() const
+      MasterConnectHandler::~MasterConnectHandler()
       {
-         return POLLIN;
       }
 
-      int MasterHandler::dataCanBeRead (int events, common::ipc::Socket &socket)
+      /*
+       * Types of events this handler handles
+       */
+      int MasterConnectHandler::events() const
+      {
+         return POLLIN; /* POLLIN gets signalled whener a socket gets connected */
+      }
+
+      /*
+       * Data can be read, this is a socket in listening state and that means that there is an incoming
+       * socket connection that has to be handled
+       */
+      int MasterConnectHandler::dataCanBeRead (int events, common::ipc::Socket &socket)
       {
          std::unique_ptr<common::ipc::Socket> pS;
 
-         common::logger::information << "MasterHandler::dataCanBeRead : Incoming connection, event = " << events;
+         common::logger::information << "MasterHandler::dataCanBeRead : Entered";
+         common::ipc::dumpEvents(events);
 
          /* Accept the connection */
+         common::logger::information << "MasterHandler::dataCanBeRead : Trying to accept incoming connection";
          pS = socket.accept();
          if (pS==0L) {
             common::logger::warning << "MasterHandler::dataCanBeRead : Incoming connection not accepted";
@@ -93,25 +105,25 @@ namespace casual
             common::logger::information << "MasterHandler::dataCanBeRead : Incoming connection accepted";
 
             /* Start a client thread */
+            std::unique_ptr<ClientThread> clientThread = std::make_unique<ClientThread>(m_state.m_global, std::move(pS));
+            clientThread->start();
+
+            /* Add the thread to the master list */
+            std::lock_guard<std::mutex> lock(m_state.m_global.listOfClientsMutex);
+            m_state.m_global.listOfClients.push_back(std::move(clientThread));
          }
 
-         /* Add an eventhandler to the socket */
-         std::unique_ptr<common::ipc::SocketEventHandler> pRL;
-         pRL.reset (new ClientHandler());
-         pS->setEventHandler (pRL);
+         common::logger::information << "MasterHandler::dataCanBeRead : Exited";
 
-         /* Add the socket to the group and continue with the business */
-         std::shared_ptr<common::ipc::Socket> pP = std::shared_ptr<common::ipc::Socket>(pS.release());
-         m_state.listOfAcceptedConnections.push_back (pP);
-
-         /* Add the socket to the group that we are polling */
-         m_state.socketGroupServer.addSocket(pP);
       }
 
       /**********************************************************************\
        *  MasterThread
       \**********************************************************************/
 
+      /*
+       * Create and initialize the master thread.
+       */
       MasterThread::MasterThread (State &s) : m_state (s)
       {
          common::ipc::Resolver resolver;
@@ -138,19 +150,14 @@ namespace casual
              * Add the socket handler and add it to the group we want to poll
              */
             m_state.socketGroupServer.addSocket(m_state.socket);
-            std::unique_ptr<common::ipc::SocketEventHandler> eH = std::make_unique<MasterHandler>(m_state);
+            std::unique_ptr<common::ipc::SocketEventHandler> eH = std::make_unique<MasterConnectHandler>(m_state);
             m_state.socket->setEventHandler(eH);
 
-            /* Initialize the socket to accept incoming calls */
-            int n = -1, m = -1;
-            n = m_state.socket->bind();
-            if (n>=0)
-               m = m_state.socket->listen();
+            /*
+             * All is well
+             */
+            m_state.bInitialized = true;
 
-            /* All is well */
-            m_state.bInitialized |= (m>=0) && (n>=0);
-            if (!m_state.bInitialized)
-               common::logger::error << "MasterThread::MasterThread : Unable to initialized socket on " << m_state.m_global.configuration.endpoint;
          }
       }
 
@@ -159,7 +166,7 @@ namespace casual
        */
       MasterThread::~MasterThread ()
       {
-         if (m_state.bInitialized) {
+         if (m_state.bInitialized && thread!=nullptr) {
             stop();
          }
       }
@@ -170,7 +177,7 @@ namespace casual
       bool MasterThread::start()
       {
          bool bStarted = false;
-         common::logger::information << "Masterthread::start : Start";
+         common::logger::information << "Masterthread::start : Entered";
 
          /* Can we start and are we not already running ? */
          if (m_state.bInitialized && thread == nullptr) {
@@ -184,7 +191,7 @@ namespace casual
             bStarted = true;
          }
 
-         common::logger::information << "Masterthread::start : Stop";
+         common::logger::information << "Masterthread::start : Exited";
 
          return bStarted;
       }
@@ -195,7 +202,7 @@ namespace casual
       bool MasterThread::stop()
       {
          bool bStopped = false;
-         common::logger::information << "Masterthread::stop : Start";
+         common::logger::information << "Masterthread::stop : Entered";
 
          /* Are we running ? */
          if (thread != nullptr) {
@@ -210,7 +217,7 @@ namespace casual
             bStopped = true;
          }
 
-         common::logger::information << "Masterthread::stop : Stop";
+         common::logger::information << "Masterthread::stop : Exited";
 
          return bStopped;
       }
@@ -222,33 +229,50 @@ namespace casual
       {
          int status;
 
-         common::logger::information << "Masterthread::loop : Start";
+         common::logger::information << "Masterthread::loop : Entered";
 
-         /* Never ending loop */
-         do {
+         /*
+          * Set up the socket to start accepting incoming calls
+          */
+         int n = -1, m = -1;
+         n = m_state.socket->bind();
+         if (n>=0)
+            m = m_state.socket->listen();
+         if ((m<0) || (n<0)) {
 
-            /* Poll all sockets */
-            status = m_state.socketGroupServer.poll(1000);
-            if (status>0) {
-               common::logger::information << "Masterthread::loop : Event happened";
-            } else {
+            common::logger::error << "MasterThread::MasterThread : Unable to initialized socket on " << m_state.m_global.configuration.endpoint;
 
-               if (status < 0) {
+         } else {
 
-                  common::logger::information << "Masterthread::loop : Error on socket";
-                  m_state.bRunning = false;
+            common::logger::information << "MasterThread::MasterThread : Bound to " << m_state.m_global.configuration.endpoint;
 
+            /* Never ending loop */
+            do {
+
+               /* Poll all sockets */
+               status = m_state.socketGroupServer.poll(m_state.m_global.configuration.clienttimeout);
+               if (status>0) {
+                  common::logger::information << "Masterthread::loop : Event happened";
                } else {
 
-                  common::logger::information << "Masterthread::loop : Timeout";
+                  if (status < 0) {
+
+                     common::logger::information << "Masterthread::loop : Error on socket";
+                     m_state.bRunning = false;
+
+                  } else {
+
+                     common::logger::information << "Masterthread::loop : Timeout";
+
+                  }
 
                }
 
-            }
+            } while (m_state.bRunning);
 
-         } while (m_state.bRunning);
+         }
 
-         common::logger::information << "Masterthread::loop : Stop";
+         common::logger::information << "Masterthread::loop : Exited";
       }
    }
 }

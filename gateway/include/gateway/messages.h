@@ -32,54 +32,56 @@ namespace casual
 {
    namespace gateway
    {
+      namespace message {
 
-      /* Message types */
-      static const int type_registration = 1;
-
-      /*
-       * The header for all messages
-       */
-      template <int messagetype>
-      struct header {
-
-         unsigned int id;  /* Id of the message */
-         unsigned int type = messagetype; /* Type of message */
-         casual::common::Uuid from; /* UUID of the sender */
+         /* Message types */
+         static const int type_registration = 1;
 
          /*
-          * Marshaller
+          * The header for all messages
           */
-         template<typename A>
-         void marshal( A& archive)
-         {
-            archive & id;
-            archive & type;
-            archive & from;
-         }
+         template <int messagetype>
+         struct Header {
 
-      };
+            unsigned int id;  /* Id of the message */
+            unsigned int type = messagetype; /* Type of message */
+            std::string from; /* UUID of the sender */
 
-      /*
-       * Registration message
-       */
-      struct registration {
+            /*
+             * Marshaller
+             */
+            template<typename A>
+            void marshal( A& archive)
+            {
+               archive & id;
+               archive & type;
+               archive & from;
+            }
 
-         /* The header */
-         struct header<type_registration> header;
-
-         /* The body */
-         std::string name; /* Name of the client that wants to register */
+         };
 
          /*
-         * Marshaller
-         */
-         template<typename A>
-         void marshal( A& archive)
-         {
-           archive & header;
-           archive & name;
-         }
-      };
+          * Registration message
+          */
+         struct Registration {
+
+            /* The header */
+            struct Header<type_registration> header;
+
+            /* The body */
+            std::string name; /* Name of the client that wants to register */
+
+            /*
+            * Marshaller
+            */
+            template<typename A>
+            void marshal( A& archive)
+            {
+              archive & header;
+              archive & name;
+            }
+         };
+      }
    }
 }
 

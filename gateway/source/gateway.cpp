@@ -27,9 +27,11 @@
 #include "common/signal.h"
 
 #include "gateway/std14.h"
-#include "gateway/gateway.h"
 #include "gateway/ipc.h"
+#include "gateway/listener.h"
+#include "gateway/gateway.h"
 #include "gateway/master.h"
+#include "gateway/client.h"
 
 #include "sf/archive_maker.h"
 
@@ -79,7 +81,7 @@ namespace casual
               /*
                * Reset the alarm
                */
-              casual::common::signal::alarm::set (m_state.configuration.housekeeping);
+              casual::common::signal::alarm::set (m_state.configuration.queuetimeout);
            }
         }
      }
@@ -121,7 +123,30 @@ namespace casual
         * Sets the housekeeping alarm, i.e when to do housekeeping, sending heartbeats to remote gateways
         * and stuff like that.
         */
-       common::signal::alarm::set (m_state.configuration.housekeeping);
+       common::signal::alarm::set (m_state.configuration.queuetimeout);
+
+       /*
+        * Start the master TCP server
+        */
+       m_state.masterThread = std::make_unique<MasterThread>(m_state);
+       m_state.masterThread->start();
+
+       /*
+        * Start up all the TCP clients, one for each remote gateway
+        */
+       {
+          std::lock_guard<std::mutex> lock(m_state.listOfClientsMutex);
+          for (auto &gw : m_state.configuration.remotegateways) {
+
+             /* Create the thread */
+             std::unique_ptr<ClientThread> ct = std::make_unique<ClientThread>(m_state, gw);
+             ct->start();
+
+             /* Add the thread to the list of remote gateway threads */
+             m_state.listOfClients.push_back(std::move (ct));
+
+          }
+       }
 
     }
 
@@ -134,6 +159,22 @@ namespace casual
         * Cancel all alarms
         */
        common::signal::alarm::set (0);
+
+       /*
+        * Stop all clients
+        */
+       {
+          std::lock_guard<std::mutex> lock(m_state.listOfClientsMutex);
+
+          for (auto &ct : m_state.listOfClients) {
+             ct->stop();
+          }
+       }
+
+       /*
+        * Stop the master thread
+        */
+       m_state.masterThread->stop();
 
     }
 
@@ -156,18 +197,27 @@ namespace casual
        boot();
 
        /*
-        * Start the master TCP server
+        * Wait for the queue to come again
         */
-       MasterThread mt(m_state);
-       mt.start();
-       std::chrono::milliseconds dura( 10000 );
-       std::this_thread::sleep_for( dura );
-       mt.stop();
+       GatewayQueueBlockingReader blockingReader( m_receiveQueue, m_state);
+       casual::common::message::dispatch::Handler handler;
 
-       /*
-        * Shutdown the gateway
-        */
-       shutdown();
+       /* Loop until time ends */
+       try {
+          while( true)
+          {
+             auto marshal = blockingReader.next();
+
+             if( ! handler.dispatch( marshal))
+             {
+                common::logger::error << "message_type: " << marshal.type() << " not recognized - action: discard";
+             }
+          }
+       }
+       catch (...) {
+          shutdown();
+          throw;
+       }
 
     }
         
