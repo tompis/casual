@@ -40,11 +40,10 @@ namespace casual
          /*
           * The header for all messages
           */
-         template <int messagetype>
          struct Header {
 
             unsigned int id;  /* Id of the message */
-            unsigned int type = messagetype; /* Type of message */
+            unsigned int type; /* Type of message */
             std::string from; /* UUID of the sender */
 
             /*
@@ -65,8 +64,9 @@ namespace casual
           */
          struct Registration {
 
-            /* The header */
-            struct Header<type_registration> header;
+            unsigned int id;  /* Id of the message */
+            unsigned int type; /* Type of message */
+            std::string from; /* UUID of the sender */
 
             /* The body */
             std::string name; /* Name of the client that wants to register */
@@ -77,8 +77,10 @@ namespace casual
             template<typename A>
             void marshal( A& archive)
             {
-              archive & header;
-              archive & name;
+               archive & id;
+               archive & type;
+               archive & from;
+               archive & name;
             }
          };
       }

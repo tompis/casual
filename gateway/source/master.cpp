@@ -37,8 +37,8 @@
 #include "gateway/ipc.h"
 #include "gateway/state.h"
 #include "gateway/listener.h"
-#include "gateway/master.h"
 #include "gateway/client.h"
+#include "gateway/master.h"
 
 /*
  * Casual namespace
@@ -60,61 +60,98 @@ namespace casual
       }
 
       /**********************************************************************\
-       *  MasterHandler
+       *  MasterSocket
       \**********************************************************************/
 
       /*
        * Master connect handler initialization
        */
-      MasterConnectHandler::MasterConnectHandler (MasterState &s) : m_state(s)
+      MasterSocket::MasterSocket (MasterState &s, common::ipc::Endpoint &p) : common::ipc::Socket (p), m_state(s)
       {
       }
 
       /*
        * Master connect handler destruction
        */
-      MasterConnectHandler::~MasterConnectHandler()
+      MasterSocket::~MasterSocket()
       {
       }
 
       /*
-       * Types of events this handler handles
+       * Handles an incoming request
        */
-      int MasterConnectHandler::events() const
+      int MasterSocket::handleIncomingConnection (int events)
       {
-         return POLLIN; /* POLLIN gets signalled whener a socket gets connected */
-      }
+         int ret = 0;
+         common::logger::information << "MasterSocket::handleIncomingConnection : Entered";
 
-      /*
-       * Data can be read, this is a socket in listening state and that means that there is an incoming
-       * socket connection that has to be handled
-       */
-      int MasterConnectHandler::dataCanBeRead (int events, common::ipc::Socket &socket)
-      {
-         std::unique_ptr<common::ipc::Socket> pS;
+         /* POLLERR */
+         if ((events & POLLERR) != 0) {
 
-         common::logger::information << "MasterHandler::dataCanBeRead : Entered";
-         common::ipc::dumpEvents(events);
+            int err = getLastError();
+            common::logger::error << "MasterSocket::handleIncomingConnection : Error " << strerror (err) << "(" << err << ")";
 
-         /* Accept the connection */
-         common::logger::information << "MasterHandler::dataCanBeRead : Trying to accept incoming connection";
-         pS = socket.accept();
-         if (pS==0L) {
-            common::logger::warning << "MasterHandler::dataCanBeRead : Incoming connection not accepted";
-         } else {
-            common::logger::information << "MasterHandler::dataCanBeRead : Incoming connection accepted";
+            /* Socket is in error, thread is in error */
+            ret = -1;
+            m_state.state = MasterState::failed;
+
+         }
+
+         /* POLLHUP */
+         if ((events & POLLHUP) != 0) {
+
+            common::logger::error << "MasterSocket::handleIncomingConnection : Hangup should never happen";
+
+            /* The other side has hung up, retry connection */
+            m_state.state = MasterState::failed;
+            ret = -1;
+         }
+
+         /* POLLRDNORM */
+         if ((events & POLLRDNORM)!=0 && m_state.state == MasterState::active) {
+
+            /* Accept the connection */
+            common::logger::information << "MasterSocket::handleIncomingConnection : Accepting incoming connection";
 
             /* Start a client thread */
-            std::unique_ptr<ClientThread> clientThread = std::make_unique<ClientThread>(m_state.m_global, std::move(pS));
+            std::unique_ptr<ClientThread> clientThread = std::make_unique<ClientThread>(m_state.m_global, this);
             clientThread->start();
 
             /* Add the thread to the master list */
             std::lock_guard<std::mutex> lock(m_state.m_global.listOfClientsMutex);
             m_state.m_global.listOfClients.push_back(std::move(clientThread));
+
          }
 
-         common::logger::information << "MasterHandler::dataCanBeRead : Exited";
+         common::logger::information << "MasterSocket::handleIncomingConnection : Exited";
+         return ret;
 
+      }
+
+      /*
+       * Called when the connecting state has an outgoing connect and we have an incoming accept.
+       * This is not a scenario in the master socket.
+       */
+      int MasterSocket::handleOutgoingConnection (int events)
+      {
+         common::logger::information << "MasterSocket::handleOutgoingConnection : Entered";
+         common::logger::error << "MasterSocket::handleOutgoingConnection : Unexpected event";
+         m_state.state = MasterState::failed;
+         common::logger::information << "MasterSocket::handleOutgoingConnection : Exited";
+         return -1;
+      }
+
+      /*
+       * Handle events when we are in connected state, usually reading and writing data to and from the socket.
+       * This is not a scenario in the master socket.
+       */
+      int MasterSocket::handleConnected (int events)
+      {
+         common::logger::information << "MasterSocket::handleConnected : Entered";
+         common::logger::error << "MasterSocket::handleConnected : Unexpected event";
+         m_state.state = MasterState::failed;
+         common::logger::information << "MasterSocket::handleConnected : Exited";
+         return -1;
       }
 
       /**********************************************************************\
@@ -126,6 +163,7 @@ namespace casual
        */
       MasterThread::MasterThread (State &s) : m_state (s)
       {
+         m_state.state = MasterState::failed;
          common::ipc::Resolver resolver;
 
          /* Resolve the bind address for the gateway */
@@ -135,28 +173,15 @@ namespace casual
              * Unable to resolve the address, gateway cannot start
              */
             common::logger::error << "MasterThread::MasterThread : Unable to resolve address " << m_state.m_global.configuration.endpoint;
-            m_state.bInitialized = false;
 
          } else {
 
             /*
-             * Create the socket, we assume the first one is the one to use for now. If this fail we should take
+             * Save the endpoint, we use the first one now but we could get
              * the next in the list, but we do not do that just now. TODO!!!!
              */
             m_state.endpoint = resolver.get().front();
-            m_state.socket = std::make_shared<common::ipc::Socket>(m_state.endpoint);
-
-            /*
-             * Add the socket handler and add it to the group we want to poll
-             */
-            m_state.socketGroupServer.addSocket(m_state.socket);
-            std::unique_ptr<common::ipc::SocketEventHandler> eH = std::make_unique<MasterConnectHandler>(m_state);
-            m_state.socket->setEventHandler(eH);
-
-            /*
-             * All is well
-             */
-            m_state.bInitialized = true;
+            m_state.state = MasterState::initialized;
 
          }
       }
@@ -166,7 +191,7 @@ namespace casual
        */
       MasterThread::~MasterThread ()
       {
-         if (m_state.bInitialized && thread!=nullptr) {
+         if (thread!=nullptr) {
             stop();
          }
       }
@@ -180,10 +205,11 @@ namespace casual
          common::logger::information << "Masterthread::start : Entered";
 
          /* Can we start and are we not already running ? */
-         if (m_state.bInitialized && thread == nullptr) {
+         if (m_state.state != MasterState::failed && thread == nullptr) {
 
             /* Change state to running */
-            m_state.bRunning = true;
+            bRun = true;
+            bExited = false;
 
             /* Start the thread */
             common::logger::information << "Masterthread::start : Thread started";
@@ -204,11 +230,11 @@ namespace casual
          bool bStopped = false;
          common::logger::information << "Masterthread::stop : Entered";
 
+         /* Stop the thread */
+         bRun = false;
+
          /* Are we running ? */
          if (thread != nullptr) {
-
-            /* Stop the thread */
-            m_state.bRunning = false;
 
             /* Wait for the thread to finish */
             common::logger::information << "Masterthread::stop : Waiting for thread to finish";
@@ -232,51 +258,73 @@ namespace casual
          common::logger::information << "Masterthread::loop : Entered";
 
          /*
-          * Set up the socket to start accepting incoming calls
+          * Open the socket if we are initialized and not in error
           */
-         int n = -1, m = -1;
-         n = m_state.socket->bind();
-         if (n>=0)
-            m = m_state.socket->listen();
-         if ((m<0) || (n<0)) {
+         if (m_state.state == MasterState::initialized) {
 
-            common::logger::error << "MasterThread::MasterThread : Unable to initialized socket on " << m_state.m_global.configuration.endpoint;
+            /* Create the socket */
+            m_state.socket = std::make_unique<MasterSocket>(m_state, m_state.endpoint);
+            if (m_state.socket->isInitialized()) {
 
-         } else {
+               /*
+                * Set up the socket to start accepting incoming calls
+                */;
+               int n = m_state.socket->bind();
+               if (n>=0) {
 
-            common::logger::information << "MasterThread::MasterThread : Bound to " << m_state.m_global.configuration.endpoint;
-
-            /* Never ending loop */
-            do {
-
-               /* Poll all sockets */
-               status = m_state.socketGroupServer.poll(m_state.m_global.configuration.clienttimeout);
-               if (status>0) {
-                  common::logger::information << "Masterthread::loop : Event happened";
-               } else {
-
-                  if (status < 0) {
-
-                     common::logger::information << "Masterthread::loop : Error on socket";
-                     m_state.bRunning = false;
-
-                  } else {
-
-                     common::logger::information << "Masterthread::loop : Timeout";
-
-                  }
+                  n = m_state.socket->listen();
 
                }
 
-            } while (m_state.bRunning);
+               /* Did it go well ? */
+               if (n<0) {
+
+                  /* Something went wrong */
+                  common::logger::error << "MasterThread::loop : Unable to bind and listen to socket on " << m_state.endpoint.info();
+                  common::logger::error << "MasterThread::loop : " << strerror (errno) << "(" << errno << ")";
+                  m_state.state = MasterState::failed;
+
+               } else {
+
+                  /* We are active */
+                  common::logger::information << "MasterThread::loop : Bound and listening on " << m_state.endpoint.info();
+                  m_state.state = MasterState::active;
+
+               }
+
+            } else {
+
+               /* We failed */
+               common::logger::error << "MasterThread::loop : Unable to create socket for " << m_state.endpoint.info() << "," << m_state.socket->getState();
+               m_state.state = MasterState::failed;
+            }
+         }
+
+         /* Never ending loop */
+         while (bRun && m_state.state != MasterState::failed) {
+
+            /* Poll all sockets */
+            status = m_state.socket->execute(m_state.m_global.configuration.clienttimeout);
+            if (status < 0) {
+
+               /* Something went wrong */
+               common::logger::error << "Masterthread::loop : Error : " << strerror (errno) << "(" << errno << ")";
+               m_state.state = MasterState::failed;
+
+            } else {
+
+               /* Normal timeout or we actually got some events to handle */
+               if (status == 0) {
+                  /* Timeout loop */
+               }
+
+            }
 
          }
 
+         /* Thread has finished */
+         bExited = true;
          common::logger::information << "Masterthread::loop : Exited";
       }
    }
 }
-
-
-
-

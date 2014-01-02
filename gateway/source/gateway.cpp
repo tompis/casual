@@ -76,8 +76,6 @@ namespace casual
            }
            catch(const common::exception::signal::Timeout& timeout)
            {
-              common::logger::information << "Timeout - resetting it";
-
               /*
                * Reset the alarm
                */
@@ -215,6 +213,7 @@ namespace casual
           }
        }
        catch (...) {
+          common::logger::information << "Exception caught, cleaning up and exiting";
           shutdown();
           throw;
        }

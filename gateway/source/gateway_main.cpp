@@ -40,8 +40,6 @@ using namespace casual;
 */
 int main( int argc, char** argv)
 {
-   common::logger::information << "Gateway starting";
-
    try
    {
       gateway::Settings settings;

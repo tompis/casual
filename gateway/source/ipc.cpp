@@ -71,11 +71,11 @@ namespace casual
          /*
           * Constructs the endpoint
           */
-         Endpoint::Endpoint (int f, int t, int p, const void *sa, size_t len)
+         Endpoint::Endpoint (int f, const void *sa, size_t len)
          {
             family = f;
-            protocol = p;
-            type = t;
+            protocol = IPPROTO_TCP;
+            type = SOCK_STREAM;
             copyData (sa, len);
          }
 
@@ -114,6 +114,9 @@ namespace casual
          std::string Endpoint::info ()
          {
             switch (family) {
+               case AF_UNIX:
+                  return infoUNIX();
+                  break;
                case AF_INET:
                   return infoTCPv4();
                   break;
@@ -124,6 +127,13 @@ namespace casual
                   return "Unknown";
                   break;
             }
+         }
+
+         std::string Endpoint::infoUNIX ()
+         {
+            std::stringstream sb;
+            sb << "local";
+            return sb.str();
          }
 
          std::string Endpoint::infoTCPv4 ()
@@ -153,9 +163,14 @@ namespace casual
           */
          void Endpoint::copyData(const void *data, std::size_t size)
          {
-            m_data = std::unique_ptr<char[]>(new char[size]);
-            m_size = size;
-            memcpy (m_data.get(), data, size);
+            if (size != 0 && data != 0) {
+               m_data = std::unique_ptr<char[]>(new char[size]);
+               m_size = size;
+               memcpy (m_data.get(), data, size);
+            } else {
+               m_data = nullptr;
+               m_size = 0;
+            }
          }
 
          /**********************************************************************\
@@ -244,7 +259,7 @@ namespace casual
 
                     if (rp->ai_family == AF_INET || rp->ai_family == AF_INET6) {
 
-                       Endpoint p(rp->ai_family, SOCK_STREAM, IPPROTO_TCP, rp->ai_addr, rp->ai_addrlen);
+                       Endpoint p(rp->ai_family, rp->ai_addr, rp->ai_addrlen);
                        listOfEndpoints.push_back(p);
 
                     }
@@ -267,29 +282,39 @@ namespace casual
          /*
           * Constructor of the socket based on an endpoint
           */
-         Socket::Socket(Endpoint &p) : pEndpoint (std::make_unique<Endpoint>(p))
+         Socket::Socket(Endpoint &e) : endpoint (e)
          {
-            fd = ::socket (pEndpoint->family, pEndpoint->type, pEndpoint->protocol);
+            /* Default in error state */
+            state = SocketState::error;
+            events = 0;
+
+            /* Create the socket */
+            fd = ::socket (endpoint.family, endpoint.type, endpoint.protocol);
             if (fd<0) {
-               common::logger::error << "Unable to create socket for " << pEndpoint->info() << " : " << ::strerror(errno);
+               common::logger::error << "Socket::Socket : Unable to create socket for " << endpoint.info() << " : " << ::strerror(errno) << "(" << errno << ")";
             } else {
 
-               /* Set socket options */
+               /* Set socket options, reuse address */
                int on = 1;
                int n = ::setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&on), sizeof(int));
                if (n<0) {
-                  common::logger::error << "Unable to force socket to reuse address " << pEndpoint->info() << " : " << ::strerror(errno);
+                  common::logger::error << "Socket::Socket : Unable to force socket to reuse address " << endpoint.info() << " : " << ::strerror(errno);
                   ::close (fd);
                   fd = -1;
                } else {
+
                   /* Set it nonblocking */
                   int flags  = fcntl(fd,F_GETFL, 0);
                   int rc = fcntl(fd,F_SETFL, flags | O_NONBLOCK);
                   if (rc < 0)
                   {
-                     common::logger::error << "Unable to set socket as nonblocking " << pEndpoint->info() << " : " << ::strerror(errno);
+                     common::logger::error << "Socket::Socket : Unable to set socket as nonblocking " << endpoint.info() << " : " << ::strerror(errno);
                      ::close (fd);
                      fd = -1;
+                  } else {
+
+                     /* All created well */
+                     state = SocketState::initialized;
                   }
                }
             }
@@ -298,35 +323,35 @@ namespace casual
          /*
           * Constructor of the socket based on a file descriptor
           */
-         Socket::Socket (int socket, Endpoint *p)
+         Socket::Socket (int socket, Endpoint &e)
          {
+            /* Default in error */
+            state = SocketState::error;
+            events = POLLRDNORM | POLLWRNORM;
+
             /* Copy the endpoint if we got one */
-            if (p!=nullptr)
-               pEndpoint = std::make_unique<Endpoint>(*p);
-            else
-               pEndpoint = nullptr;
+            endpoint = e;
 
             /* Set up the file descriptor */
             fd = socket;
 
-            /* Set the reuseaddress option on the socket */
-            int on = 1;
-            int n = ::setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&on), sizeof(int));
-            if (n<0) {
-               common::logger::error << "Unable to force socket to reuse address " << pEndpoint->info() << " : " << ::strerror(errno);
-               ::close (fd);
-               fd = -1;
-            } else {
+            /* Connected socket */
+            state = SocketState::connected;
+         }
 
-               /* Always make it nonblocking */
-               int flags  = fcntl(fd,F_GETFL, 0);
-               int rc = fcntl(fd,F_SETFL, flags | O_NONBLOCK);
-               if (rc < 0)
-               {
-                  common::logger::error << "Unable to set socket as nonblocking " << pEndpoint->info() << " : " << ::strerror(errno);
-                  fd = -1;
-               }
-            }
+         /*
+          * Constructor of the socket based on a file descriptor
+          */
+         Socket::Socket ()
+         {
+            /* Default */
+            events = 0;
+
+            /* Set up the file descriptor */
+            fd = -1;
+
+            /* Connected socket */
+            state = SocketState::unknown;
          }
 
          /*
@@ -345,9 +370,31 @@ namespace casual
          {
             int n = -1;
             if (fd>=0) {
-               n = ::connect (fd, reinterpret_cast<struct sockaddr *>(pEndpoint->m_data.get()), pEndpoint->m_size);
+               if (state == initialized) {
+                  n = ::connect (fd, reinterpret_cast<struct sockaddr *>(endpoint.m_data.get()), endpoint.m_size);
+                  if (n<0) {
+                     if (errno != EINPROGRESS) {
+                        events = 0;
+                        common::logger::error << "Socket::connect : Unable to connect to socket " << endpoint.info() << " " << strerror (errno) << "(" << errno << ")";
+                        state = SocketState::error;
+                     } else {
+                        events = POLLWRNORM;
+                        state = SocketState::connecting;
+                        n = 0;
+                     }
+                  } else {
+                     common::logger::warning << "Socket::connect : We got connected directly, strange ...";
+                     events = POLLRDNORM | POLLWRNORM;
+                     state = SocketState::connected;
+                  }
+               } else {
+                  events = 0;
+                  common::logger::warning << "Socket::connect : Socket " << endpoint.info() << " is not in initialized state, " << getState();
+               }
             } else {
-               common::logger::error << "Unable to connect to socket, it is invalid";
+               events = 0;
+               common::logger::error << "Socket::connect : Unable to connect to " << endpoint.info() << ", socket it is invalid";
+               state = SocketState::error;
             }
             return n;
          }
@@ -357,10 +404,26 @@ namespace casual
           */
          int Socket::bind(){
             int n = -1;
+
+            /* We do not need to wait for any specific events */
+            events = 0;
+
+            /* Bind it */
             if (fd>=0) {
-               n = ::bind (fd, reinterpret_cast<struct sockaddr *>(pEndpoint->m_data.get()), pEndpoint->m_size);
+               if (state == initialized) {
+                  n = ::bind (fd, reinterpret_cast<struct sockaddr *>(endpoint.m_data.get()), endpoint.m_size);
+                  if (n<0) {
+                     common::logger::error << "Socket::bind : Unable to bind socket " << endpoint.info() << " " << strerror (errno) << "(" << errno << ")";
+                     state = SocketState::error;
+                  } else
+                     state = SocketState::bound;
+               } else {
+                  common::logger::warning << "Socket::bind : Socket " << endpoint.info() << " is not in initialized state, " << getState();
+               }
+
             } else {
-               common::logger::error << "Unable to bind socket, it is invalid";
+               common::logger::error << "Socket::bind : Unable to bind socket " << endpoint.info() << ", it is invalid";
+               state = SocketState::error;
             }
             return n;
          }
@@ -370,23 +433,37 @@ namespace casual
           */
          int Socket::listen(int backlog)
          {
-            int n = ::listen (fd, backlog);
+            events = 0;
+            int n = -1;
+            if (state == bound) {
+               n = ::listen (fd, backlog);
+               if (n<0) {
+                  common::logger::error << "Socket::listen : Unable to listen to socket " << endpoint.info() << " " << strerror (errno) << "(" << errno << ")";
+                  state = SocketState::error;
+               } else {
+                  events = POLLRDNORM;
+                  state = SocketState::listening;
+               }
+            } else {
+               common::logger::warning << "Socket::connect : Socket " << endpoint.info() << " is not in bound state, " << getState();
+            }
             return n;
          }
 
          /*
           * Accepts incoming connections
           */
-         std::unique_ptr<Socket> Socket::accept()
+         int Socket::accept(Socket *pS)
          {
-            std::unique_ptr<Socket> pS = nullptr;
             struct sockaddr *pSockaddr = nullptr;
             socklen_t len = 0;
-            int new_fd = -1;
+            int n = -1;
 
-            /* Determine the size of the socket address, we can only do this if we have an enpoint */
-            if (pEndpoint != nullptr) {
-               switch (pEndpoint->family) {
+            /* Are we in correct state ? */
+            if (state == listening) {
+
+               /* Determine size of the sockaddr */
+               switch (endpoint.family) {
                   case AF_INET:
                      len = sizeof (struct sockaddr_in);
                      break;
@@ -394,7 +471,8 @@ namespace casual
                      len = sizeof (struct sockaddr_in6);
                      break;
                   default:
-                     common::logger::error << "Unsupported protocol family to accept connection on " << pEndpoint->info();
+                     common::logger::error << "Socket::accept : Unsupported protocol family to accept connection on " << endpoint.info();
+                     state = SocketState::error;
                      break;
                }
 
@@ -405,41 +483,42 @@ namespace casual
                   pSockaddr = static_cast<struct sockaddr *>(malloc (len));
 
                   /* Accept the call */
-                  int n = ::accept (fd, pSockaddr, &len);
+                  n = ::accept (fd, pSockaddr, &len);
 
                   /* Create the endpoint of the connection */
                   if (n>=0) {
-                     Endpoint *p = nullptr;
-                     if (pEndpoint != nullptr) {
-                        p = new Endpoint(pEndpoint->family, pEndpoint->type, pEndpoint->protocol, pSockaddr, len);
-                     }
-                     pS = std::unique_ptr<Socket>(new Socket (n, p));
+
+                     Endpoint p(endpoint.family, pSockaddr, len);
+
+                     pS->fd = n;
+                     pS->endpoint = p;
+                     pS->state = SocketState::connected;
+                     pS->setEventMask (POLLWRNORM | POLLRDNORM);
+                     n = 0;
+
+                  } else {
+
+                     common::logger::error << "Socket::accept : Accept error on " << endpoint.info() << " " << strerror(errno) << "(" << errno << ")";
+
+                     state = SocketState::error;
+
+                     pS->fd = -1;
+                     pS->state = SocketState::error;
+                     pS->setEventMask (0);
+
                   }
 
                   /* Free the container */
                   free (pSockaddr);
 
                }
+
+            } else {
+               common::logger::warning << "Socket::connect : Socket " << endpoint.info() << " is not in listening state, " << getState();
             }
 
-            /* Back with the socket */
-            return pS;
-         }
-
-         /*
-          * Return with the endpoint
-          */
-         Endpoint *Socket::getEndpoint()
-         {
-            return pEndpoint.get();
-         }
-
-         /*
-          * Add the event handler
-          */
-         void Socket::setEventHandler(std::unique_ptr<SocketEventHandler> &pSEH)
-         {
-            pEventHandler = std::move (pSEH);
+            /* Back with the status */
+            return n;
          }
 
          /*
@@ -447,75 +526,120 @@ namespace casual
           */
          int Socket::close()
          {
-            /*
-             * TODO: Should we do a shutdown instead? Determine this later, if needed
-             */
-            return ::close (fd);
+            int n = -1;
+
+            /* We do not need to listen to any events */
+            events = 0;
+
+            /* Close the socket */
+            if (fd >= 0) {
+               n = ::close (fd);
+               if (n<0) {
+                  common::logger::error << "Socket::close : Close error on " << endpoint.info() << " " << strerror(errno) << "(" << errno << ")";
+                  state = SocketState::error;
+               } else {
+                  state = SocketState::closed;
+                  fd = -1;
+               }
+            }
+
+            return n;
          }
 
          /*
           * Polls the socket and return 0 on timeout, -1 on error and 1 if an event occured
           */
-         int Socket::poll(int timeout)
+         int Socket::execute(int timeout)
          {
             int ready = -1; /* Error */
+            int n = 0;
 
-            /* Do we have a socketeventhandler? */
-            if (pEventHandler != nullptr) {
+            /* We cannot be in error state or in initialized state */
+            if (state != SocketState::error && state != SocketState::initialized) {
 
                /* Make the poll mask */
                struct pollfd client[1];
                client[0].fd = fd;
-               client[0].events = pEventHandler->events();
+               client[0].events = events;
                client[0].revents = 0;
 
                /* Wait for some data */
+               dumpEvents (client[0].events);
+
+               /* Poll */
                ready = ::poll (client, 1, timeout);
                if (ready == 1) {
-                  handle (client[0].revents);
-               } else {
-                  if (ready < 0) {
-                     if (pEndpoint != nullptr)
-                        common::logger::warning << "Polling " << pEndpoint->info() << " caused error => " << strerror (errno);
-                     else
-                        common::logger::warning << "Polling caused error => " << strerror (errno);
+
+                  /* We got some events */
+                  common::logger::information << "Socket::execute : The events that got fired for " << endpoint.info() << " are " << dumpEvents (client[0].revents);
+
+                  /* Decide what to do */
+                  switch (state) {
+
+                     /* States with no action */
+                     case SocketState::unknown:
+                     case SocketState::error:
+                     case SocketState::initialized:
+                     case SocketState::bound:
+                     case SocketState::closed:
+                        common::logger::warning << "Socket::execute : No event should come in this state";
+                        break;
+
+                     /* We are waiting for a connect from the other side */
+                     case SocketState::listening:
+                        n = handleIncomingConnection (client[0].revents);
+                        if (n<0) {
+                           /* Change to error state */
+                           state = SocketState::error;
+                        }
+                        break;
+
+                     /* We are waiting for an accept from the other side */
+                     case SocketState::connecting:
+                        n = handleOutgoingConnection (client[0].revents);
+                        if (n<0) {
+                           /* Change to error state */
+                           state = SocketState::error;
+                        } else {
+                           if (n > 0) {
+                              /* Change state to connected */
+                              state = SocketState::connected;
+                           }
+                        }
+                        break;
+
+                     /* We are connected, this is data in or out */
+                     case SocketState::connected:
+                        n = handleConnected (client[0].revents);
+                        if (n<0) {
+                           /* Change to error state */
+                           state = SocketState::error;
+                        } else {
+                           if (n>0) {
+                              /* Change to closed state */
+                              close();
+                           }
+                        }
+                        break;
+
                   }
+
+               } else {
+
+                  if (ready < 0) {
+                     state = SocketState::error;
+                  }
+
                }
+
+            } else {
+
+               common::logger::warning << "Socket::execute : Socket " << endpoint.info() << " is in wrong state " << getState();
+
             }
 
+            /* Return with the status */
             return ready;
-         }
-
-         /*
-          * Handles an event on the socket
-          */
-         int Socket::handle (int events)
-         {
-            int ready = -1; /* Error */
-
-            /* Do we have any socketeventhandler? */
-            if (pEventHandler != nullptr) {
-               ready = 1;
-               pEventHandler->handle (events, *this);
-            }
-
-            return ready;
-         }
-
-         /*
-          * Returns with the socket descriptor
-          */
-         int Socket::getSocket () const
-         {
-            return fd;
-         }
-
-         /*
-          * Returns with the eventhandler, remain ownership of handler
-          */
-         SocketEventHandler *Socket::getEventHandler() const
-         {
-            return pEventHandler.get();
          }
 
          /*
@@ -523,7 +647,7 @@ namespace casual
           */
          int Socket::write (void *pData, int size)
          {
-            return ::send (fd, pData, size, 0);
+            return ::send (fd, pData, size, MSG_DONTWAIT);
          }
 
          /*
@@ -531,277 +655,133 @@ namespace casual
           */
          int Socket::read (void *pData, int size)
          {
-            return ::recv (fd, pData, size, 0);
+            return ::recv (fd, pData, size, MSG_DONTWAIT);
          }
 
          /*
           * Return with the current error
           */
-         int Socket::getError ()
+         int Socket::getLastError ()
          {
             int err = 0;
-            socklen_t err_size;
-            if (getsockopt (getSocket(), SOL_SOCKET, SO_ERROR, &err, &err_size) == -1)
-               common::logger::warning << "Socket::getError: Getsockopt error " << strerror (errno);
+            socklen_t err_size = sizeof (int);
+            if (getsockopt (fd, SOL_SOCKET, SO_ERROR, &err, &err_size) == -1)
+               common::logger::warning << "Socket::getLastError: Getsockopt error " << strerror (errno);
             return err;
          }
 
-         /**********************************************************************\
-          *  SocketPair
-         \**********************************************************************/
-
          /*
-          * Constructor of a socketpair
+          * Return with the event mask
           */
-         SocketPair::SocketPair ()
+         int Socket::getEventMask ()
          {
-            int fd[2]; /* The sockets */
-
-            ::socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
-            if (fd<0) {
-               common::logger::error << "Unable to create a socketpair for : " << ::strerror(errno);
-            } else {
-
-               /* Set it nonblocking */
-               int flags  = fcntl(fd[0],F_GETFL, 0);
-               int rc = fcntl(fd[0],F_SETFL, flags | O_NONBLOCK);
-               if (rc < 0)
-               {
-                  common::logger::error << "Unable to set the socketpair side A as nonblocking  : " << ::strerror(errno);
-                  ::close (fd[0]);
-               }
-
-               flags  = fcntl(fd[1],F_GETFL, 0);
-               rc = fcntl(fd[1],F_SETFL, flags | O_NONBLOCK);
-               if (rc < 0)
-               {
-                  common::logger::error << "Unable to set the socketpair side B as nonblocking  : " << ::strerror(errno);
-                  ::close (fd[1]);
-               }
-
-               /* Create the socketwrappers */
-               pA = std::unique_ptr<Socket>(new Socket(fd[0]));
-               pB = std::unique_ptr<Socket>(new Socket(fd[0]));
-
-               // It does not work with the make_unique template :-(, template is not a friend with the socket
-               //pA = std::make_unique<Socket>(fd[0]);
-               //pB = std::make_unique<Socket>(fd[1]);
-
-            }
+            return events;
          }
 
          /*
-          * Destroys socketpair
+          * Sets the event mask
           */
-         SocketPair::~SocketPair()
+         void Socket::setEventMask (int mask)
          {
+            events = mask;
          }
 
          /*
-          * Getters for the socketpair A and B side
+          * Return with the state as a string
           */
-         std::unique_ptr<Socket> SocketPair::getSocketA ()
+         std::string Socket::getState () const
          {
-            /* Create the sockets */
-            return std::move (pA);
-         }
+            std::string s = "";
 
-         std::unique_ptr<Socket> SocketPair::getSocketB ()
-         {
-            return std::move (pB);
-         }
+            switch (state) {
+               case SocketState::unknown:
+                  s = "SocketState:unknown";
+                  break;
+               case SocketState::error:
+                  s = "SocketState:error";
+                  break;
+               case SocketState::initialized:
+                  s = "SocketState:initialized";
+                  break;
+               case SocketState::bound:
+                  s = "SocketState:bound";
+                  break;
+               case SocketState::closed:
+                  s = "SocketState:closed";
+                  break;
+               case SocketState::listening:
+                  s = "SocketState:listening";
+                  break;
+               case SocketState::connecting:
+                  s = "SocketState:listening";
+                  break;
+               case SocketState::connected:
+                  s = "SocketState:connected";
+                  break;
+               default:
+                  s = "SocketState:none";
+                  break;
 
-         /**********************************************************************\
-          *  SocketEventHandler
-         \**********************************************************************/
+            }
+            return s;
+         }
 
          /*
-          * The socket event handler dispatcher
+          * Returns true if socket is in initialized state
           */
-         int SocketEventHandler::handle(int events, Socket &socket)
+         bool Socket::isInitialized() const
          {
-            int handled = 0;
+            return state == SocketState::initialized;
+         }
 
-            /* Error */
-            if ((events & (POLLERR | POLLNVAL)) != 0) {
-               handled |= error (events, socket);
-            }
-
-            /* Hung up */
-            if ((events & POLLHUP) != 0) {
-               handled |= hangup (events, socket);
-            }
-
-            /* Data is ready */
-            if ((events & POLLIN) != 0) {
-               handled |= dataCanBeRead (events, socket);
-            }
-
-            /* Data can be written */
-            if ((events & POLLOUT) != 0) {
-               handled |= dataCanBeWritten (events, socket);
-            }
-
-            /* Flags to say what we handled */
-            return handled;
+         /*
+          * Returns true if sockes is in error state
+          */
+         bool Socket::hasError() const
+         {
+            return state == SocketState::error;
          }
 
          /*
           * Dump event socket flags
           */
-         void dumpEvents (int events)
+         std::string Socket::dumpEvents (int events)
          {
+            std::stringstream s;
+
+            s << "Events =";
             if ((events & POLLIN) != 0) {
-               common::logger::information << "Events has POLLIN set";
+               s << " POLLIN";
             }
             if ((events & POLLRDNORM) != 0) {
-               common::logger::information << "Events has POLLRDNORM set";
+               s << " POLLRDNORM";
             }
             if ((events & POLLRDBAND) != 0) {
-               common::logger::information << "Events has POLLRDBAND set";
+               s << " POLLRDBAND";
             }
             if ((events & POLLPRI) != 0) {
-               common::logger::information << "Events has POLLPRI set";
+               s << " POLLPRI";
             }
             if ((events & POLLOUT) != 0) {
-               common::logger::information << "Events has POLLOUT set";
+               s << " POLLOUT";
             }
             if ((events & POLLWRNORM) != 0) {
-               common::logger::information << "Events has POLLWRNORM set";
+               s << " POLLWRNORM";
             }
             if ((events & POLLWRBAND) != 0) {
-               common::logger::information << "Events has POLLWRBAND set";
+               s << " POLLWRBAND";
             }
             if ((events & POLLERR) != 0) {
-               common::logger::information << "Events has POLLERR set";
+               s << " POLLERR";
             }
             if ((events & POLLHUP) != 0) {
-               common::logger::information << "Events has POLLHUP set";
+               s << " POLLHUP";
             }
             if ((events & POLLNVAL) != 0) {
-               common::logger::information << "Events has POLLNVAL set";
-            }
-         }
-
-         /*
-          * Base implementation, so we don't require an implementation for all
-          */
-         int SocketEventHandler::dataCanBeRead(int events, Socket &socket)
-         {
-            common::logger::warning << "Unimplemented data read event";
-            return 0;
-         }
-
-         int SocketEventHandler::dataCanBeWritten(int events, Socket &socket)
-         {
-            common::logger::warning << "Unimplemented data write event";
-            return 0;
-         }
-
-         int SocketEventHandler::error(int events, Socket &socket)
-         {
-            common::logger::warning << "Unimplemented error event " << strerror (socket.getError());
-            return 0;
-         }
-
-         int SocketEventHandler::hangup(int events, Socket &socket)
-         {
-            common::logger::warning << "Unimplemented hangup event";
-            return 0;
-         }
-
-         /**********************************************************************\
-          *  SocketGroup
-         \**********************************************************************/
-
-         /*
-          * Polls all events from all sockets in the group and call each sockets handle function
-          */
-         int SocketGroup::poll (int timeout)
-         {
-            int ready = -1;
-
-            /*
-             * Work on a copy of the socketlist so it is allowed to alter the content of the socketgroup
-             * during poll and eventhandling.
-             */
-            std::list<std::shared_ptr<Socket>> localListOfSockets(listOfSockets);
-
-            /* Generate a pollfilter, could be pre generated or dirty. We only regenreate it if it is dirty. */
-            if (dirty) {
-               generatePollFilter();
-               dirty = false;
+               s << " POLLNVAL";
             }
 
-            /* Only poll if we got any sockets */
-            if (localListOfSockets.size()>0) {
-
-               /* Wait for something to happen on the poll filters */
-               ready = ::poll (clients.get(), localListOfSockets.size(), timeout);
-               if (ready > 0) {
-                  int n = 0;
-
-                  /* Loop through all clients to see if anything has happened */
-                  std::for_each(localListOfSockets.begin(), localListOfSockets.end(),
-                        [&](std::shared_ptr<Socket> pSocket)
-                        {
-                           if (clients[n].revents!=0)
-                              pSocket->handle (clients[n].revents);
-                           n++;
-                        }
-                  );
-
-               } else {
-                  if (ready < 0) {
-                     common::logger::warning << "Polling socketgroup caused error => " << strerror (errno);
-                  }
-               }
-            }
-
-            /*  Report back how many sockets got fired in this polling sweep */
-            return ready;
-         }
-
-         /*
-          * Generates an array of poll filters
-          */
-         void SocketGroup::generatePollFilter()
-         {
-            int n = 0;
-            clients.reset (new struct pollfd[listOfSockets.size()]);
-
-            /* For every socket in the group add it to the pollfilter */
-            std::for_each(listOfSockets.begin(),listOfSockets.end(),[&](std::shared_ptr<Socket> pSocket)
-            {
-               clients[n].fd = pSocket->getSocket();
-               if (pSocket->getEventHandler()!=0)
-                  clients[n].events = pSocket->getEventHandler()->events();
-               else
-                  clients[n].events = 0;
-               clients[n].revents = 0;
-               n++;
-            });
-
-            /* We have regenerated the poll structure, we are no longer dirty */
-            dirty = false;
-         }
-
-         /*
-          * Adds a socket to the group and regenerate the event flag array
-          */
-         void SocketGroup::addSocket (std::shared_ptr<Socket>  pSocket)
-         {
-            listOfSockets.push_back(pSocket);
-            dirty = true;
-         }
-
-         /*
-          * Remove a socket from the group and regenerate the envet flag array
-          */
-         void SocketGroup::removeSocket (std::shared_ptr<Socket>  pSocket)
-         {
-            listOfSockets.remove(pSocket);
-            dirty = true;
+            return s.str();
          }
 
       }

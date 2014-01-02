@@ -58,9 +58,10 @@ namespace casual
        struct Gateway {
           std::string name="noname";
           std::string endpoint="0.0.0.0:55555";
-          int clientreconnecttime = 5000; /* Default 5 seconds reconnect time for clients */
-          int clienttimeout = 1000; /* Default 1 second timeout for sockets */
-          int queuetimeout = 1; /* Default 1 second timeout for queue */
+          int clientreconnecttime = 5000; /* Default 5 seconds reconnect time for sockets */
+          int clienttimeout = 1000; /* Default 1 second timeout for socket polling */
+          int queuetimeout = 1; /* Default 1 second timeout for queue polling */
+          int maxMessagesInWriteQueue = 100; /* Default max number of messages waiting in write queue */
 
           std::vector<RemoteGateway> remotegateways;
 

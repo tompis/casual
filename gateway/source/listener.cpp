@@ -58,7 +58,7 @@ namespace casual
          writeBuffer_size = buffer_size = position = writePosition = message_size = message_read = 0;
          possibleToWrite = false;
          state = wait_for_header;
-         pollEvents = POLLIN | POLLOUT;
+         pollEvents = POLLRDNORM | POLLWRNORM;
       }
 
       BaseHandler::~BaseHandler()
@@ -176,81 +176,66 @@ namespace casual
       int BaseHandler::dataCanBeRead (int events, common::ipc::Socket &socket)
       {
          common::logger::information << "BaseHandler::dataCanBeRead : Entered";
-         common::ipc::dumpEvents(events);
-
+         common::logger::information << "BaseHandler::dataCanBeRead : Can be read " << maxBufferSize - buffer_size;
 
          /* Read as much data as possible, i.e. try always to fill up the buffer */
-         int numberOfBytes = 0;
          if (maxBufferSize - buffer_size > 0) {
             int numberOfReadBytes = socket.read(&buffer[buffer_size], maxBufferSize-buffer_size);
+            if (numberOfReadBytes<0) {
+               common::logger::information << "BaseHandler::dataCanBeRead : " << strerror (errno) << "(" << errno << ") - " << numberOfReadBytes;
+               numberOfReadBytes = 0;
+            }
             buffer_size += numberOfReadBytes;
+            common::logger::information << "BaseHandler::dataCanBeRead : Read " << numberOfReadBytes;
 
-         /* Runt the statemachine if we did not get any errors */
-         if (numberOfReadBytes >= 0 ) {
+            /* Runt the statemachine if we did not get any errors */
+            if (numberOfReadBytes > 0 ) {
 
-            /* Are we in header synch state */
-            if (state == wait_for_header) {
+               /* Are we in header synch state */
+               if (state == wait_for_header) {
 
-               /* Locate the header in the data stream */
-               common::logger::information << "BaseHandler::dataCanBeRead : Trying to locate header 'CASL' - Buffer size = " << buffer_size << " position = " << position;
-               if (locateHeader ())
-               {
-                  common::logger::information << "BaseHandler::dataCanBeRead : Header located, message size = " << message_size;
+                  /* Locate the header in the data stream */
+                  common::logger::information << "BaseHandler::dataCanBeRead : Trying to locate header 'CASL' - Buffer size = " << buffer_size << " position = " << position;
+                  if (locateHeader ())
+                  {
+                     common::logger::information << "BaseHandler::dataCanBeRead : Header located, message size = " << message_size;
+
+                     /* Change state */
+                     state = read_message;
+                  }
+               }
+
+               /* Are we in message read state */
+               if (state == read_message) {
+
+                  common::logger::information << "BaseHandler::dataCanBeRead : Reading message buffer size = " << buffer_size << " position " << position;
+                  common::logger::information << "BaseHandler::dataCanBeRead : Reading message current message size " << message_read << " need " << message_size;
+                  if (readMessage ()) {
+                     common::logger::information << "BaseHandler::dataCanBeRead : Message is completed, message size = " << message_size;
+
+                     /* Change state */
+                     state = message_complete;
+                  } else {
+                     common::logger::information << "BaseHandler::dataCanBeRead : Message is not complete, message_size = " << message_size << " message_read = " << message_read;
+                  }
+
+               }
+
+               /* Are we in completed message state */
+               if (state == message_complete) {
+
+                  common::logger::information << "BaseHandler::dataCanBeRead : Handle message, message size = " << message_size;
+                  handleMessage ();
 
                   /* Change state */
-                  state = read_message;
-               }
-            }
-
-            /* Are we in message read state */
-            if (state == read_message) {
-
-               common::logger::information << "BaseHandler::dataCanBeRead : Reading message buffer size = " << buffer_size << " position " << position;
-               common::logger::information << "BaseHandler::dataCanBeRead : Reading message current message size " << message_read << " need " << message_size;
-               if (readMessage ()) {
-                  common::logger::information << "BaseHandler::dataCanBeRead : Message is completed, message size = " << message_size;
-
-                  /* Change state */
-                  state = message_complete;
-               } else {
-                  common::logger::information << "BaseHandler::dataCanBeRead : Message is not complete, message_size = " << message_size << " message_read = " << message_read;
+                  state = wait_for_header;
                }
 
             }
 
-            /* Are we in completed message state */
-            if (state == message_complete) {
-
-            }
-               common::logger::information << "BaseHandler::dataCanBeRead : Handle message, message size = " << message_size;
-               handleMessage ();
-
-               /* Change state */
-               state = wait_for_header;
-            }
-
-         } else {
-
-            /*
-             * Handle the error cases
-             */
-            if (errno != EAGAIN && errno != EWOULDBLOCK) {
-               if (errno == EINTR) {
-
-                  /* Inerrupted */
-                  common::logger::information << "BaseHandler::dataCanBeRead : Interrupted";
-
-               } else {
-                  common::logger::warning << "BaseHandler::dataCanBeRead : Error during socket read " << errno << "=>" << strerror (errno);
-               }
-            } else {
-               common::logger::information << "BaseHandler::dataCanBeRead : Would block " << errno << "=>" << strerror (errno);
-            }
-         }
-
-         /* If we have reached the end of the buffer, clear the position and buffer_size */
-         if (position == buffer_size) {
-            position = buffer_size = 0;
+            /* If we have reached the end of the buffer, clear the position and buffer_size */
+            if (position == buffer_size)
+               position = buffer_size = 0;
          }
 
          common::logger::information << "BaseHandler::dataCanBeRead : Exited";
@@ -339,8 +324,13 @@ namespace casual
             /* Write to the socket */
             common::logger::information << "BaseHandler::writeAll : Write buffer size=" << writeBuffer_size << " position=" << writePosition << " towrite=" << writeBuffer_size - writePosition;
             int bytesWritten = socket.write(&writeBuffer[writePosition], writeBuffer_size-writePosition);
+            if (bytesWritten<0) {
+               common::logger::warning << "BaseHandler::writeAll : Error during socket write " << errno << "=>" << strerror (errno);
+               possibleToWrite = false;
+            }
+
             common::logger::information << "BaseHandler::writeAll : Wrote size=" << bytesWritten;
-            if (bytesWritten>=0) {
+            if (bytesWritten>0) {
 
                /* Data was written */
                bWrite = true;
@@ -358,24 +348,6 @@ namespace casual
                   writePosition = writeBuffer_size = 0;
                }
 
-            } else {
-
-               /*
-                * Handle the error cases
-                */
-               if (errno != EAGAIN && errno != EWOULDBLOCK) {
-                  if (errno == EINTR) {
-
-                     /* Interrupted */
-                     common::logger::information << "BaseHandler::writeAll : Interrupted";
-
-                  } else {
-                     common::logger::warning << "BaseHandler::writeAll : Error during socket write " << errno << "=>" << strerror (errno);
-                  }
-               } else {
-                  possibleToWrite = false;
-                  common::logger::information << "BaseHandler::writeAll : Would block " << errno << "=>" << strerror (errno);
-               }
             }
 
             /* Try to fill the buffer */
@@ -385,7 +357,7 @@ namespace casual
 
          /* If we cannot write, poll for write as we ll */
          if (!possibleToWrite)
-            pollEvents = POLLIN | POLLOUT;
+            pollEvents = POLLRDNORM | POLLWRNORM;
 
          common::logger::information << "BaseHandler::writeAll : Exited";
 
@@ -405,7 +377,7 @@ namespace casual
          possibleToWrite = true;
 
          /* We only need to poll for read */
-         pollEvents = POLLIN;
+         pollEvents = POLLRDNORM;
 
          /*
           * Write data if we got any

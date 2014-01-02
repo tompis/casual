@@ -18,7 +18,7 @@
 #include <fstream>
 #include <thread>
 #include <mutex>
-
+#include <map>
 
 namespace casual
 {
@@ -32,6 +32,13 @@ namespace casual
             {
                namespace
                {
+                  /*
+                   * Thread list, contains a list of thread::id mapped to a unique number starting from 1 and upwards.
+                   * The thread::id is so big and the logging with that id is hard to follow.
+                   */
+                  static std::map<std::thread::id, int> tidlist;
+                  static int tid = 1;
+
                   struct Context
                   {
                      /* Mutex for requiring the logfile for output */
@@ -92,12 +99,16 @@ namespace casual
                         //syslog( priority, "%s - %s", m_prefix.c_str(), message.c_str());
 
                         std::lock_guard<std::mutex> lock (logmutex);
+                        std::thread::id id = std::this_thread::get_id();
+                        if (tidlist.find(id) == tidlist.end()) {
+                           tidlist[id] = tid++;
+                        }
 
                         out <<
                            common::chronology::local() <<
                            '|' << common::environment::getDomainName() <<
                            '|' << common::calling::Context::instance().callId().string() <<
-                           '|' << common::process::id() <<
+                           '|' << common::process::id() << "-" << tidlist[id] <<
                            '|' << common::file::basename( common::environment::file::executable()) <<
                            '|' << common::calling::Context::instance().currentService() <<
                            "|";

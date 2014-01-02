@@ -49,25 +49,16 @@ namespace casual
         State &m_global;
 
         /*
-         * If all configuration and pre initialization has been done okey
+         * The masters state
          */
-        bool bInitialized = false;
-
-        /*
-         * If the master thread is running
-         */
-        bool bRunning = false;
+        enum {initialized=0, active=10, failed=100 } state = failed;
 
         /*
          * Master socket
          */
         common::ipc::Endpoint endpoint;
-        std::shared_ptr<common::ipc::Socket> socket;
+        std::unique_ptr<common::ipc::Socket> socket;
 
-        /*
-         * The socketgroup we are polling for the listener and register service
-         */
-         common::ipc::SocketGroup socketGroupServer;
      };
 
      /**********************************************************************\
@@ -112,6 +103,8 @@ namespace casual
          * The currently running thread
          */
         std::unique_ptr<std::thread> thread = nullptr;
+        bool bRun = false;
+        bool bExited = false;
 
         /*
          * The master state
@@ -120,36 +113,42 @@ namespace casual
      };
 
      /**********************************************************************\
-      *  The Masters connection eventhandler
+      *  The Master socket
      \**********************************************************************/
 
      /*
       * This class handles the events for a socket in listening state and handles
       * the event when a client is requesting a connection.
       */
-     class MasterConnectHandler : public common::ipc::SocketEventHandler {
+     class MasterSocket : public common::ipc::Socket {
 
      public:
 
         /*
          * Constructors destructors
          */
-        MasterConnectHandler (MasterState &s);
-        ~MasterConnectHandler();
-
-        /*
-         * Types this handler handles
-         */
-        int events() const;
+        MasterSocket () = delete;
+        MasterSocket (MasterState &s, common::ipc::Endpoint &p);
+        ~MasterSocket();
 
      protected:
 
         /*
-         * Functions that gets called whenever an event occurs for the socket. In this case
-         * I am only after the data can be read, because for a socket in listening state
-         * this signals that a connection request has arrived.
+         * Called when the listening state has an incoming connection that we need to accept.
          */
-        int dataCanBeRead (int events, common::ipc::Socket &socket);
+        int handleIncomingConnection (int events);
+
+        /*
+         * Called when the connecting state has an outgoing connect and we have an incoming accept.
+         * This is not a scenario in the master socket.
+         */
+        int handleOutgoingConnection (int events);
+
+        /*
+         * Handle events when we are in connected state, usually reading and writing data to and from the socket.
+         * This is not a scenario in the master socket.
+         */
+        int handleConnected (int events);
 
      private:
 

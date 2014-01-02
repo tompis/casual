@@ -87,6 +87,7 @@ namespace casual
 
             /* Friends, so we can encapsulate posix much more */
             friend class Socket;
+            friend class SocketPair;
             friend class Resolver;
 
          public:
@@ -117,16 +118,16 @@ namespace casual
             /*
              * Constructor, only for friends.
              *
-             * family, type, protocol and socket address
+             * family and socket address
              */
-            Endpoint (int f, int t, int p, const void *sa, size_t len);
+            Endpoint (int f, const void *sa, size_t len);
 
             /*
              * The POSIX data
              */
             std::unique_ptr<char[]> m_data = nullptr;
             std::size_t m_size = 0;
-            int family = AF_INET;
+            int family = AF_UNIX;
             int protocol = IPPROTO_TCP;
             int type = SOCK_STREAM;
 
@@ -135,6 +136,7 @@ namespace casual
              */
             std::string infoTCPv4();
             std::string infoTCPv6();
+            std::string infoUNIX();
 
             /*
              * POSIX helper function that copies address info
@@ -218,6 +220,11 @@ namespace casual
 
          public:
 
+            /*
+             * Socket state
+             */
+            enum SocketState {unknown=0, initialized=1, error=2, bound=100, listening, connecting, connected, closed };
+
             /* Friends, so we can encapsulate posix much more */
             friend SocketGroup;
             friend SocketPair;
@@ -225,7 +232,8 @@ namespace casual
             /*
              * Constructors and destructors
              */
-            Socket(Endpoint &p);
+            Socket ();
+            Socket(Endpoint &e);
             ~Socket();
 
             /*
@@ -239,52 +247,42 @@ namespace casual
              */
 
             /*
-             * Returns with the error conectetd to the socket
+             * Returns with the error associated with the socket
              */
-            int getError ();
+            int getLastError ();
 
             /*
-             * Close the socket, returns -1 on error, zero otherwise
+             * Close the socket, returns -1 on error, zero otherwise. Leaves socket in closed state.
              */
             int close();
 
             /*
-             * Conect to the current endpoint, returns -1 on error, zero otherwise
+             * Conect to the current endpoint, returns -1 on error, zero otherwise. Leaves socket in connecting state and
+             * once the connection is established in connected.
              */
             int connect ();
 
             /*
-             * Bind the socket to an endpoint, returns -1 on error, zero otherwise
+             * Bind the socket to an endpoint, returns -1 on error, zero otherwise. Leaves the socket in bound state.
              */
             int bind();
 
             /*
-             * Listen to an bound socket, returns -1 on error, zero otherwise
+             * Listen to an bound socket, returns -1 on error, zero otherwise. Leaves the socket in listening state.
              */
             int listen(int backlog = SOMAXCONN);
 
             /*
-             * Accept incoming connection and return a new socket
+             * Accept incoming connection and move it to the socket given as a paramter and set it to connected state.
              */
-            std::unique_ptr<Socket> accept();
+            int accept(Socket *pS);
 
             /*
-             * Other socket functions
-             */
-            Endpoint *getEndpoint ();
-
-            /*
-             * Add handler, ownership is taken
-             */
-            void setEventHandler(std::unique_ptr<SocketEventHandler> &pSEH);
-
-            /*
-             * Polls the socket.
+             * Executes the socket statemachine.
              *
-             * Returns 0 on timeout, 1 on event occured and -1 on error and calls the eventhandler
-             * for the socket.
+             * Returns 0 on timeout, 1 on event occured and -1 on error.
              */
-            int poll(int timeout);
+            int execute(int timeout);
 
             /*
              * write data
@@ -297,26 +295,55 @@ namespace casual
             int read (void *pData, int size);
 
             /*
-             * Return with the eventhandler, ownership is maintained
+             * Returns the string of the sockets current state
              */
-            SocketEventHandler *getEventHandler() const;
+            std::string getState () const;
+
+            /*
+             * Returns with a string of events
+             */
+            std::string dumpEvents (int events);
+
+            /*
+             * Returns true if sockes is in initialized state
+             */
+            bool isInitialized() const;
+
+            /*
+             * Returns true if sockes in in error state
+             */
+            bool hasError() const;
+
+         protected:
+
+            /*
+             * Called when the listening state has an incoming connection that we need to accept.
+             */
+            virtual int handleIncomingConnection (int events) = 0;
+
+            /*
+             * Called when the connecting state has an outgoing connect and we have an incoming accept.
+             */
+            virtual int handleOutgoingConnection (int events) = 0;
+
+            /*
+             * Handle events when we are in connected state, usually reading and writing data to and from the socket.
+             */
+            virtual int handleConnected (int events) = 0;
+
+            /*
+             * Sets or gets the events mask
+             */
+            int getEventMask ();
+            void setEventMask (int mask);
 
          private:
 
             /*
-             * Socket created from a file descriptor, we maybe dont have an endpoint if so set it to null.
+             * Socket created from a file descriptor, we maybe dont have an endpoint if so set it to null. We assume that
+             * the socket is in connected state and sets the statemachine accordingly.
              */
-            Socket (int fd, Endpoint *p = nullptr);
-
-            /*
-             * Get a hold on the file descriptor
-             */
-            int getSocket() const;
-
-            /*
-             * Executes a handler based on the event mask
-             */
-             int handle (int events);
+            Socket (int fd, Endpoint &e);
 
             /*
              * Socket file descriptor
@@ -324,14 +351,19 @@ namespace casual
             int fd;
 
             /*
-             * Socket endpoint
+             * Events to wait for
              */
-            std::unique_ptr<Endpoint> pEndpoint;
+            int events = POLLRDNORM | POLLWRNORM;
 
             /*
-             * Socket event handlers
+             * Socket state
              */
-            std::unique_ptr<SocketEventHandler> pEventHandler = nullptr;
+            enum SocketState state = SocketState::unknown;
+
+            /*
+             * Socket endpoint
+             */
+            Endpoint endpoint;
 
          };
 
@@ -408,7 +440,7 @@ namespace casual
          private:
 
             /*
-             * Creates a poll filter for the POSIX poll
+             * Creates a execute filter for the POSIX execute
              */
             void generatePollFilter();
 
@@ -465,11 +497,6 @@ namespace casual
             virtual int error (int events, Socket &socket);
 
          };
-
-         /*
-          * Dump events
-          */
-         void dumpEvents (int events);
 
       }
    }

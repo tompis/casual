@@ -47,7 +47,7 @@ namespace casual
          class IPSERVERHandler1 : public SocketEventHandler {
 
             /* A socket */
-            std::shared_ptr<Socket> pS;
+            Socket newSocket;
 
          public:
 
@@ -203,7 +203,7 @@ namespace casual
                /* Initialize the testbed */
                Endpoint p = *resolver.begin();
                Socket source(p);
-               source.setEventHandler (pServerHandler);
+               source.setEventHandler (std::move(pServerHandler));
                common::logger::information << "SERVER: Server socket bound";
                int bound = source.bind();
                EXPECT_TRUE(bound==0);
@@ -217,7 +217,7 @@ namespace casual
                      /* Start the client */
                      std::thread t([&](){
                         Socket sink(p);
-                        sink.setEventHandler (pClientHandler);
+                        sink.setEventHandler (std::move(pClientHandler));
                         common::logger::information << "CLIENT: Waiting to connect client";
                         std::chrono::milliseconds dura( 100 );
                         std::this_thread::sleep_for( dura );
@@ -259,7 +259,7 @@ namespace casual
                /* Initialize the testbed */
                Endpoint p = *resolver.begin();
                Socket source(p);
-               source.setEventHandler (pServerHandler);
+               source.setEventHandler (std::move(pServerHandler));
                common::logger::information << "SERVER: Server socket bound";
                int bound = source.bind();
                EXPECT_TRUE(bound==0);
@@ -273,7 +273,7 @@ namespace casual
                      /* Start the client */
                      std::thread t([&](){
                         Socket sink(p);
-                        sink.setEventHandler (pClientHandler);
+                        sink.setEventHandler (std::move(pClientHandler));
                         common::logger::information << "CLIENT: Waiting to connect client";
                         std::chrono::milliseconds dura( 100 );
                         std::this_thread::sleep_for( dura );
