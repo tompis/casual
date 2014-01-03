@@ -76,6 +76,8 @@ namespace casual
            }
            catch(const common::exception::signal::Timeout& timeout)
            {
+              gateway::Gateway::houskeeping (m_state);
+
               /*
                * Reset the alarm
                */
@@ -173,6 +175,93 @@ namespace casual
         * Stop the master thread
         */
        m_state.masterThread->stop();
+
+    }
+
+    /*
+     * Static houskeeping function
+     */
+    void Gateway::houskeeping (State &m_state)
+    {
+       common::logger::information << "Gateway::houskeeping : Houskeeping started";
+       /*
+        * Master thread houskeeping
+        */
+       {
+          common::logger::information << "Gateway::houskeeping : Checking master";
+       }
+
+       /*
+        * Client Thread houskeeping
+        */
+       {
+          std::lock_guard<std::mutex> m(m_state.listOfClientsMutex);
+          common::logger::information << "Gateway::houskeeping : Checkig all clients, there are " << m_state.listOfClients.size() << " clients";
+          std::list<std::unique_ptr<ClientThread>>::iterator i = m_state.listOfClients.begin();
+          while (i!=m_state.listOfClients.end())
+          {
+             std::unique_ptr<ClientThread> &ct = *i;
+
+             /* Has the thread exited ? */
+             if (ct->hasExited()) {
+
+                common::logger::information << "Gateway::houskeeping : Client " << ct->getName() << " has exited";
+                /*
+                 * Is the thread restartable, this is only if we are the initiatior, not incoming gateway
+                 * connections
+                */
+                if (ct->isRestartable()) {
+
+                   /* Do the thread still thinks it is running, but some other condition has caused it to stop */
+                   if (ct->hasStarted()) {
+
+                      /* If it is not fatal, then restart it */
+                      if (ct->getMachineState() != ClientState::fatal) {
+
+                         common::logger::information << "Gateway::houskeeping : Restarting connection to " << ct->getName();
+
+                         /* Find the remote gateway */
+                         std::vector<configuration::RemoteGateway>::iterator p =  std::find (m_state.configuration.remotegateways.begin(), m_state.configuration.remotegateways.end(),
+                               ct->getName());
+
+                         /* Create a new thread */
+                         *i = std::move(std::make_unique<ClientThread>(m_state, *p));
+
+                      } else {
+
+                         common::logger::warning << "Gateway::houskeeping : Unable to restart connection to " << i->get()->getName() << " it has fatal error";
+
+                         /* Next element */
+                         i = m_state.listOfClients.erase(i);
+
+                      }
+
+                   } else {
+
+                      /* Nope, no one has started it yet, so do not restart it */
+                      common::logger::information << "Gateway::houskeeping : Do not restart " << i->get()->getName() << " it has not been previously started";
+
+                      /* Next element */
+                      i = m_state.listOfClients.erase(i);
+
+                   }
+
+                } else {
+
+                   /* No, this is not restartable */
+                   common::logger::information << "Gateway::houskeeping : Removing the client " << ct->getName() << " it is not restartable";
+
+                   /* Next element */
+                   i = m_state.listOfClients.erase(i);
+
+                }
+             } else {
+
+                /* Next element */
+                i++;
+             }
+          }
+       }
 
     }
 

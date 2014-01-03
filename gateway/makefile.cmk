@@ -31,12 +31,14 @@ Compile( "source/wire.cpp", "obj/wire.o")
 Compile( "source/master.cpp", "obj/master.o")
 Compile( "source/client.cpp", "obj/client.o")
 Compile( "source/ipc.cpp", "obj/ipc.o")
+Compile( "source/state.cpp", "obj/state.o")
 
 LinkLibrary( "casual-gateway", 
 	["obj/gateway.o",
 	"obj/wire.o",
 	"obj/ipc.o",
 	"obj/master.o",
+	"obj/state.o",
 	"obj/client.o"],
 	["casual-common",
 	"casual-sf",

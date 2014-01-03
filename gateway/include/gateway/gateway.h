@@ -89,6 +89,11 @@ namespace casual
        */
       void start( const Settings& arguments);
       
+      /*
+       * Perform houskeeping stuff
+       */
+      static void houskeeping (State &m_state);
+
     private:
 
       /*

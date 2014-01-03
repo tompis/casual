@@ -51,7 +51,7 @@ namespace casual
         /*
          * The masters state
          */
-        enum {initialized=0, active=10, failed=100 } state = failed;
+        enum MachineState {initialized=0, active=10, failed=100, fatal } state = failed;
 
         /*
          * Master socket
@@ -90,12 +90,37 @@ namespace casual
          */
         bool stop ();
 
+        /*
+         * Determine if the thread has exited, either by stopping it or by an error condition.
+         */
+        bool hasExited();
+
+        /*
+         * True if it has been started
+         */
+        bool hasStarted();
+
+        /*
+         * True if it is restartable
+         */
+        bool isRestartable();
+
+        /*
+         * The current state
+         */
+        MasterState::MachineState getMachineState();
+
      protected:
 
         /*
          * The thread loop
          */
         void loop ();
+
+        /*
+         * The timeout loop
+         */
+        void housekeeping ();
 
      private:
 

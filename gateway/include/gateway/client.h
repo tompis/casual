@@ -50,11 +50,15 @@ namespace casual
         /*
          * The client state
          */
-        enum {initialized=0, connecting=1, retry=2, active=10, failed=100 } state = failed;
+        enum MachineState {initialized=0, connecting, retry, active=10, failed=100, fatal } state = failed;
 
         /*
-         * Master endpoint
+         * Remote gateway data
          */
+        std::string localRemoteName;
+        std::string localRemoteURL;
+        std::string remoteName;
+        casual::common::Uuid remoteUUID;
         common::ipc::Endpoint endpoint;
 
         /*
@@ -266,6 +270,26 @@ namespace casual
          * Determine if the thread has exited, either by stopping it or by an error condition.
          */
         bool hasExited();
+
+        /*
+         * True if it has been started
+         */
+        bool hasStarted();
+
+        /*
+         * True if it is restartable
+         */
+        bool isRestartable();
+
+        /*
+         * The current state
+         */
+        ClientState::MachineState getMachineState();
+
+        /*
+         * The name of the thread
+         */
+        std::string getName ();
 
      protected:
 

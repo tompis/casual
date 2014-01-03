@@ -44,6 +44,14 @@ namespace casual
           std::string name;
           std::string endpoint;
 
+          /*
+           * Comparator
+           */
+          bool operator==(std::string name);
+
+          /*
+           * Read a configuration file
+           */
           template< typename A>
           void serialize( A& archive)
           {
@@ -59,8 +67,8 @@ namespace casual
           std::string name="noname";
           std::string endpoint="0.0.0.0:55555";
           int clientreconnecttime = 5000; /* Default 5 seconds reconnect time for sockets */
-          int clienttimeout = 1000; /* Default 1 second timeout for socket polling */
-          int queuetimeout = 1; /* Default 1 second timeout for queue polling */
+          int clienttimeout = 5000; /* Default 5 second timeout for socket polling */
+          int queuetimeout = 5; /* Default 5 second timeout for queue polling */
           int maxMessagesInWriteQueue = 100; /* Default max number of messages waiting in write queue */
 
           std::vector<RemoteGateway> remotegateways;

@@ -163,7 +163,7 @@ namespace casual
        */
       MasterThread::MasterThread (State &s) : m_state (s)
       {
-         m_state.state = MasterState::failed;
+         m_state.state = MasterState::fatal;
          common::ipc::Resolver resolver;
 
          /* Resolve the bind address for the gateway */
@@ -249,6 +249,38 @@ namespace casual
       }
 
       /*
+       * Determine if the thread has exited, either by stopping it or by an error condition.
+       */
+      bool MasterThread::hasExited()
+      {
+         return bExited;
+      }
+
+      /*
+       * True if it has been started
+       */
+      bool MasterThread::hasStarted()
+      {
+         return bRun;
+      }
+
+      /*
+       * True if it is restartable, the master is never restartable
+       */
+      bool MasterThread::isRestartable()
+      {
+         false;
+      }
+
+      /*
+       * The current state
+       */
+      MasterState::MachineState MasterThread::getMachineState()
+      {
+         return m_state.state;
+      }
+
+      /*
        * The master threads thread loop
        */
       void MasterThread::loop()
@@ -282,7 +314,7 @@ namespace casual
                   /* Something went wrong */
                   common::logger::error << "MasterThread::loop : Unable to bind and listen to socket on " << m_state.endpoint.info();
                   common::logger::error << "MasterThread::loop : " << strerror (errno) << "(" << errno << ")";
-                  m_state.state = MasterState::failed;
+                  m_state.state = MasterState::fatal;
 
                } else {
 
@@ -296,12 +328,12 @@ namespace casual
 
                /* We failed */
                common::logger::error << "MasterThread::loop : Unable to create socket for " << m_state.endpoint.info() << "," << m_state.socket->getState();
-               m_state.state = MasterState::failed;
+               m_state.state = MasterState::fatal;
             }
          }
 
          /* Never ending loop */
-         while (bRun && m_state.state != MasterState::failed) {
+         while (bRun && m_state.state != MasterState::failed && m_state.state != MasterState::fatal) {
 
             /* Poll all sockets */
             status = m_state.socket->execute(m_state.m_global.configuration.clienttimeout);

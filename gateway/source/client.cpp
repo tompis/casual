@@ -687,7 +687,9 @@ namespace casual
       ClientThread::ClientThread (State &s, common::ipc::Socket *pSocket) : m_state (s)
       {
          /* we are initialized and can be run */
-         m_state.state = ClientState::failed;
+         m_state.state = ClientState::fatal;
+         m_state.localRemoteName = "";
+         m_state.localRemoteURL = "";
          bRestartable = false;
 
          /* Create an empty socket and accept the connection */
@@ -709,15 +711,17 @@ namespace casual
       ClientThread::ClientThread (State &s, configuration::RemoteGateway &remote) : m_state (s)
       {
          /* We are in a starting state */
-         m_state.state = ClientState::failed;
+         m_state.state = ClientState::fatal;
+         m_state.localRemoteName = remote.name;
+         m_state.localRemoteURL = remote.endpoint;
          bRestartable = true;
 
          /* Resolve the bind address for the gateway */
          common::ipc::Resolver resolver;
-         if (resolver.resolve (remote.endpoint)<0) {
+         if (resolver.resolve (m_state.localRemoteURL)<0) {
 
             /* Unable to resolve address, there is no idea to start */
-            common::logger::error << "ClientThread::ClientThread : Unable to resolve address " << remote.endpoint << " for " << remote.name;
+            common::logger::error << "ClientThread::ClientThread : Unable to resolve address " << remote.endpoint << " for " << m_state.localRemoteName;
 
          } else {
 
@@ -798,6 +802,38 @@ namespace casual
       }
 
       /*
+       * True if it has been started
+       */
+      bool ClientThread::hasStarted()
+      {
+         return bRun;
+      }
+
+      /*
+       * True if it is restartable
+       */
+      bool ClientThread::isRestartable()
+      {
+         return bRestartable;
+      }
+
+      /*
+       * The current state
+       */
+      ClientState::MachineState ClientThread::getMachineState()
+      {
+         return m_state.state;
+      }
+
+      /*
+       * The name of the thread
+       */
+      std::string ClientThread::getName ()
+      {
+         return m_state.localRemoteName;
+      }
+
+      /*
        * Connects the client to the remote gateway
        */
       bool ClientThread::connect()
@@ -832,7 +868,7 @@ namespace casual
          common::logger::information << "ClientThread::loop : Entered";
 
          /* Connection loop */
-         while (bRun && m_state.state != ClientState::failed) {
+         while (bRun && m_state.state != ClientState::failed && m_state.state != ClientState::fatal) {
 
             /* If we are not connected, try to connect */
             if (m_state.state == ClientState::initialized || m_state.state == ClientState::retry) {
@@ -847,7 +883,7 @@ namespace casual
                if (connect())
                   m_state.state = ClientState::connecting;
                else
-                  m_state.state = ClientState::failed;
+                  m_state.state = ClientState::fatal;
             }
 
             /* Execute the socket */
