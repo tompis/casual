@@ -71,7 +71,8 @@ namespace casual
           int queuetimeout = 5; /* Default 5 second timeout for queue polling */
           int maxMessagesInWriteQueue = 100; /* Default max number of messages waiting in write queue */
 
-          std::vector<RemoteGateway> remotegateways;
+          typedef std::vector<RemoteGateway> RemoteGatewayList;
+          RemoteGatewayList remotegateways;
 
           template< typename A>
           void serialize( A& archive)

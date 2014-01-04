@@ -186,16 +186,17 @@ namespace casual
          /* POLLERR */
          if ((events & POLLERR) != 0) {
 
+            /* Get the last error for the socket */
             int err = getLastError();
-            common::logger::information << "ClientSocket::handleOutgoingConnection : Error " << strerror (err) << "(" << err << ")";
-
-            /* Socket is in error */
-            ret = -1;
 
             /* Retry if the connection has been refused, otherwise exit */
             if (err == ECONNREFUSED) {
+               common::logger::information << "ClientSocket::handleOutgoingConnection : Connection refused, try again";
+               ret = 0;
                m_state.state = ClientState::retry;
             } else {
+               common::logger::information << "ClientSocket::handleOutgoingConnection : Error " << strerror (err) << "(" << err << ")";
+               ret = -1;
                m_state.state = ClientState::failed;
             }
          }
@@ -203,20 +204,17 @@ namespace casual
          /* POLLHUP */
          if ((events & POLLHUP) != 0) {
 
-            common::logger::information << "ClientSocket::handleOutgoingConnection : Hangup";
-
             /* The other side has hung up, retry connection */
+            common::logger::information << "ClientSocket::handleOutgoingConnection : Hangup on far end, try again";
             m_state.state = ClientState::retry;
+            ret = 0;
 
          }
 
          /* POLLWRNORM */
          if ((events & POLLWRNORM) != 0 && m_state.state == ClientState::connecting) {
 
-            common::logger::information << "ClientSocket::handleOutgoingConnection : Connected";
-
-            /* Write the registration message */
-            common::logger::information << "ClientSocket::handleOutgoingConnection : Writing registration message";
+            common::logger::information << "ClientSocket::handleOutgoingConnection : Connected to far end";
 
             message::Registration registrationMessage;
             registrationMessage.type = message::type_registration;
@@ -360,12 +358,12 @@ namespace casual
 
                   /* Error, so get out of the loop */
                   numberOfReadBytes = 0;
-                  common::logger::information << "ClientSocket::dataCanBeRead : Error : " << strerror (errno) << "(" << errno << ")";
                   stop = true;
 
                   if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINPROGRESS) {
                      ret = -1;
                      m_state.state = ClientState::failed;
+                     common::logger::information << "ClientSocket::dataCanBeRead : Error : " << strerror (errno) << "(" << errno << ")";
                   } else {
                      ret = 0;
                   }
@@ -755,6 +753,7 @@ namespace casual
 
             /* Allow it to run */
             bRun = true;
+            bStarted = true;
 
             /* Start the thread */
             common::logger::information << "ClientThread::start : Thread started";
@@ -851,7 +850,7 @@ namespace casual
             bOK = false;
             common::logger::error << "ClientThread::connect : Unable to connect to " << m_state.endpoint.info() << ", fatal " << strerror (errno) << "(" << errno << ")";
          } else {
-            common::logger::information << "ClientThread::connect : Connection to " << m_state.endpoint.info() << "started";
+            common::logger::information << "ClientThread::connect : Connection to " << m_state.endpoint.info() << " established";
          }
 
          /* Return with the status */

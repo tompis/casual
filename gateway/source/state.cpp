@@ -47,7 +47,7 @@ namespace casual {
          /* Remote gateway comparator */
          bool RemoteGateway::operator==(std::string n)
          {
-            name == n;
+            return name == n;
          }
 
       }

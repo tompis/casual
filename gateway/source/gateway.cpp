@@ -218,14 +218,31 @@ namespace casual
                       /* If it is not fatal, then restart it */
                       if (ct->getMachineState() != ClientState::fatal) {
 
-                         common::logger::information << "Gateway::houskeeping : Restarting connection to " << ct->getName();
-
                          /* Find the remote gateway */
-                         std::vector<configuration::RemoteGateway>::iterator p =  std::find (m_state.configuration.remotegateways.begin(), m_state.configuration.remotegateways.end(),
+                         configuration::Gateway::RemoteGatewayList::iterator p =  std::find (
+                               m_state.configuration.remotegateways.begin(),
+                               m_state.configuration.remotegateways.end(),
                                ct->getName());
 
-                         /* Create a new thread */
-                         *i = std::move(std::make_unique<ClientThread>(m_state, *p));
+                         /* Did we get any remote gateway connection information ? */
+                         if (p != m_state.configuration.remotegateways.end()) {
+
+                            /* Create a new thread */
+                            common::logger::information << "Gateway::houskeeping : Restarting connection to " << ct->getName();
+                            *i = std::move(std::make_unique<ClientThread>(m_state, *p));
+                            if (i->get()->start()) {
+                               common::logger::information << "Gateway::houskeeping : Client " << ct->getName() << " restarted";
+                            } else {
+                               common::logger::warning << "Gateway::houskeeping : Client " << ct->getName() << " failed to start, removing it";
+                               i = m_state.listOfClients.erase (i);
+                            }
+
+                         } else {
+
+                            /* Unable to find out how to connect to it, stop it */
+                            common::logger::warning << "Gateway::houskeeping : Unable to find connection information for " << ct->getName() << " removing it";
+                            i = m_state.listOfClients.erase(i);
+                         }
 
                       } else {
 
