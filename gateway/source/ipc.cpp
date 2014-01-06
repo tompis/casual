@@ -285,7 +285,7 @@ namespace casual
          Socket::Socket(Endpoint &e) : endpoint (e)
          {
             /* Default in error state */
-            state = SocketState::error;
+            state = State::error;
             events = 0;
 
             /* Create the socket */
@@ -314,7 +314,7 @@ namespace casual
                   } else {
 
                      /* All created well */
-                     state = SocketState::initialized;
+                     state = State::initialized;
                   }
                }
             }
@@ -326,7 +326,7 @@ namespace casual
          Socket::Socket (int socket, Endpoint &e)
          {
             /* Default in error */
-            state = SocketState::error;
+            state = State::error;
             events = POLLRDNORM | POLLWRNORM;
 
             /* Copy the endpoint if we got one */
@@ -336,7 +336,7 @@ namespace casual
             fd = socket;
 
             /* Connected socket */
-            state = SocketState::connected;
+            state = State::connected;
          }
 
          /*
@@ -351,7 +351,7 @@ namespace casual
             fd = -1;
 
             /* Connected socket */
-            state = SocketState::unknown;
+            state = State::unknown;
          }
 
          /*
@@ -376,16 +376,16 @@ namespace casual
                      if (errno != EINPROGRESS) {
                         events = 0;
                         common::logger::error << "Socket::connect : Unable to connect to socket " << endpoint.info() << " " << strerror (errno) << "(" << errno << ")";
-                        state = SocketState::error;
+                        state = State::error;
                      } else {
                         events = POLLWRNORM;
-                        state = SocketState::connecting;
+                        state = State::connecting;
                         n = 0;
                      }
                   } else {
                      common::logger::warning << "Socket::connect : We got connected directly, strange ...";
                      events = POLLRDNORM | POLLWRNORM;
-                     state = SocketState::connected;
+                     state = State::connected;
                   }
                } else {
                   events = 0;
@@ -394,7 +394,7 @@ namespace casual
             } else {
                events = 0;
                common::logger::error << "Socket::connect : Unable to connect to " << endpoint.info() << ", socket it is invalid";
-               state = SocketState::error;
+               state = State::error;
             }
             return n;
          }
@@ -414,16 +414,16 @@ namespace casual
                   n = ::bind (fd, reinterpret_cast<struct sockaddr *>(endpoint.m_data.get()), endpoint.m_size);
                   if (n<0) {
                      common::logger::error << "Socket::bind : Unable to bind socket " << endpoint.info() << " " << strerror (errno) << "(" << errno << ")";
-                     state = SocketState::error;
+                     state = State::error;
                   } else
-                     state = SocketState::bound;
+                     state = State::bound;
                } else {
                   common::logger::warning << "Socket::bind : Socket " << endpoint.info() << " is not in initialized state, " << getState();
                }
 
             } else {
                common::logger::error << "Socket::bind : Unable to bind socket " << endpoint.info() << ", it is invalid";
-               state = SocketState::error;
+               state = State::error;
             }
             return n;
          }
@@ -439,10 +439,10 @@ namespace casual
                n = ::listen (fd, backlog);
                if (n<0) {
                   common::logger::error << "Socket::listen : Unable to listen to socket " << endpoint.info() << " " << strerror (errno) << "(" << errno << ")";
-                  state = SocketState::error;
+                  state = State::error;
                } else {
                   events = POLLRDNORM;
-                  state = SocketState::listening;
+                  state = State::listening;
                }
             } else {
                common::logger::warning << "Socket::connect : Socket " << endpoint.info() << " is not in bound state, " << getState();
@@ -472,7 +472,7 @@ namespace casual
                      break;
                   default:
                      common::logger::error << "Socket::accept : Unsupported protocol family to accept connection on " << endpoint.info();
-                     state = SocketState::error;
+                     state = State::error;
                      break;
                }
 
@@ -492,7 +492,7 @@ namespace casual
 
                      pS->fd = n;
                      pS->endpoint = p;
-                     pS->state = SocketState::connected;
+                     pS->state = State::connected;
                      pS->setEventMask (POLLWRNORM | POLLRDNORM);
                      n = 0;
 
@@ -500,10 +500,10 @@ namespace casual
 
                      common::logger::error << "Socket::accept : Accept error on " << endpoint.info() << " " << strerror(errno) << "(" << errno << ")";
 
-                     state = SocketState::error;
+                     state = State::error;
 
                      pS->fd = -1;
-                     pS->state = SocketState::error;
+                     pS->state = State::error;
                      pS->setEventMask (0);
 
                   }
@@ -536,9 +536,9 @@ namespace casual
                n = ::close (fd);
                if (n<0) {
                   common::logger::error << "Socket::close : Close error on " << endpoint.info() << " " << strerror(errno) << "(" << errno << ")";
-                  state = SocketState::error;
+                  state = State::error;
                } else {
-                  state = SocketState::closed;
+                  state = State::closed;
                   fd = -1;
                }
             }
@@ -555,7 +555,7 @@ namespace casual
             int n = 0;
 
             /* We cannot be in error state or in initialized state */
-            if (state != SocketState::error && state != SocketState::initialized) {
+            if (state != State::error && state != State::initialized) {
 
                /* Make the poll mask */
                struct pollfd client[1];
@@ -577,57 +577,37 @@ namespace casual
                   switch (state) {
 
                      /* States with no action */
-                     case SocketState::unknown:
-                     case SocketState::error:
-                     case SocketState::initialized:
-                     case SocketState::bound:
-                     case SocketState::closed:
+                     case State::unknown:
+                     case State::error:
+                     case State::initialized:
+                     case State::bound:
+                     case State::hung_up:
+                     case State::closed:
                         common::logger::warning << "Socket::execute : No event should come in this state";
                         break;
 
                      /* We are waiting for a connect from the other side */
-                     case SocketState::listening:
-                        n = handleIncomingConnection (client[0].revents);
-                        if (n<0) {
-                           /* Change to error state */
-                           state = SocketState::error;
-                        }
+                     case State::listening:
+                        state = handleIncomingConnection (client[0].revents);
                         break;
 
                      /* We are waiting for an accept from the other side */
-                     case SocketState::connecting:
-                        n = handleOutgoingConnection (client[0].revents);
-                        if (n<0) {
-                           /* Change to error state */
-                           state = SocketState::error;
-                        } else {
-                           if (n > 0) {
-                              /* Change state to connected */
-                              state = SocketState::connected;
-                           }
-                        }
+                     case State::connecting:
+                        state = handleOutgoingConnection (client[0].revents);
                         break;
 
                      /* We are connected, this is data in or out */
-                     case SocketState::connected:
-                        n = handleConnected (client[0].revents);
-                        if (n<0) {
-                           /* Change to error state */
-                           state = SocketState::error;
-                        } else {
-                           if (n>0) {
-                              /* Change to closed state */
-                              close();
-                           }
-                        }
+                     case State::connected:
+                        state = handleConnected (client[0].revents);
                         break;
 
                   }
 
                } else {
 
+                  /* Poll error ? */
                   if (ready < 0) {
-                     state = SocketState::error;
+                     state = State::error;
                   }
 
                }
@@ -689,33 +669,41 @@ namespace casual
          /*
           * Return with the state as a string
           */
-         std::string Socket::getState () const
+         Socket::State Socket::getState () const
+         {
+            return state;
+         }
+
+         /*
+          * Return with the state as a string
+          */
+         std::string Socket::getStateAsString () const
          {
             std::string s = "";
 
             switch (state) {
-               case SocketState::unknown:
+               case State::unknown:
                   s = "SocketState:unknown";
                   break;
-               case SocketState::error:
+               case State::error:
                   s = "SocketState:error";
                   break;
-               case SocketState::initialized:
+               case State::initialized:
                   s = "SocketState:initialized";
                   break;
-               case SocketState::bound:
+               case State::bound:
                   s = "SocketState:bound";
                   break;
-               case SocketState::closed:
+               case State::closed:
                   s = "SocketState:closed";
                   break;
-               case SocketState::listening:
+               case State::listening:
                   s = "SocketState:listening";
                   break;
-               case SocketState::connecting:
+               case State::connecting:
                   s = "SocketState:listening";
                   break;
-               case SocketState::connected:
+               case State::connected:
                   s = "SocketState:connected";
                   break;
                default:
@@ -731,7 +719,7 @@ namespace casual
           */
          bool Socket::isInitialized() const
          {
-            return state == SocketState::initialized;
+            return state == State::initialized;
          }
 
          /*
@@ -739,7 +727,7 @@ namespace casual
           */
          bool Socket::hasError() const
          {
-            return state == SocketState::error;
+            return state == State::error;
          }
 
          /*

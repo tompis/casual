@@ -28,7 +28,6 @@
 #include "gateway/std14.h"
 #include "gateway/ipc.h"
 #include "gateway/state.h"
-#include "gateway/listener.h"
 #include "gateway/client.h"
 #include "gateway/master.h"
 

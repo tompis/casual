@@ -221,9 +221,9 @@ namespace casual
          public:
 
             /*
-             * Socket state
+             * Socket states
              */
-            enum SocketState {unknown=0, initialized=1, error=2, bound=100, listening, connecting, connected, closed };
+            enum State {unknown=0, initialized=1, bound, listening, connecting, connected, closed, hung_up, error=100 };
 
             /* Friends, so we can encapsulate posix much more */
             friend SocketGroup;
@@ -234,7 +234,7 @@ namespace casual
              */
             Socket ();
             Socket(Endpoint &e);
-            ~Socket();
+            virtual ~Socket();
 
             /*
              * No copy and assignment possible with sockets, there can only be one!
@@ -297,7 +297,12 @@ namespace casual
             /*
              * Returns the string of the sockets current state
              */
-            std::string getState () const;
+            std::string getStateAsString () const;
+
+            /*
+             * Returns with the sockets current state
+             */
+            State getState() const;
 
             /*
              * Returns with a string of events
@@ -319,20 +324,20 @@ namespace casual
             /*
              * Called when the listening state has an incoming connection that we need to accept.
              */
-            virtual int handleIncomingConnection (int events) = 0;
+            virtual State handleIncomingConnection (int events) = 0;
 
             /*
              * Called when the connecting state has an outgoing connect and we have an incoming accept.
              */
-            virtual int handleOutgoingConnection (int events) = 0;
+            virtual State handleOutgoingConnection (int events) = 0;
 
             /*
              * Handle events when we are in connected state, usually reading and writing data to and from the socket.
              */
-            virtual int handleConnected (int events) = 0;
+            virtual State handleConnected (int events) = 0;
 
             /*
-             * Sets or gets the events mask
+             * Sets or gets the events mask that the socket waits for during polling
              */
             int getEventMask ();
             void setEventMask (int mask);
@@ -358,7 +363,7 @@ namespace casual
             /*
              * Socket state
              */
-            enum SocketState state = SocketState::unknown;
+            State state = State::unknown;
 
             /*
              * Socket endpoint

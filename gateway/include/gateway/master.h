@@ -161,19 +161,19 @@ namespace casual
         /*
          * Called when the listening state has an incoming connection that we need to accept.
          */
-        int handleIncomingConnection (int events);
+        State handleIncomingConnection (int events);
 
         /*
          * Called when the connecting state has an outgoing connect and we have an incoming accept.
          * This is not a scenario in the master socket.
          */
-        int handleOutgoingConnection (int events);
+        State handleOutgoingConnection (int events);
 
         /*
          * Handle events when we are in connected state, usually reading and writing data to and from the socket.
          * This is not a scenario in the master socket.
          */
-        int handleConnected (int events);
+        State handleConnected (int events);
 
      private:
 

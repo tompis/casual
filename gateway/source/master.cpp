@@ -36,7 +36,6 @@
 #include "gateway/std14.h"
 #include "gateway/ipc.h"
 #include "gateway/state.h"
-#include "gateway/listener.h"
 #include "gateway/client.h"
 #include "gateway/master.h"
 
@@ -80,9 +79,9 @@ namespace casual
       /*
        * Handles an incoming request
        */
-      int MasterSocket::handleIncomingConnection (int events)
+      common::ipc::Socket::State MasterSocket::handleIncomingConnection (int events)
       {
-         int ret = 0;
+         common::ipc::Socket::State ret = state;
          common::logger::information << "MasterSocket::handleIncomingConnection : Entered";
 
          /* POLLERR */
@@ -92,8 +91,7 @@ namespace casual
             common::logger::error << "MasterSocket::handleIncomingConnection : Error " << strerror (err) << "(" << err << ")";
 
             /* Socket is in error, thread is in error */
-            ret = -1;
-            m_state.state = MasterState::failed;
+            state = MasterState::failed;
 
          }
 
@@ -132,7 +130,7 @@ namespace casual
        * Called when the connecting state has an outgoing connect and we have an incoming accept.
        * This is not a scenario in the master socket.
        */
-      int MasterSocket::handleOutgoingConnection (int events)
+      common::ipc::Socket::State MasterSocket::handleOutgoingConnection (int events)
       {
          common::logger::information << "MasterSocket::handleOutgoingConnection : Entered";
          common::logger::error << "MasterSocket::handleOutgoingConnection : Unexpected event";
@@ -145,7 +143,7 @@ namespace casual
        * Handle events when we are in connected state, usually reading and writing data to and from the socket.
        * This is not a scenario in the master socket.
        */
-      int MasterSocket::handleConnected (int events)
+      common::ipc::Socket::State MasterSocket::handleConnected (int events)
       {
          common::logger::information << "MasterSocket::handleConnected : Entered";
          common::logger::error << "MasterSocket::handleConnected : Unexpected event";

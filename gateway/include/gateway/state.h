@@ -12,6 +12,8 @@
 ** Casual header files
 */
 #include "common/environment.h"
+#include "common/file.h"
+#include "common/uuid.h"
 #include "sf/namevaluepair.h"
 
 /*

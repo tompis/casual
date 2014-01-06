@@ -31,6 +31,7 @@ Compile( "source/wire.cpp", "obj/wire.o")
 Compile( "source/master.cpp", "obj/master.o")
 Compile( "source/client.cpp", "obj/client.o")
 Compile( "source/ipc.cpp", "obj/ipc.o")
+Compile( "source/casl.cpp", "obj/casl.o")
 Compile( "source/state.cpp", "obj/state.o")
 
 LinkLibrary( "casual-gateway", 
@@ -39,6 +40,7 @@ LinkLibrary( "casual-gateway",
 	"obj/ipc.o",
 	"obj/master.o",
 	"obj/state.o",
+	"obj/casl.o",
 	"obj/client.o"],
 	["casual-common",
 	"casual-sf",
@@ -63,11 +65,11 @@ LinkExecutable( "casual-gateway-tcp",
 #
 
 Compile( "unittest/isolated/source/test_buffer.cpp", "unittest/isolated/obj/test_buffer.o")
-#Compile( "unittest/isolated/source/test_ipc.cpp", "unittest/isolated/obj/test_ipc.o")
+Compile( "unittest/isolated/source/test_ipc.cpp", "unittest/isolated/obj/test_ipc.o")
 
 LinkIsolatedUnittest( "casual-gateway-isolated", 
 	["unittest/isolated/obj/test_buffer.o"
-#	,"unittest/isolated/obj/test_ipc.o"
+	,"unittest/isolated/obj/test_ipc.o"
 	],
 	["casual-gateway","casual-common"] )
 	
