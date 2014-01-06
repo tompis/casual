@@ -26,6 +26,13 @@ namespace casual
   namespace gateway
   {
 
+     /*
+      * Make life a bit easier
+      */
+     using common::ipc::Socket;
+     using common::ipc::Endpoint;
+     using common::ipc::Resolver;
+
      /**********************************************************************\
       *  The Masters State
      \**********************************************************************/
@@ -57,7 +64,7 @@ namespace casual
          * Master socket
          */
         common::ipc::Endpoint endpoint;
-        std::unique_ptr<common::ipc::Socket> socket;
+        std::unique_ptr<Socket> socket;
 
      };
 
@@ -145,7 +152,7 @@ namespace casual
       * This class handles the events for a socket in listening state and handles
       * the event when a client is requesting a connection.
       */
-     class MasterSocket : public common::ipc::Socket {
+     class MasterSocket : public Socket {
 
      public:
 
@@ -153,7 +160,7 @@ namespace casual
          * Constructors destructors
          */
         MasterSocket () = delete;
-        MasterSocket (MasterState &s, common::ipc::Endpoint &p);
+        MasterSocket (MasterState &s, Endpoint &p);
         ~MasterSocket();
 
      protected:

@@ -49,6 +49,15 @@ namespace casual
       \**********************************************************************/
 
       /*
+       * Creates a casl socket with no endpoint
+       */
+      CASLSocket::CASLSocket () : common::ipc::Socket ()
+      {
+         writeBuffer = std::make_unique<char[]>(CASLSocket::maxWriteBufferSize);
+         buffer = std::make_unique<char[]>(CASLSocket::maxBufferSize);
+      }
+
+      /*
        * Creates a casl socket based on an endpoint that it connects to
        */
       CASLSocket::CASLSocket (common::ipc::Endpoint &p) : common::ipc::Socket (p)
@@ -79,7 +88,7 @@ namespace casual
        */
       common::ipc::Socket::State CASLSocket::handleConnected (int events)
       {
-         common::ipc::Socket::State ret = state;
+         common::ipc::Socket::State ret = getState();
 
          common::logger::information << "CASLSocket::handleConnected : Entered";
 
@@ -121,7 +130,7 @@ namespace casual
        */
       common::ipc::Socket::State CASLSocket::handleOutgoingConnection (int events)
       {
-         common::ipc::Socket::State  ret = state;
+         common::ipc::Socket::State  ret = getState();
          common::logger::information << "CASLSocket::handleOutgoingConnection : Entered";
 
          /* POLLERR */
@@ -276,7 +285,7 @@ namespace casual
        */
       common::ipc::Socket::State CASLSocket::dataCanBeRead ()
       {
-         common::ipc::Socket::State ret = state;
+         common::ipc::Socket::State ret = getState();
          bool stop = false;
 
          common::logger::information << "CASLSocket::dataCanBeRead : Entered";
@@ -454,7 +463,7 @@ namespace casual
        */
       common::ipc::Socket::State CASLSocket::writeAll()
       {
-         common::ipc::Socket::State ret = state;
+         common::ipc::Socket::State ret = getState();
          bool bMovedData = true;
          common::logger::information << "CASLSocket::writeAll : Entered";
 
@@ -531,7 +540,7 @@ namespace casual
          /*
           * Write data if we got any
           */
-         int ret = writeAll();
+         common::ipc::Socket::State ret = writeAll();
 
          common::logger::information << "CASLSocket::dataCanBeWritten : Exited";
 
@@ -563,7 +572,7 @@ namespace casual
          /*
           * Write everything
           */
-         state = writeAll();
+         setState(writeAll());
 
          common::logger::information << "CASLSocket::writeMessage : Exited";
 
@@ -613,239 +622,6 @@ namespace casual
          position += move;
       }
 
-      /**********************************************************************\
-       *  ClientThread
-      \**********************************************************************/
-
-      /*
-       * Creates a client to a remote gateway based on an incoming connection from the remote gateway. The other
-       * parameter, i,e. the socket is the listening socket that has the incoming socket. We need to accept the
-       * connection. This client is not restartable, because the connection originates on the far end.
-       */
-      ClientThread::ClientThread (State &s, common::ipc::Socket *pSocket) : m_state (s)
-      {
-         /* we are initialized and can be run */
-         m_state.state = ClientState::fatal;
-         m_state.localRemoteName = "";
-         m_state.localRemoteURL = "";
-         bRestartable = false;
-
-         /* Create an empty socket and accept the connection */
-         m_state.socket = std::make_unique<CASLSocket>(m_state);
-         int n = pSocket->accept(m_state.socket.get());
-         if (n<0) {
-            common::logger::warning << "ClientThread::ClientThread : Incoming connection not accepted";
-         } else {
-            common::logger::information << "ClientThread::ClientThread : Incoming connection accepted";
-            m_state.state = ClientState::active;
-         }
-
-      }
-
-      /*
-       * Creates a client to a remote gateway based on configuration, this client reconnects in case of
-       * a failure.
-       */
-      ClientThread::ClientThread (State &s, configuration::RemoteGateway &remote) : m_state (s)
-      {
-         /* We are in a starting state */
-         m_state.state = ClientState::fatal;
-         m_state.localRemoteName = remote.name;
-         m_state.localRemoteURL = remote.endpoint;
-         bRestartable = true;
-
-         /* Resolve the bind address for the gateway */
-         common::ipc::Resolver resolver;
-         if (resolver.resolve (m_state.localRemoteURL)<0) {
-
-            /* Unable to resolve address, there is no idea to start */
-            common::logger::error << "ClientThread::ClientThread : Unable to resolve address " << remote.endpoint << " for " << m_state.localRemoteName;
-
-         } else {
-
-            /* Save the endpoint */
-            m_state.endpoint = resolver.get().front();
-            m_state.state = ClientState::initialized;
-         }
-      }
-
-      /*
-       * Destructor
-       */
-      ClientThread::~ClientThread ()
-      {
-         /* Stop the thread */
-         if (thread != nullptr) {
-            stop();
-         }
-      }
-
-      /*
-       * Starts the ClientThread. Returns true if the thread has been started.
-       */
-      bool ClientThread::start()
-      {
-         bool bStarted = false;
-         common::logger::information << "ClientThread::start : Entered";
-
-         /* Can we start and are we not already running ? */
-         if (m_state.state!=ClientState::failed && thread == nullptr) {
-
-            /* Allow it to run */
-            bRun = true;
-            bStarted = true;
-
-            /* Start the thread */
-            common::logger::information << "ClientThread::start : Thread started";
-            thread = std::make_unique<std::thread>(&ClientThread::loop, this);
-
-         }
-
-         common::logger::information << "ClientThread::start : Exited";
-
-         return bStarted;
-      }
-
-      /*
-       * Stops the ClientThread. Returns true if the Client thread has been stopped.
-       */
-      bool ClientThread::stop()
-      {
-         bool bStopped = false;
-         common::logger::information << "ClientThread::stop : Entered";
-
-         /* Allow it to stop */
-         bRun = false;
-
-         /* Are we running ? */
-         if (thread != nullptr) {
-
-            /* Wait for the thread to finish */
-            common::logger::information << "ClientThread::stop : Waiting for thread to finish";
-            thread->join();
-            thread = nullptr;
-            bStopped = true;
-         }
-
-         common::logger::information << "ClientThread::stop : Exited";
-
-         return bStopped;
-      }
-
-      /*
-       * Determine if the thread has exited, either by stopping it or by an error condition.
-       */
-      bool ClientThread::hasExited()
-      {
-         return bExited;
-      }
-
-      /*
-       * True if it has been started
-       */
-      bool ClientThread::hasStarted()
-      {
-         return bRun;
-      }
-
-      /*
-       * True if it is restartable
-       */
-      bool ClientThread::isRestartable()
-      {
-         return bRestartable;
-      }
-
-      /*
-       * The current state
-       */
-      ClientState::MachineState ClientThread::getMachineState()
-      {
-         return m_state.state;
-      }
-
-      /*
-       * The name of the thread
-       */
-      std::string ClientThread::getName ()
-      {
-         return m_state.localRemoteName;
-      }
-
-      /*
-       * Connects the client to the remote gateway
-       */
-      bool ClientThread::connect()
-      {
-         bool bOK = true;
-
-         /* Create the socket */
-         common::logger::information << "ClientThread::connect : Connecting to endpoint " << m_state.endpoint.info();
-         m_state.socket = std::make_unique<CASLSocket>(m_state, m_state.endpoint);
-
-         /* Connect to the remote endpoint */
-         if (m_state.socket->connect()<0)
-         {
-            /* If we are in progres, then that is ok, otherwise we failed */
-            bOK = false;
-            common::logger::error << "ClientThread::connect : Unable to connect to " << m_state.endpoint.info() << ", fatal " << strerror (errno) << "(" << errno << ")";
-         } else {
-            common::logger::information << "ClientThread::connect : Connection to " << m_state.endpoint.info() << " established";
-         }
-
-         /* Return with the status */
-         return bOK;
-      }
-
-      /*
-       * The Client threads thread loop
-       */
-      void ClientThread::loop()
-      {
-         int status;
-
-         common::logger::information << "ClientThread::loop : Entered";
-
-         /* Connection loop */
-         while (bRun && m_state.state != ClientState::failed && m_state.state != ClientState::fatal) {
-
-            /* If we are not connected, try to connect */
-            if (m_state.state == ClientState::initialized || m_state.state == ClientState::retry) {
-
-               /* Wait if we are retrying */
-               if (m_state.state == ClientState::retry) {
-                  std::chrono::milliseconds dura( m_state.m_global.configuration.clientreconnecttime );
-                  std::this_thread::sleep_for(dura);
-               }
-
-               /* Try to connect */
-               if (connect())
-                  m_state.state = ClientState::connecting;
-               else
-                  m_state.state = ClientState::fatal;
-            }
-
-            /* Execute the socket */
-            status = m_state.socket->execute(m_state.m_global.configuration.clienttimeout);
-            if (status < 0) {
-
-               /* Some serious polling error, stop this */
-               common::logger::information << "ClientThread::loop : Error during poll, " << strerror (errno) << "(" << errno << ")";
-               m_state.state = ClientState::failed;
-
-            } else {
-
-               if (status == 0) {
-                  /* Timeout */
-               }
-            }
-
-         }
-
-         /* Exit */
-         bExited = true;
-         common::logger::information << "ClientThread::loop : Exited";
-      }
    }
 }
 

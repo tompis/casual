@@ -34,7 +34,7 @@ namespace casual
         /*
          * Constructors destructors
          */
-        CASLSocket () = delete;
+        CASLSocket ();
         CASLSocket (common::ipc::Endpoint &endpoint);
         ~CASLSocket();
 
@@ -65,7 +65,7 @@ namespace casual
          * Function that gets called whenever a message has been completed, have to be overridden by the
          * superclass of this socket implementation
          */
-        virtual bool handleMessage();
+        virtual bool handleMessage() = 0;
 
     private:
 

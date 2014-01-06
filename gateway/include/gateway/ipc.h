@@ -243,13 +243,9 @@ namespace casual
             Socket &operator=(const Socket &other) = delete;
 
             /*
-             * Standard socket functions
-             */
-
-            /*
              * Returns with the error associated with the socket
              */
-            int getLastError ();
+            int getLastError () const;
 
             /*
              * Close the socket, returns -1 on error, zero otherwise. Leaves socket in closed state.
@@ -307,7 +303,7 @@ namespace casual
             /*
              * Returns with a string of events
              */
-            std::string dumpEvents (int events);
+            std::string dumpEvents (int events) const;
 
             /*
              * Returns true if sockes is in initialized state
@@ -339,8 +335,17 @@ namespace casual
             /*
              * Sets or gets the events mask that the socket waits for during polling
              */
-            int getEventMask ();
+            int getEventMask () const;
+
+            /*
+             * Sets the eventmask
+             */
             void setEventMask (int mask);
+
+            /*
+             * Sets the state
+             */
+            void setState (State newState);
 
          private:
 
@@ -356,7 +361,7 @@ namespace casual
             int fd;
 
             /*
-             * Events to wait for
+             * Eventmask containing which events to eait for
              */
             int events = POLLRDNORM | POLLWRNORM;
 

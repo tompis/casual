@@ -641,7 +641,7 @@ namespace casual
          /*
           * Return with the current error
           */
-         int Socket::getLastError ()
+         int Socket::getLastError () const
          {
             int err = 0;
             socklen_t err_size = sizeof (int);
@@ -653,7 +653,7 @@ namespace casual
          /*
           * Return with the event mask
           */
-         int Socket::getEventMask ()
+         int Socket::getEventMask () const
          {
             return events;
          }
@@ -672,6 +672,14 @@ namespace casual
          Socket::State Socket::getState () const
          {
             return state;
+         }
+
+         /*
+          * Sets the state
+          */
+         void Socket::setState (State newState)
+         {
+            state = newState;
          }
 
          /*
@@ -733,7 +741,7 @@ namespace casual
          /*
           * Dump event socket flags
           */
-         std::string Socket::dumpEvents (int events)
+         std::string Socket::dumpEvents (int events) const
          {
             std::stringstream s;
 

@@ -98,6 +98,11 @@ namespace casual
      protected:
 
         /*
+         * The message handler, i.e. every incoming message from the other end, ends up here
+         */
+        bool handleMessage();
+
+        /*
          * Fill the write buffer from the list of messages
          */
         bool fillWriteBuffer();
