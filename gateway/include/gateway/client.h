@@ -28,6 +28,13 @@ namespace casual
   {
 
      /*
+      * Make life a bit easier
+      */
+     using common::ipc::Socket;
+     using common::ipc::Endpoint;
+     using common::ipc::Resolver;
+
+     /*
       * Predefines
       */
      class ClientSocket;
@@ -92,7 +99,7 @@ namespace casual
          */
         ClientSocket () = delete;
         ClientSocket (ClientState &s);
-        ClientSocket (ClientState &s, common::ipc::Endpoint &p);
+        ClientSocket (ClientState &s, Endpoint &p);
         ~ClientSocket();
 
      protected:
@@ -132,7 +139,7 @@ namespace casual
          * Creates a client to a remote gateway based on an incoming connection from the remote gateway. The socket is
          * in listening mode and the incoming connection has to be handled with an accept.
          */
-        ClientThread (State &s, common::ipc::Socket *pSocket);
+        ClientThread (State &s, Socket *pSocket);
 
         /*
          * Creates a client to a remote gateway based on configuration

@@ -128,7 +128,7 @@ namespace casual
       ClientThread::ClientThread (State &s, common::ipc::Socket *pSocket) : m_state (s)
       {
          /* we are initialized and can be run */
-         m_state.state = ClientState::fatal;
+         m_state.state = ClientState::MachineState::fatal;
          m_state.localRemoteName = "";
          m_state.localRemoteURL = "";
          bRestartable = false;
@@ -140,7 +140,7 @@ namespace casual
             common::logger::warning << "ClientThread::ClientThread : Incoming connection not accepted";
          } else {
             common::logger::information << "ClientThread::ClientThread : Incoming connection accepted";
-            m_state.state = ClientState::active;
+            m_state.state = ClientState::MachineState::active;
          }
 
       }
@@ -152,7 +152,7 @@ namespace casual
       ClientThread::ClientThread (State &s, configuration::RemoteGateway &remote) : m_state (s)
       {
          /* We are in a starting state */
-         m_state.state = ClientState::fatal;
+         m_state.state = ClientState::MachineState::fatal;
          m_state.localRemoteName = remote.name;
          m_state.localRemoteURL = remote.endpoint;
          bRestartable = true;
@@ -168,7 +168,7 @@ namespace casual
 
             /* Save the endpoint */
             m_state.endpoint = resolver.get().front();
-            m_state.state = ClientState::initialized;
+            m_state.state = ClientState::MachineState::initialized;
          }
       }
 

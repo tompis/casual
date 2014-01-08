@@ -338,7 +338,7 @@ namespace casual
 
             } else {
 
-               /* Normal timeout or we actually got some events to handle */
+               /* Normal timeout or did we actually get some events that got handled */
                if (status == 0) {
 
                   /* Timeout loop, here we can do any houskeeping functions if needed */
@@ -350,8 +350,9 @@ namespace casual
             /* If socket is in error, then stop */
             if (m_state.socket->getState() == Socket::State::error) {
 
-               /* Thread is fatal */
+               /* Thread cannot function */
                m_state.state = MasterState::MachineState::failed;
+
             }
 
          }
