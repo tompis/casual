@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "config/domain.h"
-#include "sf/archive_logger.h"
+#include "sf/log.h"
 
 // TODO Temp
 #include "../../../../serviceframework/include/sf/archive_json.h"
@@ -39,7 +39,7 @@ namespace casual
 	   std::cerr << json_object_to_json_string( root);
 	   */
 
-
+	   EXPECT_TRUE( domain.name == "domain1") << "nane: " << domain.name;
 	   EXPECT_TRUE( domain.groups.size() == 5) << "size: " << domain.groups.size();
 	}
 

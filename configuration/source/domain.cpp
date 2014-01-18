@@ -114,7 +114,7 @@ namespace casual
          {
             const std::string configFile = common::environment::file::configuration();
 
-            if( !configFile.empty())
+            if( ! configFile.empty())
             {
                return get( configFile);
             }

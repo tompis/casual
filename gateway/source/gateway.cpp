@@ -20,7 +20,7 @@
 */
 #include "config/domain.h"
 #include "common/environment.h"
-#include "common/logger.h"
+#include "common/log.h"
 #include "common/queue.h"
 #include "common/message.h"
 #include "common/message_dispatch.h"
@@ -182,12 +182,12 @@ namespace casual
      */
     void Gateway::houskeeping (State &m_state)
     {
-       common::logger::information << "Gateway::houskeeping : Houskeeping started";
+       common::log::information << "Gateway::houskeeping : Houskeeping started";
        /*
         * Master thread houskeeping
         */
        {
-          common::logger::information << "Gateway::houskeeping : Checking master";
+          common::log::information << "Gateway::houskeeping : Checking master";
        }
 
        /*
@@ -195,7 +195,7 @@ namespace casual
         */
        {
           std::lock_guard<std::mutex> m(m_state.listOfClientsMutex);
-          common::logger::information << "Gateway::houskeeping : Checkig all clients, there are " << m_state.listOfClients.size() << " clients";
+          common::log::information << "Gateway::houskeeping : Checkig all clients, there are " << m_state.listOfClients.size() << " clients";
           std::list<std::unique_ptr<ClientThread>>::iterator i = m_state.listOfClients.begin();
           while (i!=m_state.listOfClients.end())
           {
@@ -204,7 +204,7 @@ namespace casual
              /* Has the thread exited ? */
              if (ct->hasExited()) {
 
-                common::logger::information << "Gateway::houskeeping : Client " << ct->getName() << " has exited";
+                common::log::information << "Gateway::houskeeping : Client " << ct->getName() << " has exited";
                 /*
                  * Is the thread restartable, this is only if we are the initiatior, not incoming gateway
                  * connections
@@ -227,25 +227,25 @@ namespace casual
                          if (p != m_state.configuration.remotegateways.end()) {
 
                             /* Create a new thread */
-                            common::logger::information << "Gateway::houskeeping : Restarting connection to " << ct->getName();
+                            common::log::information << "Gateway::houskeeping : Restarting connection to " << ct->getName();
                             *i = std::move(std::make_unique<ClientThread>(m_state, *p));
                             if (i->get()->start()) {
-                               common::logger::information << "Gateway::houskeeping : Client " << ct->getName() << " restarted";
+                               common::log::information << "Gateway::houskeeping : Client " << ct->getName() << " restarted";
                             } else {
-                               common::logger::warning << "Gateway::houskeeping : Client " << ct->getName() << " failed to start, removing it";
+                               common::log::warning << "Gateway::houskeeping : Client " << ct->getName() << " failed to start, removing it";
                                i = m_state.listOfClients.erase (i);
                             }
 
                          } else {
 
                             /* Unable to find out how to connect to it, stop it */
-                            common::logger::warning << "Gateway::houskeeping : Unable to find connection information for " << ct->getName() << " removing it";
+                            common::log::warning << "Gateway::houskeeping : Unable to find connection information for " << ct->getName() << " removing it";
                             i = m_state.listOfClients.erase(i);
                          }
 
                       } else {
 
-                         common::logger::warning << "Gateway::houskeeping : Unable to restart connection to " << i->get()->getName() << " it has fatal error";
+                         common::log::warning << "Gateway::houskeeping : Unable to restart connection to " << i->get()->getName() << " it has fatal error";
 
                          /* Next element */
                          i = m_state.listOfClients.erase(i);
@@ -255,7 +255,7 @@ namespace casual
                    } else {
 
                       /* Nope, no one has started it yet, so do not restart it */
-                      common::logger::information << "Gateway::houskeeping : Do not restart " << i->get()->getName() << " it has not been previously started";
+                      common::log::information << "Gateway::houskeeping : Do not restart " << i->get()->getName() << " it has not been previously started";
 
                       /* Next element */
                       i = m_state.listOfClients.erase(i);
@@ -265,7 +265,7 @@ namespace casual
                 } else {
 
                    /* No, this is not restartable */
-                   common::logger::information << "Gateway::houskeeping : Removing the client " << ct->getName() << " it is not restartable";
+                   common::log::information << "Gateway::houskeeping : Removing the client " << ct->getName() << " it is not restartable";
 
                    /* Next element */
                    i = m_state.listOfClients.erase(i);
@@ -292,7 +292,7 @@ namespace casual
        configuration::Gateway& gateway = m_state.configuration;
        auto reader = sf::archive::reader::makeFromFile(arguments.configurationFile);
        reader >> CASUAL_MAKE_NVP(gateway);
-       common::logger::information << "Gateway " << m_state.configuration.name << " starting up";
+       common::log::information << "Gateway " << m_state.configuration.name << " starting up";
 
        /*
         * Set up the gateway
@@ -313,12 +313,12 @@ namespace casual
 
              if( ! handler.dispatch( marshal))
              {
-                common::logger::error << "message_type: " << marshal.type() << " not recognized - action: discard";
+                common::log::error << "message_type: " << marshal.type() << " not recognized - action: discard";
              }
           }
        }
        catch (...) {
-          common::logger::information << "Exception caught, cleaning up and exiting";
+          common::log::information << "Exception caught, cleaning up and exiting";
           shutdown();
           throw;
        }

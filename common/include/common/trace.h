@@ -8,7 +8,7 @@
 #ifndef TRACE_H_
 #define TRACE_H_
 
-#include "common/logger.h"
+#include "common/log.h"
 
 #include <string>
 
@@ -16,32 +16,46 @@ namespace casual
 {
    namespace common
    {
-      class Trace
+      class base_trace
+      {
+      protected:
+         template< typename T>
+         base_trace( std::ostream& log, T&& info) : m_log( log), m_information{ std::forward< T>( info)}
+         {
+            if( m_log.good())
+            {
+               m_log << m_information << " - in" << std::endl;
+            }
+         }
+
+         ~base_trace()
+         {
+            if( m_log.good())
+            {
+               if( std::uncaught_exception())
+               {
+                  m_log << m_information << " - out*" << std::endl;
+               }
+               else
+               {
+                  m_log << m_information << " - out" << std::endl;
+               }
+            }
+         }
+
+         base_trace( const base_trace&) = delete;
+         base_trace& operator = ( const base_trace&) = delete;
+
+      private:
+         std::ostream& m_log;
+         std::string m_information;
+      };
+
+      class Trace : base_trace
       {
       public:
          template< typename T>
-         Trace( T&& info) : m_information{ std::forward< T>( info)}
-         {
-            logger::trace << m_information << " - in";
-         }
-
-         ~Trace()
-         {
-            if( std::uncaught_exception())
-            {
-               logger::trace << m_information << " - out*";
-            }
-            else
-            {
-               logger::trace << m_information << " - out";
-            }
-         }
-
-         Trace( const Trace&) = delete;
-         Trace& operator = ( const Trace&) = delete;
-
-      private:
-         std::string m_information;
+         Trace( T&& info) : base_trace( log::trace, std::forward< T>( info)) {}
       };
 
       namespace trace
@@ -56,11 +70,11 @@ namespace casual
            {
               if( std::uncaught_exception())
               {
-                 logger::trace << m_information << " - failed";
+                 log::trace << m_information << " - failed" << std::endl;
               }
               else
               {
-                 logger::trace << m_information << " - ok";
+                 log::trace << m_information << " - ok" << std::endl;
               }
            }
 

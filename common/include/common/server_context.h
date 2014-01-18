@@ -12,14 +12,12 @@
 #include "common/message.h"
 #include "common/ipc.h"
 #include "common/queue.h"
-#include "common/transform.h"
-#include "common/types.h"
 #include "common/environment.h"
 
 #include "common/calling_context.h"
 #include "common/transaction_context.h"
 #include "common/platform.h"
-#include "common/logger.h"
+#include "common/log.h"
 #include "common/trace.h"
 
 
@@ -166,8 +164,14 @@ namespace casual
 
                typedef message::service::callee::Call message_type;
 
+               basic_call( basic_call&&) = delete;
+               basic_call& operator = ( basic_call&&) = delete;
+
                basic_call() = delete;
                basic_call( const basic_call&) = delete;
+               basic_call& operator = ( basic_call&) = delete;
+
+
 
 
                //!
@@ -194,6 +198,7 @@ namespace casual
                   // Connect to casual
                   //
                   auto configuration = m_policy.connect( message);
+                  environment::domain::name( configuration.domain);
 
                   //
                   // Apply the configuration
@@ -220,7 +225,7 @@ namespace casual
 
                   try
                   {
-                     logger::information << "terminated";
+                     Trace trace{ "basic_call::~basic_call"};
                      //
                      // Call tpsrvdone
                      //
@@ -255,7 +260,7 @@ namespace casual
                   //
                   if( message.service.monitor_queue != 0)
                   {
-                     m_state.monitor.start = common::clock_type::now();
+                     m_state.monitor.start = platform::clock_type::now();
                   }
 
                   //
@@ -302,7 +307,7 @@ namespace casual
 
                      calling::Context::instance().currentService( message.service.name);
 
-                     TPSVCINFO serviceInformation = transform::ServiceInformation()( message);
+                     TPSVCINFO serviceInformation = transformServiceInformation( message);
 
                      //
                      // Before we call the user function we have to add the buffer to the "buffer-pool"
@@ -348,7 +353,7 @@ namespace casual
                      //
                      if( message.service.monitor_queue != 0)
                      {
-                        m_state.monitor.end = common::clock_type::now();
+                        m_state.monitor.end = platform::clock_type::now();
                         m_state.monitor.callId = message.callId;
                         m_state.monitor.service = message.service.name;
                         m_state.monitor.parentService = message.callee;
@@ -359,6 +364,21 @@ namespace casual
                   }
                }
             private:
+
+               TPSVCINFO transformServiceInformation( message::service::callee::Call& message) const
+               {
+                  TPSVCINFO result;
+
+                  strncpy( result.name, message.service.name.data(), sizeof( result.name) );
+                  result.data = platform::public_buffer( message.buffer.raw());
+                  result.len = message.buffer.size();
+                  result.cd = message.callDescriptor;
+                  result.flags = 0;
+
+                  return result;
+               }
+
+
                policy_type m_policy;
                server::State& m_state = server::Context::instance().getState();
 
@@ -377,7 +397,7 @@ namespace casual
                   template< typename W>
                   struct broker_writer : public W
                   {
-                     broker_writer() : W( ipc::getBrokerQueue()) {}
+                     broker_writer() : W( ipc::getBrokerQueue().id()) {}
                   };
 
 
@@ -395,8 +415,8 @@ namespace casual
                   void transaction( const message::service::Reply& message);
 
                private:
-                  typedef queue::ipc_wrapper< queue::blocking::Writer> reply_writer;
-                  typedef queue::ipc_wrapper< queue::non_blocking::Writer> monitor_writer;
+                  typedef queue::blocking::Writer reply_writer;
+                  typedef queue::non_blocking::Writer monitor_writer;
                   typedef broker_writer< queue::blocking::Writer> blocking_broker_writer;
                   typedef broker_writer< queue::non_blocking::Writer> non_blocking_broker_writer;
 

@@ -19,10 +19,10 @@
  * Casual
  */
 #include "common/ipc.h"
-#include "common/types.h"
+//#include "common/types.h"
 #include "common/uuid.h"
 
-#include "common/logger.h"
+#include "common/log.h"
 #include "common/marshal.h"
 #include "gateway/wire.h"
 #include "gateway/std14.h"

@@ -8,11 +8,10 @@
 #ifndef CASUAL_BUFFER_H_
 #define CASUAL_BUFFER_H_
 
-#include "common/types.h"
+#include "common/platform.h"
 
 #include <string>
 #include <list>
-#include <functional>
 
 namespace casual
 {
@@ -20,111 +19,122 @@ namespace casual
    {
       namespace buffer
       {
-
-         struct Callback
+         struct Type
          {
-            //
-            // Functions shall return 0 on succes
-            //
-            typedef std::function<long(char*,long)> interface;
+            Type() = default;
+            Type( const std::string& type, const std::string& subtype) : type( type), subtype( subtype) {}
+            Type( const char* type, const char* subtype) : type( type ? type : ""), subtype( subtype ? subtype : "") {}
 
-            interface m_create;
-            interface m_expand;
-            interface m_reduce;
-            //interface m_remove;
-            interface m_needed;
+            std::string type;
+            std::string subtype;
 
-
-            Callback()
-            : m_create( nullptr),
-              m_expand( nullptr),
-              m_reduce( nullptr),
-              //m_remove( nullptr),
-              m_needed( nullptr)
-            {}
-
-
-            Callback(
-               interface create_function,
-               interface expand_function,
-               interface reduce_function,
-               //interface remove_function,
-               interface needed_function)
-             : m_create( create_function),
-               m_expand( expand_function),
-               m_reduce( reduce_function),
-               //m_remove( remove_function),
-               m_needed( needed_function)
-            {}
-
-            Callback( Callback&&) = default;
-            Callback( const Callback&) = default;
-            Callback& operator = ( Callback&&) = default;
-            Callback& operator = ( const Callback&) = default;
-
-            static Callback create( const std::string& type, const std::string& subtype);
+            template< typename A>
+            void marshal( A& archive)
+            {
+               archive & type;
+               archive & subtype;
+            }
          };
+
+         inline bool operator < ( const Type& lhs, const Type& rhs)
+         {
+            if( lhs.type < rhs.type)
+               return true;
+            if( rhs.type < lhs.type)
+               return false;
+            return lhs.subtype < rhs.subtype;
+
+         }
+
+         namespace implementation
+         {
+            class Base;
+         }
+
 
          struct Buffer
          {
-            Buffer() {}
-
-            Buffer( const std::string& type, const std::string& subtype, const std::size_t size)
-               : m_type( type), m_subtype( subtype), m_memory( size), m_callback( Callback::create( m_type, m_subtype)) {}
-
-
-            Buffer( Buffer&& rhs) = default;
-            Buffer& operator = ( Buffer&& rhs) = default;
+            Buffer();
+            Buffer( buffer::Type&& type, std::size_t size, implementation::Base& implementaion);
+            Buffer( buffer::Type&& type, std::size_t size);
+            Buffer( Buffer&& rhs);
+            Buffer& operator = ( Buffer&& rhs);
 
 
             Buffer( const Buffer&) = delete;
             Buffer& operator = ( const Buffer&) = delete;
 
 
-            inline raw_buffer_type raw()
-            {
-               return m_memory.data();
-            }
-            std::size_t size() const
-            {
-               return m_memory.size();
-            }
+            platform::raw_buffer_type raw();
 
-            inline raw_buffer_type reallocate( const std::size_t size)
-            {
-               m_memory.resize( size);
-               return raw();
-            }
+            std::size_t size() const;
 
-            const std::string& type() const
-            {
-               return m_type;
-            }
+            void reallocate( std::size_t size);
 
-            const std::string& subtype() const
-            {
-               return m_subtype;
-            }
+            const Type& type() const;
 
-            const Callback& callback() const
-            {
-               return m_callback;
-            }
+            implementation::Base& implementation();
+
+            const platform::binary_type& memory() const;
+            platform::binary_type& memory();
 
             template< typename A>
-            void marshal( A& archive)
-            {
-               archive & m_type;
-               archive & m_subtype;
-               archive & m_memory;
-            }
+            void marshal( A& archive);
 
          private:
-            std::string m_type;
-            std::string m_subtype;
-            binary_type m_memory;
-            Callback m_callback;
+            implementation::Base* m_implemenation = nullptr;
+            Type m_type;
+            platform::binary_type m_memory;
+
          };
+
+
+
+         namespace implementation
+         {
+            class Base
+            {
+            public:
+               virtual ~Base();
+
+               void create( Buffer& buffer, std::size_t size);
+               void reallocate( Buffer& buffer, std::size_t size);
+
+               void network( Buffer& buffer);
+
+            private:
+
+               virtual void doCreate( Buffer& buffer, std::size_t size);
+               virtual void doReallocate( Buffer& buffer, std::size_t size);
+               virtual void doNetwork( Buffer& buffer);
+            };
+
+            bool registrate( Base& implemenation, const std::vector< buffer::Type>& types);
+
+            template< typename I>
+            bool registrate( const std::vector< buffer::Type>& types)
+            {
+               static I implemenation;
+               return registrate( implemenation, types);
+            }
+
+            Base& get( const buffer::Type& type);
+
+         } // implementation
+
+
+         template< typename A>
+         void Buffer::marshal( A& archive)
+         {
+            archive & m_type;
+            archive & m_memory;
+
+            if( ! m_implemenation)
+            {
+               m_implemenation = &implementation::get( m_type);
+            }
+         }
+
 
          class Context
          {
@@ -135,29 +145,33 @@ namespace casual
             Context( const Context&) = delete;
             Context& operator = ( const Context&) = delete;
 
+
+
+
             static Context& instance();
 
-            raw_buffer_type allocate( const std::string& type, const std::string& subtype, std::size_t size);
+            platform::raw_buffer_type allocate( buffer::Type&& type, std::size_t size);
 
-            raw_buffer_type reallocate( const_raw_buffer_type memory, std::size_t size);
+            platform::raw_buffer_type reallocate( platform::const_raw_buffer_type memory, std::size_t size);
 
-            void deallocate( const_raw_buffer_type memory);
+            void deallocate( platform::const_raw_buffer_type memory);
 
-            Buffer& get( const_raw_buffer_type memory);
+            Buffer& get( platform::const_raw_buffer_type memory);
 
             //!
             //! @return the buffer, after it has been erased from the pool
             //!
             //!
-            Buffer extract( const_raw_buffer_type memory);
+            Buffer extract( platform::const_raw_buffer_type memory);
 
             Buffer& add( Buffer&& buffer);
 
             void clear();
 
+
          private:
 
-            pool_type::iterator getFromPool( const_raw_buffer_type memory);
+            pool_type::iterator getFromPool( platform::const_raw_buffer_type memory);
 
             Context();
             pool_type m_memoryPool;
@@ -169,7 +183,9 @@ namespace casual
             struct Deallocator
             {
                Deallocator( char* buffer) : m_memory( buffer)
-               {}
+               {
+
+               }
 
                ~Deallocator()
                {
@@ -189,6 +205,9 @@ namespace casual
       } // buffer
 	} // common
 } // casual
+
+
+
 
 
 

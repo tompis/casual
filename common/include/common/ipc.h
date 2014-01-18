@@ -16,7 +16,6 @@
 #include "common/uuid.h"
 #include "common/platform.h"
 
-#include "common/types.h"
 
 
 //
@@ -96,13 +95,13 @@ namespace casual
             struct Complete
             {
                typedef platform::message_type_type message_type_type;
-               typedef common::binary_type payload_type;
+               typedef platform::binary_type payload_type;
 
                Complete() = default;
 
                Complete( Transport& transport);
 
-               Complete( message_type_type messageType, common::binary_type&& buffer)
+               Complete( message_type_type messageType, platform::binary_type&& buffer)
                   : type( messageType), correlation( Uuid::make()), payload( std::move( buffer)), complete( true)
                {}
 
@@ -179,7 +178,7 @@ namespace casual
                //!
                //! @return true if sent, false otherwise
                //!
-               bool operator () ( message::Complete& message) const
+               bool operator () ( const message::Complete& message) const
                {
                   return send( message, 0);
                }
@@ -189,7 +188,7 @@ namespace casual
                //!
                //! @return true if sent, false otherwise
                //!
-               bool operator () ( message::Complete& message, const long flags) const
+               bool operator () ( const message::Complete& message, const long flags) const
                {
                   return send( message, flags);
                }
@@ -197,7 +196,7 @@ namespace casual
             private:
 
                bool send( message::Transport& message, const long flags) const;
-               bool send( message::Complete& message, const long flags) const;
+               bool send( const message::Complete& message, const long flags) const;
             };
 
          }
@@ -253,9 +252,33 @@ namespace casual
             };
          }
 
+         namespace broker
+         {
+            send::Queue::id_type id();
 
+            send::Queue& queue();
+
+         } // broker
+
+
+         //!
+         //! @deprecated use broker::queue(), or probably easier: ipc::broker::id();
+         //!
          send::Queue& getBrokerQueue();
 
+
+         namespace receive
+         {
+            receive::Queue::id_type id();
+
+            receive::Queue& queue();
+
+         } // receive
+
+
+         //!
+         //! @deprecated use receive::queue()
+         //!
          receive::Queue& getReceiveQueue();
 
 

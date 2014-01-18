@@ -10,7 +10,7 @@
 
 #include "common/marshal.h"
 #include "common/queue.h"
-#include "common/logger.h"
+#include "common/log.h"
 
 
 #include <map>
@@ -42,8 +42,12 @@ namespace casual
                typedef H handler_type;
                typedef typename handler_type::message_type message_type;
 
+               handle_holder( handle_holder&&) = default;
+               handle_holder& operator = ( handle_holder&&) = default;
+
+
                template< typename... Arguments>
-               handle_holder( Arguments&&... arguments) : m_handler( std::forward< Arguments>( arguments)...) {}
+               handle_holder( Arguments&&... arguments) : m_handler{ std::forward< Arguments>( arguments)...} {}
 
                void marshal( marshal::input::Binary& binary)
                {
@@ -79,12 +83,25 @@ namespace casual
                {
                   // TODO: change to std::make_unique
                   handlers_type::mapped_type holder(
-                        new handle_holder< H>{ std::move( handler)});
+                        new handle_holder< H>{ std::forward< H>( handler)});
 
                   m_handlers[ H::message_type::message_type] = std::move( holder);
                }
 
-               bool dispatch( marshal::input::Binary& binary)
+               template< typename B>
+               bool dispatch( B&& binary)
+               {
+                  return doDispatch( binary);
+               }
+
+               std::size_t size() const
+               {
+                  return m_handlers.size();
+               }
+
+            private:
+
+               bool doDispatch( marshal::input::Binary& binary)
                {
                   auto findIter = m_handlers.find( binary.type());
 
@@ -93,35 +110,40 @@ namespace casual
                      findIter->second->marshal( binary);
                      return true;
                   }
+                  else
+                  {
+                     common::log::error << "message_type: " << binary.type() << " not recognized - action: discard" << std::endl;
+                  }
                   return false;
                }
 
 
-               std::size_t size() const
+               bool doDispatch( std::vector< marshal::input::Binary>& binary)
                {
-                  return m_handlers.size();
+                  if( binary.empty())
+                  {
+                     return false;
+                  }
+
+                  doDispatch( binary.front());
+
+                  return true;
                }
 
-            private:
+
                handlers_type m_handlers;
             };
 
-
-            void pump( Handler& handler, ipc::receive::Queue& ipc = ipc::getReceiveQueue())
+            template< typename RQ>
+            void pump( Handler& handler, RQ&& receiveQueue)
             {
-               queue::blocking::Reader receiveQueue( ipc);
-
                while( true)
                {
                   auto marshal = receiveQueue.next();
 
-                  if( ! handler.dispatch( marshal))
-                  {
-                     common::logger::error << "message_type: " << marshal.type() << " not recognized - action: discard";
-                  }
+                   handler.dispatch( marshal);
                }
             }
-
 
 
          } // dispatch

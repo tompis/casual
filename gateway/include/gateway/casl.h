@@ -41,7 +41,7 @@ namespace casual
         /*
          * Writes messages to the other end
          */
-        bool writeMessage (common::binary_type &message);
+        bool writeMessage (common::platform::binary_type &message);
 
      protected:
 
@@ -137,7 +137,7 @@ namespace casual
        int message_read = 0;
 
        /* The actual message data without the transport header CASL<size> */
-       common::binary_type message; /* The actual mesage */
+       common::platform::binary_type message; /* The actual mesage */
 
        /**********************************************************************
         * Message writer area
@@ -154,7 +154,7 @@ namespace casual
           /*
            * Constructor and destructor
            */
-          Buffer (common::binary_type &message);
+          Buffer (common::platform::binary_type &message);
           ~Buffer () = default;
 
           /*

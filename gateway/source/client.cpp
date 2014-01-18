@@ -30,7 +30,7 @@
 /*
  * Casual common
  */
-#include "common/logger.h"
+#include "common/log.h"
 #include "gateway/std14.h"
 #include "gateway/ipc.h"
 #include "gateway/state.h"
@@ -112,7 +112,7 @@ namespace casual
        */
       bool ClientSocket::handleMessage()
       {
-         common::logger::information << "ClientSocket::handleMessage : Incoming message arrived";
+         common::log::information << "ClientSocket::handleMessage : Incoming message arrived";
          return true;
       }
 
@@ -137,9 +137,9 @@ namespace casual
          m_state.socket = std::make_unique<ClientSocket>(m_state);
          int n = pSocket->accept(m_state.socket.get());
          if (n<0) {
-            common::logger::warning << "ClientThread::ClientThread : Incoming connection not accepted";
+            common::log::warning << "ClientThread::ClientThread : Incoming connection not accepted";
          } else {
-            common::logger::information << "ClientThread::ClientThread : Incoming connection accepted";
+            common::log::information << "ClientThread::ClientThread : Incoming connection accepted";
             m_state.state = ClientState::MachineState::active;
          }
 
@@ -162,7 +162,7 @@ namespace casual
          if (resolver.resolve (m_state.localRemoteURL)<0) {
 
             /* Unable to resolve address, there is no idea to start */
-            common::logger::error << "ClientThread::ClientThread : Unable to resolve address " << remote.endpoint << " for " << m_state.localRemoteName;
+            common::log::error << "ClientThread::ClientThread : Unable to resolve address " << remote.endpoint << " for " << m_state.localRemoteName;
 
          } else {
 
@@ -189,7 +189,7 @@ namespace casual
       bool ClientThread::start()
       {
          bool bStarted = false;
-         common::logger::information << "ClientThread::start : Entered";
+         common::log::information << "ClientThread::start : Entered";
 
          /* Can we start and are we not already running ? */
          if (m_state.state!=ClientState::failed && thread == nullptr) {
@@ -199,12 +199,12 @@ namespace casual
             bStarted = true;
 
             /* Start the thread */
-            common::logger::information << "ClientThread::start : Thread started";
+            common::log::information << "ClientThread::start : Thread started";
             thread = std::make_unique<std::thread>(&ClientThread::loop, this);
 
          }
 
-         common::logger::information << "ClientThread::start : Exited";
+         common::log::information << "ClientThread::start : Exited";
 
          return bStarted;
       }
@@ -215,7 +215,7 @@ namespace casual
       bool ClientThread::stop()
       {
          bool bStopped = false;
-         common::logger::information << "ClientThread::stop : Entered";
+         common::log::information << "ClientThread::stop : Entered";
 
          /* Allow it to stop */
          bRun = false;
@@ -224,13 +224,13 @@ namespace casual
          if (thread != nullptr) {
 
             /* Wait for the thread to finish */
-            common::logger::information << "ClientThread::stop : Waiting for thread to finish";
+            common::log::information << "ClientThread::stop : Waiting for thread to finish";
             thread->join();
             thread = nullptr;
             bStopped = true;
          }
 
-         common::logger::information << "ClientThread::stop : Exited";
+         common::log::information << "ClientThread::stop : Exited";
 
          return bStopped;
       }
@@ -283,7 +283,7 @@ namespace casual
          bool bOK = true;
 
          /* Create the socket */
-         common::logger::information << "ClientThread::connect : Connecting to endpoint " << m_state.endpoint.info();
+         common::log::information << "ClientThread::connect : Connecting to endpoint " << m_state.endpoint.info();
          m_state.socket = std::make_unique<ClientSocket>(m_state, m_state.endpoint);
 
          /* Connect to the remote endpoint */
@@ -291,9 +291,9 @@ namespace casual
          {
             /* If we are in progres, then that is ok, otherwise we failed */
             bOK = false;
-            common::logger::error << "ClientThread::connect : Unable to connect to " << m_state.endpoint.info() << ", fatal " << strerror (errno) << "(" << errno << ")";
+            common::log::error << "ClientThread::connect : Unable to connect to " << m_state.endpoint.info() << ", fatal " << strerror (errno) << "(" << errno << ")";
          } else {
-            common::logger::information << "ClientThread::connect : Connection to " << m_state.endpoint.info() << " established";
+            common::log::information << "ClientThread::connect : Connection to " << m_state.endpoint.info() << " established";
          }
 
          /* Return with the status */
@@ -307,7 +307,7 @@ namespace casual
       {
          int status;
 
-         common::logger::information << "ClientThread::loop : Entered";
+         common::log::information << "ClientThread::loop : Entered";
 
          /* Connection loop */
          while (bRun && m_state.state != ClientState::failed && m_state.state != ClientState::fatal) {
@@ -333,7 +333,7 @@ namespace casual
             if (status < 0) {
 
                /* Some serious polling error, stop this */
-               common::logger::information << "ClientThread::loop : Error during poll, " << strerror (errno) << "(" << errno << ")";
+               common::log::information << "ClientThread::loop : Error during poll, " << strerror (errno) << "(" << errno << ")";
                m_state.state = ClientState::failed;
 
             } else {
@@ -347,7 +347,7 @@ namespace casual
 
          /* Exit */
          bExited = true;
-         common::logger::information << "ClientThread::loop : Exited";
+         common::log::information << "ClientThread::loop : Exited";
       }
    }
 }

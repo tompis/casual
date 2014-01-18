@@ -30,8 +30,8 @@
 /*
  * Casual common
  */
-#include "common/logger.h"
-#include "common/types.h"
+#include "common/log.h"
+//#include "common/types.h"
 #include "gateway/std14.h"
 #include "gateway/wire.h"
 #include "gateway/ipc.h"
@@ -79,7 +79,7 @@ namespace casual
        */
       common::ipc::Socket::State CASLSocket::handleIncomingConnection (int events)
       {
-         common::logger::warning << "CASLSocket::handleIncomingConnection : Should never get an event here";
+         common::log::warning << "CASLSocket::handleIncomingConnection : Should never get an event here";
          return common::ipc::Socket::State::error;
       }
 
@@ -90,13 +90,13 @@ namespace casual
       {
          common::ipc::Socket::State ret = getState();
 
-         common::logger::information << "CASLSocket::handleConnected : Entered";
+         common::log::information << "CASLSocket::handleConnected : Entered";
 
          /* POLLERR */
          if ((events & POLLERR) != 0) {
 
             int err = getLastError();
-            common::logger::information << "CASLSocket::handleConnected : Error " << strerror (err) << "(" << err << ")";
+            common::log::information << "CASLSocket::handleConnected : Error " << strerror (err) << "(" << err << ")";
 
             /* Socket is in error and so is the thread */
             ret = common::ipc::Socket::State::error;
@@ -105,7 +105,7 @@ namespace casual
          /* HANGUP */
          if ((events & POLLHUP) != 0) {
 
-            common::logger::information << "CASLSocket::handleConnected : Hangup";
+            common::log::information << "CASLSocket::handleConnected : Hangup";
 
             /* The other side has hung up */
             ret = common::ipc::Socket::State::hung_up;
@@ -121,7 +121,7 @@ namespace casual
             ret = dataCanBeRead ();
          }
 
-         common::logger::information << "CASLSocket::handleConnected : Exited";
+         common::log::information << "CASLSocket::handleConnected : Exited";
          return ret;
       }
 
@@ -131,12 +131,12 @@ namespace casual
       common::ipc::Socket::State CASLSocket::handleOutgoingConnection (int events)
       {
          common::ipc::Socket::State  ret = getState();
-         common::logger::information << "CASLSocket::handleOutgoingConnection : Entered";
+         common::log::information << "CASLSocket::handleOutgoingConnection : Entered";
 
          /* POLLERR */
          if ((events & POLLERR) != 0) {
             int err = getLastError();
-            common::logger::information << "CASLSocket::handleOutgoingConnection : Error " << strerror (err) << "(" << err << ")";
+            common::log::information << "CASLSocket::handleOutgoingConnection : Error " << strerror (err) << "(" << err << ")";
             ret = common::ipc::Socket::State::error;
          }
 
@@ -144,14 +144,14 @@ namespace casual
          if ((events & POLLHUP) != 0) {
 
             /* The other side has hung up, retry connection */
-            common::logger::information << "CASLSocket::handleOutgoingConnection : Hangup on far end, try again";
+            common::log::information << "CASLSocket::handleOutgoingConnection : Hangup on far end, try again";
             ret = common::ipc::Socket::State::hung_up;
          }
 
          /* POLLWRNORM */
          if ((events & POLLWRNORM) != 0) {
 
-            common::logger::information << "CASLSocket::handleOutgoingConnection : Connected to far end";
+            common::log::information << "CASLSocket::handleOutgoingConnection : Connected to far end";
 
             /* It is now possible to write data */
             possibleToWrite = true;
@@ -176,7 +176,7 @@ namespace casual
 
          }
 
-         common::logger::information << "CASLSocket::handleOutgoingConnection : Exited";
+         common::log::information << "CASLSocket::handleOutgoingConnection : Exited";
          return ret;
 
       }
@@ -189,7 +189,7 @@ namespace casual
          bool complete = false;
          int byte_to_read;
 
-         common::logger::information << "CASLSocket::readMessage : Entered";
+         common::log::information << "CASLSocket::readMessage : Entered";
 
          /* Determine the number of bytes to copy from the read buffer */
          if (buffer_size - position < message_size - message_read)
@@ -197,7 +197,7 @@ namespace casual
          else
             byte_to_read = message_size - message_read;
 
-         common::logger::information << "ReadMessage : " << message_read << " " << position << " " << byte_to_read;
+         common::log::information << "ReadMessage : " << message_read << " " << position << " " << byte_to_read;
 
          /* Copy the required number of bytes */
          memcpy (&message[message_read], &buffer[position], byte_to_read);
@@ -209,7 +209,7 @@ namespace casual
          /* Move the buffer, if needed, i.e. if we got any more data in the buffer for the next sweep */
          /* THIS SHOULD BE OPTIMIZED, RINGBUFFER maybe instead :-) */
          if (position < buffer_size) {
-            common::logger::information << "ReadMessage : " << position << " " << buffer_size << " " << buffer_size - position;
+            common::log::information << "ReadMessage : " << position << " " << buffer_size << " " << buffer_size - position;
             memcpy (&buffer[0], &buffer[position], buffer_size - position);
             buffer_size = buffer_size - position;
             position = 0;
@@ -219,7 +219,7 @@ namespace casual
          if (message_size == message_read)
             complete = true;
 
-         common::logger::information << "CASLSocket::readMessage : Exited";
+         common::log::information << "CASLSocket::readMessage : Exited";
 
          return complete;
       }
@@ -232,7 +232,7 @@ namespace casual
       {
          bool found = false;
 
-         common::logger::information << "CASLSocket::locateHeader : Entered";
+         common::log::information << "CASLSocket::locateHeader : Entered";
 
          /* We need at least 12 characters to locate the message header, loop until we find it. It is called message
           * synchronization. Try to locate the magic string "CASL" followed by message size */
@@ -274,7 +274,7 @@ namespace casual
             position = 0;
          }
 
-         common::logger::information << "CASLSocket::locateHeader : Exited";
+         common::log::information << "CASLSocket::locateHeader : Exited";
 
          /* Return with status */
          return found;
@@ -288,8 +288,8 @@ namespace casual
          common::ipc::Socket::State ret = getState();
          bool stop = false;
 
-         common::logger::information << "CASLSocket::dataCanBeRead : Entered";
-         common::logger::information << "CASLSocket::dataCanBeRead : Can read " << maxBufferSize - buffer_size << " bytes";
+         common::log::information << "CASLSocket::dataCanBeRead : Entered";
+         common::log::information << "CASLSocket::dataCanBeRead : Can read " << maxBufferSize - buffer_size << " bytes";
 
          /* Read as much data as possible, i.e. try always to fill up the buffer */
          do {
@@ -306,7 +306,7 @@ namespace casual
                   stop = true;
 
                   if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINPROGRESS) {
-                     common::logger::information << "CASLSocket::dataCanBeRead : Error : " << strerror (errno) << "(" << errno << ")";
+                     common::log::information << "CASLSocket::dataCanBeRead : Error : " << strerror (errno) << "(" << errno << ")";
                      ret = common::ipc::Socket::State::error;
                   }
 
@@ -314,8 +314,8 @@ namespace casual
 
                   /* No bytes, it means EOF and/or hangup on the other side */
                   if (numberOfReadBytes == 0) {
-                     common::logger::information << "CASLSocket::dataCanBeRead : No data when reading, hangup on far end";
-                     common::logger::information << "CASLSocket::dataCanBeRead : " << strerror (errno) << "(" << errno << ")";
+                     common::log::information << "CASLSocket::dataCanBeRead : No data when reading, hangup on far end";
+                     common::log::information << "CASLSocket::dataCanBeRead : " << strerror (errno) << "(" << errno << ")";
                      stop = true;
                      ret = common::ipc::Socket::State::hung_up;
                   }
@@ -324,7 +324,7 @@ namespace casual
 
                /* Add number of bytes read */
                buffer_size += numberOfReadBytes;
-               common::logger::information << "CASLSocket::dataCanBeRead : Read " << numberOfReadBytes << " bytes";
+               common::log::information << "CASLSocket::dataCanBeRead : Read " << numberOfReadBytes << " bytes";
 
                /* Run the read statemachine if we got any data */
                bool bAgain = true;
@@ -337,10 +337,10 @@ namespace casual
                   if (state == wait_for_header) {
 
                      /* Locate the header in the data stream */
-                     common::logger::information << "CASLSocket::dataCanBeRead : Trying to locate header 'CASL' - Buffer size = " << buffer_size << " position = " << position;
+                     common::log::information << "CASLSocket::dataCanBeRead : Trying to locate header 'CASL' - Buffer size = " << buffer_size << " position = " << position;
                      if (locateHeader ())
                      {
-                        common::logger::information << "CASLSocket::dataCanBeRead : Header located, message size = " << message_size;
+                        common::log::information << "CASLSocket::dataCanBeRead : Header located, message size = " << message_size;
 
                         /* Resize the message */
                         if (message.size()<message_size)
@@ -354,16 +354,16 @@ namespace casual
                   /* Are we in message read state */
                   if (state == read_message) {
 
-                     common::logger::information << "CASLSocket::dataCanBeRead : Reading message buffer size = " << buffer_size << " position " << position;
-                     common::logger::information << "CASLSocket::dataCanBeRead : Reading message current message size " << message_read << " need " << message_size;
+                     common::log::information << "CASLSocket::dataCanBeRead : Reading message buffer size = " << buffer_size << " position " << position;
+                     common::log::information << "CASLSocket::dataCanBeRead : Reading message current message size " << message_read << " need " << message_size;
                      if (readMessage ()) {
-                        common::logger::information << "CASLSocket::dataCanBeRead : Message is completed, message size = " << message_size;
+                        common::log::information << "CASLSocket::dataCanBeRead : Message is completed, message size = " << message_size;
 
                         /* Change state */
                         state = message_complete;
 
                      } else {
-                        common::logger::information << "CASLSocket::dataCanBeRead : Message is not complete, message_size = " << message_size << " message_read = " << message_read;
+                        common::log::information << "CASLSocket::dataCanBeRead : Message is not complete, message_size = " << message_size << " message_read = " << message_read;
                      }
 
                   }
@@ -371,7 +371,7 @@ namespace casual
                   /* Are we in completed message state */
                   if (state == message_complete) {
 
-                     common::logger::information << "CASLSocket::dataCanBeRead : Handle message, message size = " << message_size;
+                     common::log::information << "CASLSocket::dataCanBeRead : Handle message, message size = " << message_size;
                      handleMessage ();
 
                      /* Change state */
@@ -383,7 +383,7 @@ namespace casual
 
                /* If we have reached the end of the buffer, clear the position and buffer_size so we can go around again */
                if (position == buffer_size) {
-                  common::logger::information << "CASLSocket::dataCanBeRead : We have reached the end of the read buffer";
+                  common::log::information << "CASLSocket::dataCanBeRead : We have reached the end of the read buffer";
                   position = buffer_size = 0;
                }
 
@@ -392,7 +392,7 @@ namespace casual
             /* Do it again unless we have reached the end */
          } while (!stop);
 
-         common::logger::information << "CASLSocket::dataCanBeRead : Exited";
+         common::log::information << "CASLSocket::dataCanBeRead : Exited";
 
          /* Return with handled event, stay in the state */
          return ret;
@@ -408,7 +408,7 @@ namespace casual
          const void *pData;
          bool bDataMoved = false;
 
-         common::logger::information << "CASLSocket::fillWriteBuffer : Entered";
+         common::log::information << "CASLSocket::fillWriteBuffer : Entered";
 
          /*
           * Fill up the write bufferwith all messages waiting in the queue until all messages are written or
@@ -449,7 +449,7 @@ namespace casual
              */
          }
 
-         common::logger::information << "CASLSocket::fillWriteBuffer : Exited";
+         common::log::information << "CASLSocket::fillWriteBuffer : Exited";
 
          /*
           * All is well
@@ -465,7 +465,7 @@ namespace casual
       {
          common::ipc::Socket::State ret = getState();
          bool bMovedData = true;
-         common::logger::information << "CASLSocket::writeAll : Entered";
+         common::log::information << "CASLSocket::writeAll : Entered";
 
          /* Fill up the buffer */
          while (possibleToWrite && bMovedData) {
@@ -477,10 +477,10 @@ namespace casual
             while (possibleToWrite && writeBuffer_size-writePosition>0) {
 
                /* Write to the socket */
-               common::logger::information << "CASLSocket::writeAll : Write buffer size=" << writeBuffer_size << " position=" << writePosition << " towrite=" << writeBuffer_size - writePosition;
+               common::log::information << "CASLSocket::writeAll : Write buffer size=" << writeBuffer_size << " position=" << writePosition << " towrite=" << writeBuffer_size - writePosition;
                int bytesWritten = write(&writeBuffer[writePosition], writeBuffer_size-writePosition);
                if (bytesWritten<0) {
-                  common::logger::warning << "CASLSocket::writeAll : Error : " << errno << "=>" << strerror (errno);
+                  common::log::warning << "CASLSocket::writeAll : Error : " << errno << "=>" << strerror (errno);
                   possibleToWrite = false;
 
                   /* Normal error or not */
@@ -490,7 +490,7 @@ namespace casual
 
                }
 
-               common::logger::information << "CASLSocket::writeAll : Wrote size=" << bytesWritten;
+               common::log::information << "CASLSocket::writeAll : Wrote size=" << bytesWritten;
                if (bytesWritten>=0) {
 
                   /* Did we write all? If not the socket is probably full */
@@ -518,7 +518,7 @@ namespace casual
             setEventMask (POLLRDNORM | POLLWRNORM);
          }
 
-         common::logger::information << "CASLSocket::writeAll : Exited";
+         common::log::information << "CASLSocket::writeAll : Exited";
 
          /* Return true if we wrote anything out through the socket */
          return ret;
@@ -529,7 +529,7 @@ namespace casual
        */
       common::ipc::Socket::State CASLSocket::dataCanBeWritten ()
       {
-         common::logger::information << "CASLSocket::dataCanBeWritten : Entered";
+         common::log::information << "CASLSocket::dataCanBeWritten : Entered";
 
          /* It is now possible to write data */
          possibleToWrite = true;
@@ -542,7 +542,7 @@ namespace casual
           */
          common::ipc::Socket::State ret = writeAll();
 
-         common::logger::information << "CASLSocket::dataCanBeWritten : Exited";
+         common::log::information << "CASLSocket::dataCanBeWritten : Exited";
 
          return ret;
       }
@@ -550,15 +550,15 @@ namespace casual
       /*
        * Write message
        */
-      bool CASLSocket::writeMessage (common::binary_type &message)
+      bool CASLSocket::writeMessage (common::platform::binary_type &message)
       {
-         common::logger::information << "CASLSocket::writeMessage : Entered";
+         common::log::information << "CASLSocket::writeMessage : Entered";
 
          /*
           * If we are full, throw it away
           */
          if (listOfMessages.size()>=maxMessagesInWriteQueue) {
-            common::logger::error << "CASLSocket::writeMessage : Too many messages pending, throwing them away";
+            common::log::error << "CASLSocket::writeMessage : Too many messages pending, throwing them away";
          } else {
 
             /*
@@ -574,7 +574,7 @@ namespace casual
           */
          setState(writeAll());
 
-         common::logger::information << "CASLSocket::writeMessage : Exited";
+         common::log::information << "CASLSocket::writeMessage : Exited";
 
       }
 
@@ -583,14 +583,14 @@ namespace casual
        */
       bool CASLSocket::handleMessage()
       {
-         common::logger::information << "CASLSocket::handleMessage : Incoming message arrived";
+         common::log::information << "CASLSocket::handleMessage : Incoming message arrived";
          return true;
       }
 
       /**********************************************************************\
        *  CASLSocket::Buffer
       \**********************************************************************/
-      CASLSocket::Buffer::Buffer (common::binary_type &message)
+      CASLSocket::Buffer::Buffer (common::platform::binary_type &message)
       {
          int header = 0x4341534c;
          buffer << header;

@@ -10,8 +10,12 @@
 //!
 
 
-#include "common/logger.h"
+#include "common/log.h"
 #include "common/process.h"
+
+#include "common/arguments.h"
+#include "common/string.h"
+#include "common/environment.h"
 
 
 #include <unistd.h>
@@ -33,9 +37,9 @@ void casual_test1( TPSVCINFO *serviceContext)
    buffer = tprealloc( buffer, 3000);
 
    {
-      casual::common::logger::debug << "transb->name: " << serviceContext->name;
-      casual::common::logger::debug << "transb->cd: " << serviceContext->cd;
-      casual::common::logger::debug << "transb->data: " << serviceContext->data;
+      casual::common::log::debug << "transb->name: " << serviceContext->name << std::endl;
+      casual::common::log::debug << "transb->cd: " << serviceContext->cd << std::endl;
+      casual::common::log::debug << "transb->data: " << serviceContext->data << std::endl;
 
 
 
@@ -52,10 +56,21 @@ void casual_test1( TPSVCINFO *serviceContext)
 
 void casual_test2( TPSVCINFO *serviceContext)
 {
+   auto args = casual::common::string::split( serviceContext->data);
 
-   casual::common::logger::debug << "casual_test2 called - sleep for a while...";
+   casual::common::Arguments parser;
 
-   casual::common::process::sleep(  std::chrono::milliseconds( 200));
+   std::size_t millesconds = 0;
+
+   parser.add(
+         casual::common::argument::directive( { "-ms", "--ms-sleep"}, "sleep time", millesconds)
+   );
+
+   parser.parse( casual::common::environment::file::executable(), args);
+
+   casual::common::log::debug << "casual_test2 called - sleep for a while..." << std::endl;
+
+   casual::common::process::sleep(  std::chrono::milliseconds( millesconds));
 
 	tpreturn( TPSUCCESS, 0, serviceContext->data, serviceContext->len, 0);
 }
@@ -64,7 +79,7 @@ void casual_test2( TPSVCINFO *serviceContext)
 void casual_test3( TPSVCINFO *serviceContext)
 {
 
-   casual::common::logger::debug << "casual_test3 called";
+   casual::common::log::debug << "casual_test3 called" << std::endl;
 
    tpreturn( TPSUCCESS, 0, serviceContext->data, serviceContext->len, 0);
 }
@@ -74,7 +89,7 @@ void casual_test3( TPSVCINFO *serviceContext)
 
 int tpsvrinit(int argc, char **argv)
 {
-   casual::common::logger::debug << "USER tpsvrinit called";
+   casual::common::log::debug << "USER tpsvrinit called" << std::endl;
 
    return 0;
 }

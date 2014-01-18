@@ -30,7 +30,7 @@
 /*
  * Casual common
  */
-#include "common/logger.h"
+#include "common/log.h"
 #include "common/marshal.h"
 #include "gateway/wire.h"
 #include "gateway/std14.h"
@@ -82,13 +82,13 @@ namespace casual
       Socket::State MasterSocket::handleIncomingConnection (int events)
       {
          Socket::State ret = getState();
-         common::logger::information << "MasterSocket::handleIncomingConnection : Entered";
+         common::log::information << "MasterSocket::handleIncomingConnection : Entered";
 
          /* POLLERR */
          if ((events & POLLERR) != 0) {
 
             int err = getLastError();
-            common::logger::error << "MasterSocket::handleIncomingConnection : Error " << strerror (err) << "(" << err << ")";
+            common::log::error << "MasterSocket::handleIncomingConnection : Error " << strerror (err) << "(" << err << ")";
 
             ret = Socket::State::error;
          }
@@ -96,7 +96,7 @@ namespace casual
          /* POLLHUP */
          if ((events & POLLHUP) != 0) {
 
-            common::logger::error << "MasterSocket::handleIncomingConnection : Hangup should never happen";
+            common::log::error << "MasterSocket::handleIncomingConnection : Hangup should never happen";
 
             /* The other side has hung up, retry connection */
             ret = Socket::State::hung_up;
@@ -106,7 +106,7 @@ namespace casual
          if ((events & POLLRDNORM)!=0 && m_state.state == MasterState::MachineState::active) {
 
             /* Accept the connection */
-            common::logger::information << "MasterSocket::handleIncomingConnection : Accepting incoming connection";
+            common::log::information << "MasterSocket::handleIncomingConnection : Accepting incoming connection";
 
             /* Start a client thread */
             std::unique_ptr<ClientThread> clientThread = std::make_unique<ClientThread>(m_state.m_global, this);
@@ -118,7 +118,7 @@ namespace casual
 
          }
 
-         common::logger::information << "MasterSocket::handleIncomingConnection : Exited";
+         common::log::information << "MasterSocket::handleIncomingConnection : Exited";
          return ret;
 
       }
@@ -129,9 +129,9 @@ namespace casual
        */
       Socket::State MasterSocket::handleOutgoingConnection (int events)
       {
-         common::logger::information << "MasterSocket::handleOutgoingConnection : Entered";
-         common::logger::error << "MasterSocket::handleOutgoingConnection : Unexpected event";
-         common::logger::information << "MasterSocket::handleOutgoingConnection : Exited";
+         common::log::information << "MasterSocket::handleOutgoingConnection : Entered";
+         common::log::error << "MasterSocket::handleOutgoingConnection : Unexpected event";
+         common::log::information << "MasterSocket::handleOutgoingConnection : Exited";
          return Socket::State::error;
       }
 
@@ -141,9 +141,9 @@ namespace casual
        */
       Socket::State MasterSocket::handleConnected (int events)
       {
-         common::logger::information << "MasterSocket::handleConnected : Entered";
-         common::logger::error << "MasterSocket::handleConnected : Unexpected event";
-         common::logger::information << "MasterSocket::handleConnected : Exited";
+         common::log::information << "MasterSocket::handleConnected : Entered";
+         common::log::error << "MasterSocket::handleConnected : Unexpected event";
+         common::log::information << "MasterSocket::handleConnected : Exited";
          return Socket::State::error;
       }
 
@@ -165,7 +165,7 @@ namespace casual
             /*
              * Unable to resolve the address, gateway cannot start
              */
-            common::logger::error << "MasterThread::MasterThread : Unable to resolve address " << m_state.m_global.configuration.endpoint;
+            common::log::error << "MasterThread::MasterThread : Unable to resolve address " << m_state.m_global.configuration.endpoint;
 
          } else {
 
@@ -195,7 +195,7 @@ namespace casual
       bool MasterThread::start()
       {
          bool bStarted = false;
-         common::logger::information << "Masterthread::start : Entered";
+         common::log::information << "Masterthread::start : Entered";
 
          /* Can we start and are we not already running ? */
          if (m_state.state != MasterState::MachineState::failed && thread == nullptr) {
@@ -205,12 +205,12 @@ namespace casual
             bExited = false;
 
             /* Start the thread */
-            common::logger::information << "Masterthread::start : Thread started";
+            common::log::information << "Masterthread::start : Thread started";
             thread = std::make_unique<std::thread>(&MasterThread::loop, this);
             bStarted = true;
          }
 
-         common::logger::information << "Masterthread::start : Exited";
+         common::log::information << "Masterthread::start : Exited";
 
          return bStarted;
       }
@@ -221,7 +221,7 @@ namespace casual
       bool MasterThread::stop()
       {
          bool bStopped = false;
-         common::logger::information << "Masterthread::stop : Entered";
+         common::log::information << "Masterthread::stop : Entered";
 
          /* Stop the thread */
          bRun = false;
@@ -230,13 +230,13 @@ namespace casual
          if (thread != nullptr) {
 
             /* Wait for the thread to finish */
-            common::logger::information << "Masterthread::stop : Waiting for thread to finish";
+            common::log::information << "Masterthread::stop : Waiting for thread to finish";
             thread->join();
             thread = nullptr;
             bStopped = true;
          }
 
-         common::logger::information << "Masterthread::stop : Exited";
+         common::log::information << "Masterthread::stop : Exited";
 
          return bStopped;
       }
@@ -280,7 +280,7 @@ namespace casual
       {
          int status;
 
-         common::logger::information << "Masterthread::loop : Entered";
+         common::log::information << "Masterthread::loop : Entered";
 
          /*
           * Open the socket if we are initialized and not in error
@@ -305,14 +305,14 @@ namespace casual
                if (n<0) {
 
                   /* Something went wrong */
-                  common::logger::error << "MasterThread::loop : Unable to bind and listen to socket on " << m_state.endpoint.info();
-                  common::logger::error << "MasterThread::loop : " << strerror (errno) << "(" << errno << ")";
+                  common::log::error << "MasterThread::loop : Unable to bind and listen to socket on " << m_state.endpoint.info();
+                  common::log::error << "MasterThread::loop : " << strerror (errno) << "(" << errno << ")";
                   m_state.state = MasterState::MachineState::fatal;
 
                } else {
 
                   /* We are active */
-                  common::logger::information << "MasterThread::loop : Bound and listening on " << m_state.endpoint.info();
+                  common::log::information << "MasterThread::loop : Bound and listening on " << m_state.endpoint.info();
                   m_state.state = MasterState::MachineState::active;
 
                }
@@ -320,7 +320,7 @@ namespace casual
             } else {
 
                /* We failed */
-               common::logger::error << "MasterThread::loop : Unable to create socket for " << m_state.endpoint.info() << "," << m_state.socket->getState();
+               common::log::error << "MasterThread::loop : Unable to create socket for " << m_state.endpoint.info() << "," << m_state.socket->getState();
                m_state.state = MasterState::MachineState::fatal;
             }
          }
@@ -333,7 +333,7 @@ namespace casual
             if (status < 0) {
 
                /* Something went wrong */
-               common::logger::error << "Masterthread::loop : Polling error : " << strerror (errno) << "(" << errno << ")";
+               common::log::error << "Masterthread::loop : Polling error : " << strerror (errno) << "(" << errno << ")";
                m_state.state = MasterState::MachineState::failed;
 
             } else {
@@ -359,7 +359,7 @@ namespace casual
 
          /* Thread has finished */
          bExited = true;
-         common::logger::information << "Masterthread::loop : Exited";
+         common::log::information << "Masterthread::loop : Exited";
       }
    }
 }

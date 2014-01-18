@@ -9,7 +9,7 @@
  * Casual
  */
 #include "common/ipc.h"
-#include "common/types.h"
+//#include "common/types.h"
 #include "common/uuid.h"
 
 #include "gateway/wire.h"
@@ -217,7 +217,7 @@ namespace casual
              * We assume that the length of the binary buffer will always fit in 64 bits.
              *
              */
-            void NWBOBinary::write( common::binary_type& value)
+            void NWBOBinary::write( common::platform::binary_type& value)
             {
                writeIntegralU64( static_cast<unsigned long int>(value.size()));
 
@@ -252,7 +252,7 @@ namespace casual
             /*
              * Unmarshaling of a binary array. The first eight bytes (64 bits) are the length of the binary blob.
              */
-            void NWBOBinary::read( common::binary_type& value)
+            void NWBOBinary::read( common::platform::binary_type& value)
             {
                uint64_t size;
                assert( m_buffer.size() >= ( m_offset+8));

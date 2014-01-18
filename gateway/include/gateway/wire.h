@@ -12,7 +12,7 @@
  * Casual
  */
 #include "common/ipc.h"
-#include "common/types.h"
+#include "common/platform.h"
 #include "common/uuid.h"
 #include "common/marshal.h"
 /*
@@ -66,7 +66,7 @@ namespace casual
                /*
                 * Buffer type
                 */
-               typedef common::binary_type buffer_type;
+               typedef common::platform::binary_type buffer_type;
 
                /*
                 * Standard operators
@@ -123,8 +123,8 @@ namespace casual
                // Be friend with free marshal function so we can use more
                // bare-bone stuff when we do non-intrusive marshal for third-party types
                //
-               template< typename M, typename T>
-               friend void marshal_value( M& marshler, T& value);
+               template< typename T, typename M>
+               friend void casual_marshal_value( T& value, M& marshler);
 
                /*
                 * Marshal complex types, use their own marshaling function.
@@ -138,7 +138,7 @@ namespace casual
                typename std::enable_if< ! std::is_arithmetic< T>::value>::type
                write( T& value)
                {
-                  casual::marshal_value( *this, value);
+                  casual::casual_marshal_value( value, *this);
                }
 
                /*
@@ -314,7 +314,7 @@ namespace casual
                 * We assume that the length of the binary buffer will always fit in 64 bits.
                 *
                 */
-               void write( common::binary_type& value);
+               void write( common::platform::binary_type& value);
 
                /*
                 * The actual binary buffer
@@ -332,7 +332,7 @@ namespace casual
                /*
                 * Type definitions
                 */
-               typedef common::binary_type buffer_type;
+               typedef common::platform::binary_type buffer_type;
                typedef buffer_type::size_type offest_type;
 
                /*
@@ -379,7 +379,7 @@ namespace casual
                typename std::enable_if< ! std::is_arithmetic< T>::value>::type
                read( T& value)
                {
-                  casual::unmarshal_value( *this, value);
+                  casual::casual_unmarshal_value( value, *this);
                }
 
                /*
@@ -418,7 +418,7 @@ namespace casual
                /*
                 * Unmarshaling of a binary array. The first eight bytes (64 bits) are the length of the binary blob.
                 */
-               void read( common::binary_type& value);
+               void read( common::platform::binary_type& value);
 
                /*
                 * Read an unsigned 8 bit integer.

@@ -10,7 +10,8 @@
 #include "common/buffer_context.h"
 #include "common/calling_context.h"
 #include "common/server_context.h"
-#include "common/types.h"
+#include "common/platform.h"
+#include "common/log.h"
 
 #include "common/string.h"
 #include "common/error.h"
@@ -26,13 +27,13 @@ extern "C"
    long tpurcode = 0;
 }
 
-char* tpalloc( const char* const type, const char* const subtype, const long size)
+char* tpalloc( const char* type, const char* subtype, long size)
 {
    try
    {
-      auto&& result = casual::common::buffer::Context::instance().allocate( type ? type : "", subtype ? subtype : "", size);
+      auto result = casual::common::buffer::Context::instance().allocate( { type, subtype}, size);
 
-      return casual::common::transform::public_buffer( result);
+      return casual::common::platform::public_buffer( result);
 
    }
    catch( ...)
@@ -42,13 +43,13 @@ char* tpalloc( const char* const type, const char* const subtype, const long siz
    }
 }
 
-char* tprealloc( const char* ptr, const long size)
+char* tprealloc( const char* ptr, long size)
 {
 
    try
    {
       auto&& buffer = casual::common::buffer::Context::instance().reallocate( ptr, size);
-      return casual::common::transform::public_buffer( buffer);
+      return casual::common::platform::public_buffer( buffer);
    }
    catch( ...)
    {
@@ -88,7 +89,7 @@ long tptypes( const char* const ptr, char* const type, char* const subtype)
       {
          const int type_size = { 8 };
          memset( type, '\0', type_size);
-         local::copy_max( buffer.type().begin(), buffer.type().end(), type_size, type);
+         local::copy_max( buffer.type().type.begin(), buffer.type().type.end(), type_size, type);
       }
 
       //
@@ -98,7 +99,7 @@ long tptypes( const char* const ptr, char* const type, char* const subtype)
       {
          const int subtype_size = { 16 };
          memset( subtype, '\0', subtype_size);
-         local::copy_max( buffer.subtype().begin(), buffer.subtype().end(), subtype_size, subtype);
+         local::copy_max( buffer.type().subtype.begin(), buffer.type().subtype.end(), subtype_size, subtype);
       }
 
       return buffer.size();
@@ -215,12 +216,12 @@ const char* tperrnostring( int error)
 
 int tpsvrinit( int argc, char **argv)
 {
-   casual::common::logger::debug << "internal tpsvrinit called";
-   return 0;
+  casual::common::log::debug << "internal tpsvrinit called" << std::endl;
+  return 0;
 }
 
 void tpsvrdone()
 {
-   casual::common::logger::debug << "internal tpsvrdone called";
+  casual::common::log::debug << "internal tpsvrdone called" << std::endl;
 }
 

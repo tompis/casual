@@ -8,17 +8,13 @@
 #include "common/buffer_context.h"
 
 #include "common/exception.h"
-#include "common/logger.h"
-
-#include "common/field_buffer.h"
-#include "common/octet_buffer.h"
-#include "common/order_buffer.h"
-#include "common/string_buffer.h"
+#include "common/log.h"
 
 
 #include <stdexcept>
 
 #include <algorithm>
+#include <map>
 
 
 namespace casual
@@ -44,45 +40,148 @@ namespace casual
                const void* m_toFind;
             };
 
-
          }
 
-         Callback Callback::create( const std::string& type, const std::string& subtype)
+         Buffer::Buffer() {}
+
+
+         Buffer::Buffer( buffer::Type&& type, std::size_t size, implementation::Base& implementaion)
+            : m_implemenation( &implementaion), m_type( std::move( type))
          {
-            //
-            // TODO: better
-            //
-
-            if( type == CASUAL_FIELD && subtype.empty())
-            {
-               return Callback( CasualFieldCreate, CasualFieldExpand, CasualFieldReduce, CasualFieldNeeded);
-            }
-
-            if( type == CASUAL_OCTET && subtype.empty())
-            {
-               return Callback( CasualOctetCreate, CasualOctetExpand, CasualOctetReduce, CasualOctetNeeded);
-            }
-
-            if( type == CASUAL_ORDER && subtype.empty())
-            {
-               return Callback( CasualOrderCreate, CasualOrderExpand, CasualOrderReduce, CasualOrderNeeded);
-            }
-
-            if( type == CASUAL_STRING && subtype.empty())
-            {
-               return Callback( CasualStringCreate, CasualStringExpand, CasualStringReduce, CasualStringNeeded);
-            }
-
-
-            //
-            // TODO: throw if unknown buffer ... or ?
-            //
-
-            //throw common::exception::xatmi::SystemError();
-
-            return Callback( CasualOctetCreate, CasualOctetExpand, CasualOctetReduce, CasualOctetNeeded);
-
+            m_implemenation->create( *this, size);
          }
+
+         Buffer::Buffer( buffer::Type&& type, std::size_t size)
+            : Buffer( std::move( type), size, implementation::get( type)) {}
+
+         Buffer::Buffer( Buffer&& rhs) = default;
+         Buffer& Buffer::operator = ( Buffer&& rhs) = default;
+
+
+         platform::raw_buffer_type Buffer::raw()
+         {
+            return m_memory.data();
+         }
+
+         std::size_t Buffer::size() const
+         {
+            return m_memory.size();
+         }
+
+         void Buffer::reallocate( std::size_t size)
+         {
+            m_implemenation->reallocate( *this, size);
+         }
+
+         const Type& Buffer::type() const
+         {
+            return m_type;
+         }
+
+         implementation::Base& Buffer::implementation()
+         {
+            return *m_implemenation;
+         }
+
+         const platform::binary_type& Buffer::memory() const
+         {
+            return m_memory;
+         }
+         platform::binary_type& Buffer::memory()
+         {
+            return m_memory;
+         }
+
+
+
+         namespace implementation
+         {
+
+            Base::~Base() {}
+
+            void Base::create( Buffer& buffer, std::size_t size)
+            {
+               doCreate( buffer, size);
+            }
+
+            void Base::reallocate( Buffer& buffer, std::size_t size)
+            {
+               doReallocate( buffer, size);
+            }
+
+            void Base::network( Buffer& buffer)
+            {
+               doNetwork( buffer);
+            }
+
+
+            void Base::doCreate( Buffer& buffer, std::size_t size)
+            {
+               buffer.memory().resize( size);
+
+            }
+            void Base::doReallocate( Buffer& buffer, std::size_t size)
+            {
+               buffer.memory().resize( size);
+            }
+
+            void Base::doNetwork( Buffer& buffer)
+            {
+               // no op
+            }
+
+            namespace local
+            {
+               namespace
+               {
+                  typedef std::map< buffer::Type, implementation::Base&> implementations_type;
+                  implementations_type& implementations()
+                  {
+                     static implementations_type singleton;
+                     return singleton;
+                  }
+               }
+
+            } // local
+
+            bool registrate( Base& implemenation, const std::vector< buffer::Type>& types)
+            {
+               for( auto& type : types)
+               {
+                  local::implementations().emplace( type, implemenation);
+               }
+               return true;
+            }
+
+            Base& get( const buffer::Type& type)
+            {
+               auto found = local::implementations().find( type);
+               if( found == std::end( local::implementations()))
+               {
+                  throw exception::xatmi::buffer::TypeNotSupported( "buffer type not suported - type: " + type.type + " subtype: " + type.subtype);
+               }
+               return found->second;
+            }
+
+
+            //
+            // Default implementation for standard X_OCTET
+            //
+            struct XOCTET : public Base
+            {
+
+               static const bool registration;
+            };
+
+            const bool XOCTET::registration = registrate< XOCTET>({
+               { "X_OCTET", ""},
+               {"X_OCTET", "binary"},
+               {"X_OCTET", "YAML"},
+               {"X_OCTET", "JSON"}});
+
+
+
+         } // implementation
 
 
          Context::Context()
@@ -96,60 +195,24 @@ namespace casual
             return singleton;
          }
 
-         common::raw_buffer_type Context::allocate(const std::string& type, const std::string& subtype, const std::size_t size)
+         platform::raw_buffer_type Context::allocate( buffer::Type&& type, std::size_t size)
          {
-
-            // TODO: create Callback from type+subtype
-            m_memoryPool.emplace_back( type, subtype, size);
-
-            common::logger::debug << "allocates type: " << type << " subtype: " << subtype << " @" << static_cast< const void*>( m_memoryPool.back().raw()) << " size: " << size;
-
+            m_memoryPool.emplace_back( std::move( type), size);
             auto& buffer = m_memoryPool.back();
 
-            if( buffer.callback().m_create( buffer.raw(), buffer.size()) != 0)
-            {
-               throw exception::xatmi::SystemError();
-            }
+            common::log::debug << "allocates type: " << buffer.type().type << " subtype: " << buffer.type().subtype << " @" << static_cast< const void*>( buffer.raw()) << " size: " << buffer.size() << std::endl;
 
             return buffer.raw();
          }
 
 
 
-         raw_buffer_type Context::reallocate( const_raw_buffer_type memory, const std::size_t size)
+         platform::raw_buffer_type Context::reallocate( platform::const_raw_buffer_type memory, std::size_t size)
          {
             auto& buffer = *getFromPool( memory);
+            buffer.reallocate( size);
 
-            // check if the user is about to increase size
-            if( buffer.size() < size)
-            {
-               // do the actual expansion
-               buffer.reallocate( size);
-
-               // tell the buffer it has been expanded
-               if( buffer.callback().m_expand( buffer.raw(), size) != 0)
-               {
-                  throw exception::xatmi::SystemError();
-               }
-
-            }
-
-            // check if the user is about to decrease size
-            if( buffer.size() > size)
-            {
-               // tell the buffer it is about to be reduced
-               if( buffer.callback().m_reduce( buffer.raw(), size) != 0)
-               {
-                  throw exception::xatmi::SystemError();
-               }
-
-               // do the actual reduction
-               buffer.reallocate( size);
-
-            }
-
-
-            common::logger::debug << "reallocates from: " <<
+            common::log::debug << "reallocates from: " <<
                   static_cast< const void*>( memory) << " to: " << static_cast< const void*>( buffer.raw()) << " new size: " << buffer.size();
 
             return buffer.raw();
@@ -157,13 +220,13 @@ namespace casual
 
 
 
-         Buffer& Context::get( const_raw_buffer_type memory)
+         Buffer& Context::get( platform::const_raw_buffer_type memory)
          {
             return *getFromPool( memory);
          }
 
 
-         Buffer Context::extract( const_raw_buffer_type memory)
+         Buffer Context::extract( platform::const_raw_buffer_type memory)
          {
             auto iter = getFromPool( memory);
             Buffer buffer = std::move( *iter);
@@ -183,7 +246,7 @@ namespace casual
             empty.swap( m_memoryPool);
          }
 
-         Context::pool_type::iterator Context::getFromPool( const_raw_buffer_type memory)
+         Context::pool_type::iterator Context::getFromPool( platform::const_raw_buffer_type memory)
          {
             auto findIter = std::find_if(
                m_memoryPool.begin(),
@@ -198,9 +261,9 @@ namespace casual
             return findIter;
          }
 
-         void Context::deallocate( const_raw_buffer_type memory)
+         void Context::deallocate( platform::const_raw_buffer_type memory)
          {
-            common::logger::debug << "deallocates: " << static_cast< const void*>( memory);
+            common::log::debug << "deallocates: " << static_cast< const void*>( memory) << std::endl;
 
             if( memory != 0)
             {

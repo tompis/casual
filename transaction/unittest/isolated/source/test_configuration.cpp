@@ -9,12 +9,14 @@
 #include <gtest/gtest.h>
 
 
-#include "transaction/manager.h"
-#include "transaction/manager_handle.h"
-#include "transaction/manager_action.h"
+#include "transaction/manager/manager.h"
+#include "transaction/manager/handle.h"
+#include "transaction/manager/action.h"
 
 #include "common/message.h"
 #include "common/mockup.h"
+#include "common/internal/trace.h"
+#include "common/internal/log.h"
 
 namespace casual
 {
@@ -27,6 +29,11 @@ namespace casual
          common::platform::queue_id_type tm() { return 20;}
 
       } // id
+
+      common::file::ScopedPath transactionLogPath()
+      {
+         return common::file::ScopedPath{ "unittest_transaction_log.db"};
+      }
 
       void prepareConfigurationResponse()
       {
@@ -64,7 +71,8 @@ namespace casual
       local::prepareConfigurationResponse();
 
 
-      transaction::State state( "unittest_transaction.db");
+      auto path = local::transactionLogPath();
+      transaction::State state( path);
 
       common::mockup::queue::blocking::Writer brokerQueue{ local::id::broker()};
       common::mockup::queue::blocking::Reader queueReader{ local::id::tm()};
@@ -84,7 +92,8 @@ namespace casual
       local::prepareConfigurationResponse();
 
 
-      transaction::State state( "unittest_transaction.db");
+      auto path = local::transactionLogPath();
+      transaction::State state( path);
 
       common::mockup::queue::blocking::Writer brokerQueue{ local::id::broker()};
       common::mockup::queue::blocking::Reader queueReader{ local::id::tm()};
@@ -92,10 +101,10 @@ namespace casual
       transaction::action::configure( state, brokerQueue, queueReader);
 
       ASSERT_TRUE( state.resources.size() == 2);
-      EXPECT_TRUE( state.resources.at( 0)->id == 1);
-      EXPECT_TRUE( state.resources.at( 0)->openinfo == "some open info 1");
-      EXPECT_TRUE( state.resources.at( 1)->id == 2);
-      EXPECT_TRUE( state.resources.at( 1)->closeinfo == "some close info 2");
+      EXPECT_TRUE( state.resources.at( 0).id == 1);
+      EXPECT_TRUE( state.resources.at( 0).openinfo == "some open info 1");
+      EXPECT_TRUE( state.resources.at( 1).id == 2);
+      EXPECT_TRUE( state.resources.at( 1).closeinfo == "some close info 2");
    }
 
    /*

@@ -9,10 +9,11 @@
 #include "common/queue.h"
 #include "common/message.h"
 #include "common/message_dispatch.h"
-#include "common/types.h"
-#include "common/logger.h"
+#include "common/platform.h"
+#include "common/log.h"
 #include "common/trace.h"
 #include "common/environment.h"
+#include "common/chronology.h"
 
 
 #include <vector>
@@ -34,9 +35,9 @@ namespace
 		os << "parentService: " << message.parentService << ", ";
 		os << "service: " << message.service << ", ";
 		os << "callId: " << message.callId.string() << ", ";
-		os << "start: " << transform::time( message.start) << ", ";
+		os << "start: " << chronology::local( message.start) << ", ";
 		// os << "end: " << transform::time( message.end) << ", ";
-		os << "difference: " << time_type::duration( message.end - message.start).count() << " usec";
+		os << "difference: " << platform::time_type::duration( message.end - message.start).count() << " usec";
 		//
 		// TODO: etc...
 		//
@@ -138,7 +139,7 @@ namespace monitor
 		message.path = name;
 		message.server.queue_id = m_receiveQueue.id();
 
-		queue::blocking::Writer writer( ipc::getBrokerQueue());
+		queue::blocking::Writer writer( ipc::getBrokerQueue().id());
 		writer(message);
 	}
 
@@ -156,7 +157,7 @@ namespace monitor
 
          message.server.queue_id = m_receiveQueue.id();
 
-         queue::blocking::Writer writer( ipc::getBrokerQueue());
+         queue::blocking::Writer writer( ipc::getBrokerQueue().id());
          writer(message);
 		}
 		catch( ...)
@@ -167,11 +168,11 @@ namespace monitor
 		//
 		// Test of select
 		//
-		common::logger::debug << "Statistic logging";
+		common::log::debug << "Statistic logging" << std::endl;
 //		auto rowset = m_monitordb.select();
 //		for (auto row = rowset.begin(); row != rowset.end(); ++row )
 //		{
-//			common::logger::debug << *row;
+//			common::log::debug << *row;
 //		}
 	}
 
@@ -196,7 +197,7 @@ namespace monitor
 
 			if( ! handler.dispatch( marshal))
 			{
-			   common::logger::error << "message_type: " << " not recognized - action: discard";
+			   common::log::error << "message_type: " << " not recognized - action: discard" << std::endl;
 			}
 
 			nonBlockingRead( common::platform::statistics_batch);

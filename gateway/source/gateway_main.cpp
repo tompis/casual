@@ -12,7 +12,7 @@
 */
 #include "common/error.h"
 #include "common/arguments.h"
-#include "common/logger.h"
+#include "common/log.h"
 #include "common/file.h"
 #include "common/uuid.h"
 #include "common/queue.h"

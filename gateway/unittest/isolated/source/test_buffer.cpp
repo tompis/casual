@@ -46,7 +46,7 @@ namespace casual
          /*
           * Test of a binary pattern
           */
-         bool testPattern(const common::binary_type& buffer, const int correct[])
+         bool testPattern(const common::platform::binary_type& buffer, const int correct[])
          {
             int i = 0;
             bool b = true;
@@ -64,7 +64,7 @@ namespace casual
          TEST( casual_gateway_marshal_output, nwunsignedlonglong)
          {
             output::NWBOBinary nwbo;
-            const common::binary_type &b = nwbo.get();
+            const common::platform::binary_type &b = nwbo.get();
             const int pattern[] = {0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef};
             unsigned long int l = 0x1234567890abcdef;
             nwbo << l;
@@ -299,7 +299,7 @@ namespace casual
 
          TEST (casual_gateway_marshal_input, nwunsignedlonglong)
          {
-            const common::binary_type b{static_cast<char>(0x12), static_cast<char>(0x34), static_cast<char>(0x56), static_cast<char>(0x78),
+            const common::platform::binary_type b{static_cast<char>(0x12), static_cast<char>(0x34), static_cast<char>(0x56), static_cast<char>(0x78),
                   static_cast<char>(0x90), static_cast<char>(0xab), static_cast<char>(0xcd), static_cast<char>(0xef)};
             input::NWBOBinary nwbo(b);
 
@@ -310,7 +310,7 @@ namespace casual
 
          TEST (casual_gateway_marshal_input, nwlonglong)
          {
-            const common::binary_type b{static_cast<char>(0xed), static_cast<char>(0xcb), static_cast<char>(0xa9),
+            const common::platform::binary_type b{static_cast<char>(0xed), static_cast<char>(0xcb), static_cast<char>(0xa9),
                   static_cast<char>(0x87), static_cast<char>(0x6f), static_cast<char>(0x54), static_cast<char>(0x32),
                   static_cast<char>(0x11)};
             input::NWBOBinary nwbo(b);
@@ -322,7 +322,7 @@ namespace casual
 
          TEST (casual_gateway_marshal_input, nwunsignedlong)
          {
-            const common::binary_type b{static_cast<char>(0x12), static_cast<char>(0x34), static_cast<char>(0x56),
+            const common::platform::binary_type b{static_cast<char>(0x12), static_cast<char>(0x34), static_cast<char>(0x56),
                static_cast<char>(0x78)};
             input::NWBOBinary nwbo(b);
 
@@ -333,7 +333,7 @@ namespace casual
 
          TEST (casual_gateway_marshal_input, nwlong)
          {
-            const common::binary_type b{static_cast<char>(0xed), static_cast<char>(0xcb), static_cast<char>(0xa9), static_cast<char>(0x88)};
+            const common::platform::binary_type b{static_cast<char>(0xed), static_cast<char>(0xcb), static_cast<char>(0xa9), static_cast<char>(0x88)};
             input::NWBOBinary nwbo(b);
 
             int l = 0;
@@ -343,7 +343,7 @@ namespace casual
 
          TEST (casual_gateway_marshal_input, nwunsignedshort)
          {
-            const common::binary_type b{static_cast<char>(0x12), static_cast<char>(0x34)};
+            const common::platform::binary_type b{static_cast<char>(0x12), static_cast<char>(0x34)};
             input::NWBOBinary nwbo(b);
 
             unsigned short int l = 0;
@@ -353,7 +353,7 @@ namespace casual
 
          TEST (casual_gateway_marshal_input, nwshort)
          {
-            const common::binary_type b{static_cast<char>(0xed), static_cast<char>(0xcc)};
+            const common::platform::binary_type b{static_cast<char>(0xed), static_cast<char>(0xcc)};
             input::NWBOBinary nwbo(b);
 
             short int l = 0;
@@ -363,7 +363,7 @@ namespace casual
 
          TEST (casual_gateway_marshal_input, nwunsignedchar)
          {
-            const common::binary_type b{static_cast<char>(0xed)};
+            const common::platform::binary_type b{static_cast<char>(0xed)};
             input::NWBOBinary nwbo(b);
 
             unsigned char l = 0;
@@ -373,7 +373,7 @@ namespace casual
 
          TEST (casual_gateway_marshal_input, nwchar)
          {
-            const common::binary_type b{static_cast<char>(0xee)};
+            const common::platform::binary_type b{static_cast<char>(0xee)};
             input::NWBOBinary nwbo(b);
 
             char l = 0;
@@ -383,7 +383,7 @@ namespace casual
 
          TEST (casual_gateway_marshal_input, nwsignedchar)
          {
-            const common::binary_type b{static_cast<char>(0xee)};
+            const common::platform::binary_type b{static_cast<char>(0xee)};
             input::NWBOBinary nwbo(b);
 
             signed char l = 0;
@@ -394,7 +394,7 @@ namespace casual
          TEST( casual_gateway_marshal_input, nwfloat)
          {
             /* IEEE 754 32 bit 0.33333333333 */
-            const common::binary_type b{static_cast<char>(0x3e),static_cast<char>(0xaa),static_cast<char>(0xaa),
+            const common::platform::binary_type b{static_cast<char>(0x3e),static_cast<char>(0xaa),static_cast<char>(0xaa),
                static_cast<char>(0xab)};
             input::NWBOBinary nwbo(b);
 
@@ -407,7 +407,7 @@ namespace casual
          TEST( casual_gateway_marshal_input, nwdouble)
          {
             /* IEEE 754 32 bit 0.33333333333 */
-            const common::binary_type b{static_cast<char>(0x3f),static_cast<char>(0xd5),static_cast<char>(0x55),
+            const common::platform::binary_type b{static_cast<char>(0x3f),static_cast<char>(0xd5),static_cast<char>(0x55),
                static_cast<char>(0x55),static_cast<char>(0x55),static_cast<char>(0x55),static_cast<char>(0x55),
                static_cast<char>(0x55)};
             input::NWBOBinary nwbo(b);
@@ -420,7 +420,7 @@ namespace casual
 
          TEST( casual_gateway_marshal_input, nwstring)
          {
-            const common::binary_type b{static_cast<char>(0x00),static_cast<char>(0x05),
+            const common::platform::binary_type b{static_cast<char>(0x00),static_cast<char>(0x05),
                static_cast<char>(0x74),static_cast<char>(0x6f),static_cast<char>(0x6d),
                static_cast<char>(0x61),static_cast<char>(0x73)};
             input::NWBOBinary nwbo(b);
@@ -431,7 +431,7 @@ namespace casual
 
          TEST( casual_gateway_marshal_input, nwvectorint)
          {
-            const common::binary_type b{static_cast<char>(0x00),static_cast<char>(0x02),static_cast<char>(0x00),
+            const common::platform::binary_type b{static_cast<char>(0x00),static_cast<char>(0x02),static_cast<char>(0x00),
                static_cast<char>(0x00),static_cast<char>(0x00),static_cast<char>(0x19),static_cast<char>(0xff),
                static_cast<char>(0xff),static_cast<char>(0x22),static_cast<char>(0x2b)};
             input::NWBOBinary nwbo(b);
@@ -444,7 +444,7 @@ namespace casual
 
          TEST( casual_gateway_marshal_input, nwvectorstring)
          {
-            const common::binary_type b{static_cast<char>(0x00),static_cast<char>(0x03),static_cast<char>(0x00),
+            const common::platform::binary_type b{static_cast<char>(0x00),static_cast<char>(0x03),static_cast<char>(0x00),
                static_cast<char>(0x05),static_cast<char>(0x74),static_cast<char>(0x6f),static_cast<char>(0x6d),
                static_cast<char>(0x61),static_cast<char>(0x73),static_cast<char>(0x00),static_cast<char>(0x05),
                static_cast<char>(0x70),static_cast<char>(0x65),static_cast<char>(0x74),static_cast<char>(0x65),
@@ -461,7 +461,7 @@ namespace casual
 
          TEST( casual_gateway_marshal_input, nwvectorvectorint)
          {
-            const common::binary_type b{static_cast<char>(0x00),static_cast<char>(0x03),static_cast<char>(0x00),
+            const common::platform::binary_type b{static_cast<char>(0x00),static_cast<char>(0x03),static_cast<char>(0x00),
                static_cast<char>(0x01),static_cast<char>(0x00),static_cast<char>(0x00),static_cast<char>(0x00),
                static_cast<char>(0x01),static_cast<char>(0x00),static_cast<char>(0x02),static_cast<char>(0x00),
                static_cast<char>(0x00),static_cast<char>(0x00),static_cast<char>(0x02),static_cast<char>(0x00),
@@ -483,7 +483,7 @@ namespace casual
 
          TEST( casual_gateway_marshal_input, nwstruct)
          {
-            const common::binary_type b{static_cast<char>(0x00),static_cast<char>(0x05),static_cast<char>(0x74),
+            const common::platform::binary_type b{static_cast<char>(0x00),static_cast<char>(0x05),static_cast<char>(0x74),
                static_cast<char>(0x6f),static_cast<char>(0x6d),static_cast<char>(0x61),static_cast<char>(0x73),
                static_cast<char>(0x12),static_cast<char>(0x34),static_cast<char>(0x56),static_cast<char>(0x78),
                static_cast<char>(0x90),static_cast<char>(0xab),static_cast<char>(0xcd),static_cast<char>(0xef),
@@ -502,7 +502,7 @@ namespace casual
          {
             output::NWBOBinary nwbo;
             const output::NWBOBinary::buffer_type &buffer = nwbo.get();
-            common::binary_type bt;
+            common::platform::binary_type bt;
             int pattern[264];
             for (int i = 0; i<256; i++) {
                bt.push_back(i);
@@ -520,7 +520,7 @@ namespace casual
 
          TEST( casual_gateway_marshal_input, nwbinary)
          {
-            common::binary_type b;
+            common::platform::binary_type b;
             b.push_back(0);
             b.push_back(0);
             b.push_back(0);
@@ -533,7 +533,7 @@ namespace casual
                b.push_back(i+8);
             }
             input::NWBOBinary nwbo(b);
-            common::binary_type t;
+            common::platform::binary_type t;
             nwbo >> t;
             EXPECT_TRUE(t.size()==256);
          }
