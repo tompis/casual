@@ -9,9 +9,13 @@
 
 #include "common/network_byteorder.h"
 
+#include "sf/namevaluepair.h"
+
+
 #include <cstring>
 
-#include <iostream>
+#include <string>
+#include <vector>
 
 
 namespace
@@ -19,10 +23,37 @@ namespace
 
    namespace local
    {
-      using casual::common::network::byteorder;
-
       namespace explore
       {
+
+         struct field
+         {
+            std::string name;
+            long id; // relative-id
+            std::string type;
+
+            template< typename A>
+            void serialize( A& archive)
+            {
+               archive & CASUAL_MAKE_NVP( name);
+               archive & CASUAL_MAKE_NVP( id);
+               archive & CASUAL_MAKE_NVP( type);
+            }
+         };
+
+         struct group
+         {
+            long base;
+            std::vector<field> fields;
+
+            template< typename A>
+            void serialize( A& archive)
+            {
+               archive & CASUAL_MAKE_NVP( base);
+               archive & CASUAL_MAKE_NVP( fields);
+            }
+         };
+
          int type_from_id( const long id)
          {
             //
@@ -32,7 +63,7 @@ namespace
 
             if( id > 0)
             {
-               const int result = id / 0x200000;
+               const int result = id / CASUAL_FIELD_TYPE_BASE;
 
                switch( result)
                {
@@ -96,20 +127,20 @@ namespace
          template<typename T>
          inline void write( char* const where, const T& value)
          {
-            const auto encoded = byteorder<T>::encode( value);
+            const auto encoded = casual::common::network::byteorder<T>::encode( value);
             std::memcpy( where, &encoded, sizeof( encoded));
          }
 
          template<typename T>
          inline T parse( const char* const where)
          {
-            return byteorder<T>::decode( *reinterpret_cast< const decltype(byteorder<T>::encode(0))*>( where));
+            return casual::common::network::byteorder<T>::decode( *reinterpret_cast< const casual::common::network::type<T>*>( where));
          }
 
          template< typename T>
          constexpr long bytes()
          {
-            return sizeof(decltype(byteorder<T>::encode(0)));
+            return casual::common::network::bytes<T>();
          }
 
       }
@@ -532,16 +563,30 @@ int CasualFieldExploreBuffer( const char* buffer, long* const size, long* const 
    return CASUAL_FIELD_SUCCESS;
 }
 
-int CasualFieldNameOfId( long id, const char** name)
+int CasualFieldNameOfId( const long id, const char** name)
 {
-   // TODO
+   if( const char* const result = local::explore::name_from_id( id))
+   {
+      *name = result;
+   }
+   else
+   {
+      return CASUAL_FIELD_INVALID_ID;
+   }
 
    return CASUAL_FIELD_SUCCESS;
 }
 
 int CasualFieldIdOfName( const char* name, long* const id)
 {
-   // TODO
+   if( const long result = local::explore::id_from_name( name))
+   {
+      *id = result;
+   }
+   else
+   {
+      return CASUAL_FIELD_INVALID_ID;
+   }
 
    return CASUAL_FIELD_SUCCESS;
 }
@@ -576,14 +621,14 @@ int CasualFieldNameOfType( const int type, const char** name)
 }
 
 
-int CasualFieldExist( const char* const buffer, const long id, const long occurrence)
+int CasualFieldExist( const char* const buffer, const long id, const long index)
 {
    if( local::explore::type_from_id( id) < 0)
    {
       return CASUAL_FIELD_INVALID_ID;
    }
 
-   const char* const selector = local::get::prepare( buffer, id, occurrence);
+   const char* const selector = local::get::prepare( buffer, id, index);
 
    return selector != nullptr ? CASUAL_FIELD_SUCCESS : CASUAL_FIELD_NO_OCCURRENCE;
 }
@@ -612,14 +657,14 @@ int CasualFieldRemoveId( char* buffer, const long id)
 }
 
 
-int CasualFieldRemoveOccurrence( char* const buffer, const long id, long occurrence)
+int CasualFieldRemoveOccurrence( char* const buffer, const long id, long index)
 {
    if( const int result = CasualFieldExist( buffer, id, 0))
    {
       return result;
    }
 
-   if( const char* const selector = local::get::prepare( buffer, id, occurrence))
+   if( const char* const selector = local::get::prepare( buffer, id, index))
    {
       // const_cast by fooling the compiler (but that is what we want)
       char* const inserter = buffer + (selector - buffer);
@@ -654,6 +699,69 @@ int CasualFieldCopyBuffer( char* const target, const char* const source)
 
    return CASUAL_FIELD_SUCCESS;
 }
+
+
+
+int CasualFieldFirst( const char* const buffer, long* const id, long* const index)
+{
+   if( local::header::select::inserter( buffer) > local::header::size())
+   {
+      *id = local::field::select::id( buffer + local::header::size());
+      *index = 0;
+   }
+   else
+   {
+      return CASUAL_FIELD_NO_OCCURRENCE;
+   }
+
+   return CASUAL_FIELD_SUCCESS;
+
+}
+
+int CasualFieldNext( const char* const buffer, long* const id, long* const index)
+{
+   //
+   // This is very inefficient for large buffers
+   //
+   // Perhaps we shall store the occurrence as well, but then insertions
+   // and removals becomes a bit more cumbersome
+   //
+
+
+   if( const char* const selector = local::get::prepare( buffer, *id, *index))
+   {
+      const char* const next = selector + local::field::size() + local::field::select::count( selector);
+      const char* const inserter = buffer + local::header::select::inserter( buffer);
+
+      if( next < inserter)
+      {
+
+         *id = local::field::select::id( next);
+         *index = 0;
+
+         while( next != local::get::prepare( buffer, *id, *index))
+         {
+            *index += 1;
+         }
+
+      }
+      else
+      {
+         // no more occurrences/fields
+         return CASUAL_FIELD_NO_OCCURRENCE;
+      }
+
+   }
+   else
+   {
+      // this should be more severe
+      return CASUAL_FIELD_INVALID_ID;
+   }
+
+   return CASUAL_FIELD_SUCCESS;
+}
+
+
 
 
 long CasualFieldCreate( char* const buffer, const long size)
