@@ -27,7 +27,7 @@ Compile( "source/template_server.cpp", "obj/template_server.o")
 LinkAtmiServerResource( "test",
 	[ "obj/template_server.o"],
 	[ "casual-xatmi", "casual-common"],
-	"casual_test1,casual_test2,casual_test3", "rm-mockup")
+	["casual_test1","casual_test2","casual_test3"], "rm-mockup")
 
 
 
@@ -62,7 +62,7 @@ LinkAtmiServer("sf_test",
     "casual-xatmi",
     "casual-common",
     "casual-sf"],
-    "casual_sf_test1,casual_sf_test2")
+    ["casual_sf_test1","casual_sf_test2"])
 
 
 	
@@ -103,7 +103,7 @@ LinkAtmiServer("sf-detoct-test-server",
     ["sf-test-vo",
     "casual-sf",
     "casual-xatmi"],
-    "casual_sf_test1,casual_sf_test2")
+    ["casual_sf_test1","casual_sf_test2"])
 
 #
 # Install
