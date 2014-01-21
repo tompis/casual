@@ -28,10 +28,14 @@
 #include <thread>
 
 /*
- * Casual common
+ * Casual
  */
 #include "common/log.h"
 #include "common/marshal.h"
+
+/*
+ * Gateway
+ */
 #include "gateway/wire.h"
 #include "gateway/std14.h"
 #include "gateway/ipc.h"
@@ -87,22 +91,24 @@ namespace casual
          /* POLLERR */
          if ((events & POLLERR) != 0) {
 
-            int err = getLastError();
-            common::log::error << "MasterSocket::handleIncomingConnection : Error " << strerror (err) << "(" << err << ")";
+			/* What error did we get ? */
+			int err = getLastError();
+			common::log::error << "MasterSocket::handleIncomingConnection : Error " << strerror (err) << "(" << err << ")";
 
+			/* Socket enters error state */
             ret = Socket::State::error;
          }
 
          /* POLLHUP */
          if ((events & POLLHUP) != 0) {
 
-            common::log::error << "MasterSocket::handleIncomingConnection : Hangup should never happen";
+            common::log::error << "MasterSocket::handleIncomingConnection : Hangup should never happen on this type of socket";
 
             /* The other side has hung up, retry connection */
             ret = Socket::State::hung_up;
          }
 
-         /* POLLRDNORM */
+         /* POLLRDNORM - UGLY, do I need the masterThreads state really ???? */
          if ((events & POLLRDNORM)!=0 && m_state.state == MasterState::MachineState::active) {
 
             /* Accept the connection */
@@ -130,7 +136,7 @@ namespace casual
       Socket::State MasterSocket::handleOutgoingConnection (int events)
       {
          common::log::information << "MasterSocket::handleOutgoingConnection : Entered";
-         common::log::error << "MasterSocket::handleOutgoingConnection : Unexpected event";
+         common::log::warning << "MasterSocket::handleOutgoingConnection : Unexpected event";
          common::log::information << "MasterSocket::handleOutgoingConnection : Exited";
          return Socket::State::error;
       }
@@ -142,7 +148,7 @@ namespace casual
       Socket::State MasterSocket::handleConnected (int events)
       {
          common::log::information << "MasterSocket::handleConnected : Entered";
-         common::log::error << "MasterSocket::handleConnected : Unexpected event";
+         common::log::warning << "MasterSocket::handleConnected : Unexpected event";
          common::log::information << "MasterSocket::handleConnected : Exited";
          return Socket::State::error;
       }
@@ -190,7 +196,7 @@ namespace casual
       }
 
       /*
-       * Starts the masterthread. Returns true if the thread has been started.
+       * Starts the master thread. Returns true if the thread has been started.
        */
       bool MasterThread::start()
       {
@@ -198,7 +204,9 @@ namespace casual
          common::log::information << "Masterthread::start : Entered";
 
          /* Can we start and are we not already running ? */
-         if (m_state.state != MasterState::MachineState::failed && thread == nullptr) {
+         if (m_state.state != MasterState::MachineState::failed
+        		 && m_state.state != MasterState::MachineState::fatal
+        		 && thread == nullptr) {
 
             /* Change state to running */
             bRun = true;
@@ -216,7 +224,7 @@ namespace casual
       }
 
       /*
-       * Stops the masterthread. Returns true if the master thread has been stopped.
+       * Stops the master thread. Returns true if the master thread has been stopped.
        */
       bool MasterThread::stop()
       {
@@ -258,7 +266,7 @@ namespace casual
       }
 
       /*
-       * True if it is restartable, the master is never restartable
+       * True if it is restartable, the master is never restartable. If it fails the gateway fails.
        */
       bool MasterThread::isRestartable()
       {
@@ -341,7 +349,7 @@ namespace casual
                /* Normal timeout or did we actually get some events that got handled */
                if (status == 0) {
 
-                  /* Timeout loop, here we can do any houskeeping functions if needed */
+                  /* Timeout loop, here we can do any house keeping functions if needed */
 
                }
 

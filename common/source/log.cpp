@@ -179,7 +179,7 @@ namespace casual
 
                   if( ! found.empty())
                   {
-                     //std::cerr << std::to_string( process::id()) + " - " + log::category::name( category) << std::endl;
+                     std::cerr << std::to_string( process::id()) + " - " + log::category::name( category) << std::endl;
                      return getBuffer( category).factory();
                   }
 

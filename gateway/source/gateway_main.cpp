@@ -8,7 +8,7 @@
 #include <poll.h>
 
 /*
-** Common casual headerfiles
+** Common casual header files
 */
 #include "common/error.h"
 #include "common/arguments.h"
@@ -17,6 +17,9 @@
 #include "common/uuid.h"
 #include "common/queue.h"
 
+/*
+ * Gateway header files
+ */
 #include "gateway/std14.h"
 #include "gateway/ipc.h"
 #include "gateway/state.h"

@@ -125,7 +125,8 @@ namespace casual
        common::signal::alarm::set (m_state.configuration.queuetimeout);
 
        /*
-        * Start the master TCP server
+        * Start the master TCP server. This server listens to this gateways socket and spawn of
+        * a new thread for each connecting remote gateway.
         */
        m_state.masterThread = std::make_unique<MasterThread>(m_state);
        m_state.masterThread->start();
@@ -137,7 +138,7 @@ namespace casual
           std::lock_guard<std::mutex> lock(m_state.listOfClientsMutex);
           for (auto &gw : m_state.configuration.remotegateways) {
 
-             /* Create the thread */
+             /* Create the thread for the client so it can connect to the remote gateway */
              std::unique_ptr<ClientThread> ct = std::make_unique<ClientThread>(m_state, gw);
              ct->start();
 
@@ -178,16 +179,16 @@ namespace casual
     }
 
     /*
-     * Static houskeeping function
+     * Static housekeeping function
      */
     void Gateway::houskeeping (State &m_state)
     {
-       common::log::information << "Gateway::houskeeping : Houskeeping started";
+       common::log::information << "Gateway::housekeeping : Housekeeping started";
        /*
         * Master thread houskeeping
         */
        {
-          common::log::information << "Gateway::houskeeping : Checking master";
+          common::log::information << "Gateway::housekeeping : Checking master";
        }
 
        /*
@@ -195,7 +196,8 @@ namespace casual
         */
        {
           std::lock_guard<std::mutex> m(m_state.listOfClientsMutex);
-          common::log::information << "Gateway::houskeeping : Checkig all clients, there are " << m_state.listOfClients.size() << " clients";
+
+          common::log::information << "Gateway::housekeeping : Checkig all clients, there are " << m_state.listOfClients.size() << " clients started";
           std::list<std::unique_ptr<ClientThread>>::iterator i = m_state.listOfClients.begin();
           while (i!=m_state.listOfClients.end())
           {
@@ -204,20 +206,23 @@ namespace casual
              /* Has the thread exited ? */
              if (ct->hasExited()) {
 
-                common::log::information << "Gateway::houskeeping : Client " << ct->getName() << " has exited";
+                common::log::information << "Gateway::housekeeping : Client " << ct->getName() << " has exited";
                 /*
                  * Is the thread restartable, this is only if we are the initiatior, not incoming gateway
-                 * connections
+                 * connections. They are restarted by the remote gateway.
                 */
                 if (ct->isRestartable()) {
 
-                   /* Do the thread still thinks it is running, but some other condition has caused it to stop */
+                   /* Do the thread still thinks it is running, but some other condition has caused it to stop?
+                    * Because if it thinks it is still running then some error condition caused it to stop and
+                    * we should try to restart it because we want it to run. */
                    if (ct->hasStarted()) {
 
-                      /* If it is not fatal, then restart it */
+                      /* If it is not fatal, then restart it. Fatal error is errors that makes it impossible to
+                       * restart. Such as faulty IP-addresses etc. */
                       if (ct->getMachineState() != ClientState::fatal) {
 
-                         /* Find the remote gateway */
+                         /* Find the remote gateway configuration */
                          configuration::Gateway::RemoteGatewayList::iterator p =  std::find (
                                m_state.configuration.remotegateways.begin(),
                                m_state.configuration.remotegateways.end(),
@@ -227,25 +232,26 @@ namespace casual
                          if (p != m_state.configuration.remotegateways.end()) {
 
                             /* Create a new thread */
-                            common::log::information << "Gateway::houskeeping : Restarting connection to " << ct->getName();
+                            common::log::information << "Gateway::housekeeping : Restarting connection to " << ct->getName();
                             *i = std::move(std::make_unique<ClientThread>(m_state, *p));
                             if (i->get()->start()) {
-                               common::log::information << "Gateway::houskeeping : Client " << ct->getName() << " restarted";
+                               common::log::information << "Gateway::housekeeping : Client " << i->get()->getName() << " restarted";
+                               i++;
                             } else {
-                               common::log::warning << "Gateway::houskeeping : Client " << ct->getName() << " failed to start, removing it";
+                               common::log::warning << "Gateway::housekeeping : Client " << i->get()->getName() << " failed to start, removing it";
                                i = m_state.listOfClients.erase (i);
                             }
 
                          } else {
 
-                            /* Unable to find out how to connect to it, stop it */
-                            common::log::warning << "Gateway::houskeeping : Unable to find connection information for " << ct->getName() << " removing it";
+                            /* Unable to find out how to connect to it, stop it it is fatal */
+                            common::log::warning << "Gateway::housekeeping : Unable to find connection information for " << ct->getName() << " removing it";
                             i = m_state.listOfClients.erase(i);
                          }
 
                       } else {
 
-                         common::log::warning << "Gateway::houskeeping : Unable to restart connection to " << i->get()->getName() << " it has fatal error";
+                         common::log::warning << "Gateway::housekeeping : Unable to restart connection to " << ct->getName() << " it has fatal error";
 
                          /* Next element */
                          i = m_state.listOfClients.erase(i);
@@ -255,7 +261,7 @@ namespace casual
                    } else {
 
                       /* Nope, no one has started it yet, so do not restart it */
-                      common::log::information << "Gateway::houskeeping : Do not restart " << i->get()->getName() << " it has not been previously started";
+                      common::log::information << "Gateway::housekeeping : We do not restart " << ct->getName() << " it has not been previously started, removed";
 
                       /* Next element */
                       i = m_state.listOfClients.erase(i);
@@ -265,18 +271,20 @@ namespace casual
                 } else {
 
                    /* No, this is not restartable */
-                   common::log::information << "Gateway::houskeeping : Removing the client " << ct->getName() << " it is not restartable";
+                   common::log::information << "Gateway::housekeeping : Removing the client " << ct->getName() << " it is restarted by remote gateway";
 
                    /* Next element */
                    i = m_state.listOfClients.erase(i);
 
                 }
+
              } else {
 
                 /* Next element */
                 i++;
              }
-          }
+
+          } /* while */
        }
 
     }
@@ -292,7 +300,7 @@ namespace casual
        configuration::Gateway& gateway = m_state.configuration;
        auto reader = sf::archive::reader::makeFromFile(arguments.configurationFile);
        reader >> CASUAL_MAKE_NVP(gateway);
-       common::log::information << "Gateway " << m_state.configuration.name << " starting up";
+       common::log::information << "Gateway " << m_state.configuration.name << " starting up" << std::endl;
 
        /*
         * Set up the gateway

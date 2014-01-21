@@ -147,7 +147,7 @@ namespace casual
 
       /*
        * Creates a client to a remote gateway based on configuration, this client reconnects in case of
-       * a failure.
+       * a failure and is also restartable because it originates from this gateway not the remote one (far end).
        */
       ClientThread::ClientThread (State &s, configuration::RemoteGateway &remote) : m_state (s)
       {
@@ -192,7 +192,9 @@ namespace casual
          common::log::information << "ClientThread::start : Entered";
 
          /* Can we start and are we not already running ? */
-         if (m_state.state!=ClientState::failed && thread == nullptr) {
+         if (m_state.state!=ClientState::MachineState::fatal
+        		 && m_state.state!=ClientState::MachineState::failed
+        		 && thread == nullptr) {
 
             /* Allow it to run */
             bRun = true;
@@ -289,11 +291,11 @@ namespace casual
          /* Connect to the remote endpoint */
          if (m_state.socket->connect()<0)
          {
-            /* If we are in progres, then that is ok, otherwise we failed */
+            /* If we are in progress, then that is ok, otherwise we failed */
             bOK = false;
             common::log::error << "ClientThread::connect : Unable to connect to " << m_state.endpoint.info() << ", fatal " << strerror (errno) << "(" << errno << ")";
          } else {
-            common::log::information << "ClientThread::connect : Connection to " << m_state.endpoint.info() << " established";
+            common::log::information << "ClientThread::connect : Connection to " << m_state.endpoint.info() << " initialized";
          }
 
          /* Return with the status */
@@ -310,22 +312,25 @@ namespace casual
          common::log::information << "ClientThread::loop : Entered";
 
          /* Connection loop */
-         while (bRun && m_state.state != ClientState::failed && m_state.state != ClientState::fatal) {
+         while (bRun
+        		 && m_state.state != ClientState::MachineState::failed
+        		 && m_state.state != ClientState::MachineState::fatal) {
 
             /* If we are not connected, try to connect */
-            if (m_state.state == ClientState::initialized || m_state.state == ClientState::retry) {
+            if (m_state.state == ClientState::MachineState::initialized
+            		|| m_state.state == ClientState::MachineState::retry) {
 
-               /* Wait if we are retrying */
-               if (m_state.state == ClientState::retry) {
+               /* Wait if we are retrying to allow the far end to start up */
+               if (m_state.state == ClientState::MachineState::retry) {
                   std::chrono::milliseconds dura( m_state.m_global.configuration.clientreconnecttime );
                   std::this_thread::sleep_for(dura);
                }
 
                /* Try to connect */
                if (connect())
-                  m_state.state = ClientState::connecting;
+                  m_state.state = ClientState::MachineState::connecting;
                else
-                  m_state.state = ClientState::fatal;
+                  m_state.state = ClientState::MachineState::fatal;
             }
 
             /* Execute the socket */
@@ -339,7 +344,7 @@ namespace casual
             } else {
 
                if (status == 0) {
-                  /* Timeout */
+                  /* Timeout, do some house keeping if we need to */
                }
             }
 

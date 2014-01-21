@@ -95,6 +95,7 @@ namespace casual
          /* POLLERR */
          if ((events & POLLERR) != 0) {
 
+        	 /* Get the last error */
             int err = getLastError();
             common::log::information << "CASLSocket::handleConnected : Error " << strerror (err) << "(" << err << ")";
 
@@ -105,7 +106,7 @@ namespace casual
          /* HANGUP */
          if ((events & POLLHUP) != 0) {
 
-            common::log::information << "CASLSocket::handleConnected : Hangup";
+            common::log::information << "CASLSocket::handleConnected : Far end hung up";
 
             /* The other side has hung up */
             ret = common::ipc::Socket::State::hung_up;
@@ -144,7 +145,7 @@ namespace casual
          if ((events & POLLHUP) != 0) {
 
             /* The other side has hung up, retry connection */
-            common::log::information << "CASLSocket::handleOutgoingConnection : Hangup on far end, try again";
+            common::log::information << "CASLSocket::handleOutgoingConnection : Hung up on far end, try again";
             ret = common::ipc::Socket::State::hung_up;
          }
 
