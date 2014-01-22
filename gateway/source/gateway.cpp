@@ -183,12 +183,12 @@ namespace casual
      */
     void Gateway::houskeeping (State &m_state)
     {
-       common::log::information << "Gateway::housekeeping : Housekeeping started";
+       common::log::information << "Gateway::housekeeping : Housekeeping started" << std::endl;
        /*
         * Master thread houskeeping
         */
        {
-          common::log::information << "Gateway::housekeeping : Checking master";
+          common::log::information << "Gateway::housekeeping : Checking master" << std::endl;
        }
 
        /*
@@ -197,7 +197,7 @@ namespace casual
        {
           std::lock_guard<std::mutex> m(m_state.listOfClientsMutex);
 
-          common::log::information << "Gateway::housekeeping : Checkig all clients, there are " << m_state.listOfClients.size() << " clients started";
+          common::log::information << "Gateway::housekeeping : Checkig all clients, there are " << m_state.listOfClients.size() << " clients started" << std::endl;
           std::list<std::unique_ptr<ClientThread>>::iterator i = m_state.listOfClients.begin();
           while (i!=m_state.listOfClients.end())
           {
@@ -206,7 +206,7 @@ namespace casual
              /* Has the thread exited ? */
              if (ct->hasExited()) {
 
-                common::log::information << "Gateway::housekeeping : Client " << ct->getName() << " has exited";
+                common::log::information << "Gateway::housekeeping : Client " << ct->getName() << " has exited" << std::endl;
                 /*
                  * Is the thread restartable, this is only if we are the initiatior, not incoming gateway
                  * connections. They are restarted by the remote gateway.
@@ -232,20 +232,20 @@ namespace casual
                          if (p != m_state.configuration.remotegateways.end()) {
 
                             /* Create a new thread */
-                            common::log::information << "Gateway::housekeeping : Restarting connection to " << ct->getName();
+                            common::log::information << "Gateway::housekeeping : Restarting connection to " << ct->getName() << std::endl;
                             *i = std::move(std::make_unique<ClientThread>(m_state, *p));
                             if (i->get()->start()) {
-                               common::log::information << "Gateway::housekeeping : Client " << i->get()->getName() << " restarted";
+                               common::log::information << "Gateway::housekeeping : Client " << i->get()->getName() << " restarted" << std::endl;
                                i++;
                             } else {
-                               common::log::warning << "Gateway::housekeeping : Client " << i->get()->getName() << " failed to start, removing it";
+                               common::log::warning << "Gateway::housekeeping : Client " << i->get()->getName() << " failed to start, removing it" << std::endl;
                                i = m_state.listOfClients.erase (i);
                             }
 
                          } else {
 
                             /* Unable to find out how to connect to it, stop it it is fatal */
-                            common::log::warning << "Gateway::housekeeping : Unable to find connection information for " << ct->getName() << " removing it";
+                            common::log::warning << "Gateway::housekeeping : Unable to find connection information for " << ct->getName() << " removing it" << std::endl << std::endl;
                             i = m_state.listOfClients.erase(i);
                          }
 
@@ -261,7 +261,7 @@ namespace casual
                    } else {
 
                       /* Nope, no one has started it yet, so do not restart it */
-                      common::log::information << "Gateway::housekeeping : We do not restart " << ct->getName() << " it has not been previously started, removed";
+                      common::log::information << "Gateway::housekeeping : We do not restart " << ct->getName() << " it has not been previously started, removed" << std::endl;
 
                       /* Next element */
                       i = m_state.listOfClients.erase(i);
@@ -271,7 +271,7 @@ namespace casual
                 } else {
 
                    /* No, this is not restartable */
-                   common::log::information << "Gateway::housekeeping : Removing the client " << ct->getName() << " it is restarted by remote gateway";
+                   common::log::information << "Gateway::housekeeping : Removing the client " << ct->getName() << " it is restarted by remote gateway" << std::endl;
 
                    /* Next element */
                    i = m_state.listOfClients.erase(i);
@@ -321,12 +321,12 @@ namespace casual
 
              if( ! handler.dispatch( marshal))
              {
-                common::log::error << "message_type: " << marshal.type() << " not recognized - action: discard";
+                common::log::error << "message_type: " << marshal.type() << " not recognized - action: discard" << std::endl;
              }
           }
        }
        catch (...) {
-          common::log::information << "Exception caught, cleaning up and exiting";
+          common::log::information << "Exception caught, cleaning up and exiting" << std::endl;
           shutdown();
           throw;
        }

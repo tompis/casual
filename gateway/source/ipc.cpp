@@ -224,7 +224,7 @@ namespace casual
                host = connectionInfo.substr(0,pos);
                service = connectionInfo.substr(pos+1);
             } else {
-               common::log::error << "Endpoint '" << connectionInfo << "' not of correct format <host>:<service>";
+               common::log::error << "Endpoint '" << connectionInfo << "' not of correct format <host>:<service>" << std::endl;
                return -1;
             }
 
@@ -245,7 +245,7 @@ namespace casual
              */
             s = getaddrinfo(host.c_str(), service.c_str(), &hints, &result);
             if (s != 0) {
-               common::log::error << gai_strerror(s);
+               common::log::error << gai_strerror(s) << std::endl;
                return -1;
             }
 
@@ -292,14 +292,14 @@ namespace casual
             /* Create the socket */
             fd = ::socket (endpoint.family, endpoint.type, endpoint.protocol);
             if (fd<0) {
-               common::log::error << "Socket::Socket : Unable to create socket for " << endpoint.info() << " : " << ::strerror(errno) << "(" << errno << ")";
+               common::log::error << "Socket::Socket : Unable to create socket for " << endpoint.info() << " : " << ::strerror(errno) << "(" << errno << ")" << std::endl;
             } else {
 
                /* Set socket options, reuse address */
                int on = 1;
                int n = ::setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&on), sizeof(int));
                if (n<0) {
-                  common::log::error << "Socket::Socket : Unable to force socket to reuse address " << endpoint.info() << " : " << ::strerror(errno);
+                  common::log::error << "Socket::Socket : Unable to force socket to reuse address " << endpoint.info() << " : " << ::strerror(errno) << std::endl;
                   ::close (fd);
                   fd = -1;
                } else {
@@ -309,7 +309,7 @@ namespace casual
                   int rc = fcntl(fd,F_SETFL, flags | O_NONBLOCK);
                   if (rc < 0)
                   {
-                     common::log::error << "Socket::Socket : Unable to set socket as nonblocking " << endpoint.info() << " : " << ::strerror(errno);
+                     common::log::error << "Socket::Socket : Unable to set socket as nonblocking " << endpoint.info() << " : " << ::strerror(errno) << std::endl;
                      ::close (fd);
                      fd = -1;
                   } else {
@@ -376,7 +376,7 @@ namespace casual
                   if (n<0) {
                      if (errno != EINPROGRESS) {
                         events = 0;
-                        common::log::error << "Socket::connect : Unable to connect to socket " << endpoint.info() << " " << strerror (errno) << "(" << errno << ")";
+                        common::log::error << "Socket::connect : Unable to connect to socket " << endpoint.info() << " " << strerror (errno) << "(" << errno << ")" << std::endl;
                         state = State::error;
                      } else {
                         events = POLLWRNORM;
@@ -384,17 +384,17 @@ namespace casual
                         n = 0;
                      }
                   } else {
-                     common::log::warning << "Socket::connect : We got connected directly, strange ...";
+                     common::log::warning << "Socket::connect : We got connected directly, strange ..." << std::endl;
                      events = POLLRDNORM | POLLWRNORM;
                      state = State::connected;
                   }
                } else {
                   events = 0;
-                  common::log::warning << "Socket::connect : Socket " << endpoint.info() << " is not in initialized state, " << getState();
+                  common::log::warning << "Socket::connect : Socket " << endpoint.info() << " is not in initialized state, " << getState() << std::endl;
                }
             } else {
                events = 0;
-               common::log::error << "Socket::connect : Unable to connect to " << endpoint.info() << ", socket it is invalid";
+               common::log::error << "Socket::connect : Unable to connect to " << endpoint.info() << ", socket it is invalid" << std::endl;
                state = State::error;
             }
             return n;
@@ -414,16 +414,16 @@ namespace casual
                if (state == initialized) {
                   n = ::bind (fd, reinterpret_cast<struct sockaddr *>(endpoint.m_data.get()), endpoint.m_size);
                   if (n<0) {
-                     common::log::error << "Socket::bind : Unable to bind socket " << endpoint.info() << " " << strerror (errno) << "(" << errno << ")";
+                     common::log::error << "Socket::bind : Unable to bind socket " << endpoint.info() << " " << strerror (errno) << "(" << errno << ")" << std::endl;
                      state = State::error;
                   } else
                      state = State::bound;
                } else {
-                  common::log::warning << "Socket::bind : Socket " << endpoint.info() << " is not in initialized state, " << getState();
+                  common::log::warning << "Socket::bind : Socket " << endpoint.info() << " is not in initialized state, " << getState() << std::endl;
                }
 
             } else {
-               common::log::error << "Socket::bind : Unable to bind socket " << endpoint.info() << ", it is invalid";
+               common::log::error << "Socket::bind : Unable to bind socket " << endpoint.info() << ", it is invalid" << std::endl;
                state = State::error;
             }
             return n;
@@ -439,14 +439,14 @@ namespace casual
             if (state == bound) {
                n = ::listen (fd, backlog);
                if (n<0) {
-                  common::log::error << "Socket::listen : Unable to listen to socket " << endpoint.info() << " " << strerror (errno) << "(" << errno << ")";
+                  common::log::error << "Socket::listen : Unable to listen to socket " << endpoint.info() << " " << strerror (errno) << "(" << errno << ")" << std::endl;
                   state = State::error;
                } else {
                   events = POLLRDNORM;
                   state = State::listening;
                }
             } else {
-               common::log::warning << "Socket::connect : Socket " << endpoint.info() << " is not in bound state, " << getState();
+               common::log::warning << "Socket::connect : Socket " << endpoint.info() << " is not in bound state, " << getState() << std::endl;
             }
             return n;
          }
@@ -472,7 +472,7 @@ namespace casual
                      len = sizeof (struct sockaddr_in6);
                      break;
                   default:
-                     common::log::error << "Socket::accept : Unsupported protocol family to accept connection on " << endpoint.info();
+                     common::log::error << "Socket::accept : Unsupported protocol family to accept connection on " << endpoint.info() << std::endl;
                      state = State::error;
                      break;
                }
@@ -499,7 +499,7 @@ namespace casual
 
                   } else {
 
-                     common::log::error << "Socket::accept : Accept error on " << endpoint.info() << " " << strerror(errno) << "(" << errno << ")";
+                     common::log::error << "Socket::accept : Accept error on " << endpoint.info() << " " << strerror(errno) << "(" << errno << ")" << std::endl;
 
                      state = State::error;
 
@@ -515,7 +515,7 @@ namespace casual
                }
 
             } else {
-               common::log::warning << "Socket::connect : Socket " << endpoint.info() << " is not in listening state, " << getState();
+               common::log::warning << "Socket::connect : Socket " << endpoint.info() << " is not in listening state, " << getState() << std::endl;
             }
 
             /* Back with the status */
@@ -536,7 +536,7 @@ namespace casual
             if (fd >= 0) {
                n = ::close (fd);
                if (n<0) {
-                  common::log::error << "Socket::close : Close error on " << endpoint.info() << " " << strerror(errno) << "(" << errno << ")";
+                  common::log::error << "Socket::close : Close error on " << endpoint.info() << " " << strerror(errno) << "(" << errno << ")" << std::endl;
                   state = State::error;
                } else {
                   state = State::closed;
@@ -555,6 +555,9 @@ namespace casual
             int ready = -1; /* Error */
             int n = 0;
 
+            common::log::information << "Socket::execute : State=" << getStateAsString()
+            		<< " Waiting for " << dumpEvents(getEventMask()) << std::endl;
+
             /* We cannot be in error state or in initialized state */
             if (state != State::error && state != State::initialized) {
 
@@ -572,7 +575,7 @@ namespace casual
                if (ready == 1) {
 
                   /* We got some events */
-                  common::log::information << "Socket::execute : The events that got fired for " << endpoint.info() << " are " << dumpEvents (client[0].revents);
+                  common::log::information << "Socket::execute : The events that got fired for " << endpoint.info() << " are " << dumpEvents (client[0].revents) << std::endl;
 
                   /* Decide what to do */
                   switch (state) {
@@ -584,7 +587,7 @@ namespace casual
                      case State::bound:
                      case State::hung_up:
                      case State::closed:
-                        common::log::warning << "Socket::execute : No event should come in this state";
+                        common::log::warning << "Socket::execute : No event should come in this state" << std::endl;
                         break;
 
                      /* We are waiting for a connect from the other side */
@@ -615,7 +618,7 @@ namespace casual
 
             } else {
 
-               common::log::warning << "Socket::execute : Socket " << endpoint.info() << " is in wrong state " << getState();
+               common::log::warning << "Socket::execute : Socket " << endpoint.info() << " is in wrong state " << getState() << std::endl;
 
             }
 
@@ -647,7 +650,7 @@ namespace casual
             int err = 0;
             socklen_t err_size = sizeof (int);
             if (getsockopt (fd, SOL_SOCKET, SO_ERROR, &err, &err_size) == -1)
-               common::log::warning << "Socket::getLastError: Getsockopt error " << strerror (errno);
+               common::log::warning << "Socket::getLastError: Getsockopt error " << strerror (errno) << std::endl;
             return err;
          }
 

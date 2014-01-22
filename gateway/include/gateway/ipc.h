@@ -361,7 +361,7 @@ namespace casual
             int fd;
 
             /*
-             * Eventmask containing which events to eait for
+             * Eventmask containing which events to wait for
              */
             int events = POLLRDNORM | POLLWRNORM;
 
