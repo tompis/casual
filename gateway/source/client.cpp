@@ -311,43 +311,64 @@ namespace casual
 
          common::log::information << "ClientThread::loop : Entered" << std::endl;
 
-         /* Connection loop */
-         while (bRun
-        		 && m_state.state != ClientState::MachineState::failed
-        		 && m_state.state != ClientState::MachineState::fatal) {
+         /* Connection loop, run until we do not want it to run anymore or if it has reached a
+          * fatal state */
+         while (bRun && m_state.state != ClientState::MachineState::fatal) {
 
-            /* If we are not connected, try to connect */
-            if (m_state.state == ClientState::MachineState::initialized
-            		|| m_state.state == ClientState::MachineState::retry) {
+        	 /* Execute the master state machine */
+        	 switch (m_state.state) {
 
-               /* Wait if we are retrying to allow the far end to start up */
-               if (m_state.state == ClientState::MachineState::retry) {
-                  std::chrono::milliseconds dura( m_state.m_global.configuration.clientreconnecttime );
-                  std::this_thread::sleep_for(dura);
-               }
+        	 case ClientState::MachineState::failed:
 
-               /* Try to connect */
-               if (connect())
-                  m_state.state = ClientState::MachineState::connecting;
-               else
-                  m_state.state = ClientState::MachineState::fatal;
-            }
+        		 /* Determine what to do */
+        		 m_state.state = ClientState::MachineState::fatal;
+        		 break;
 
-            /* Execute the socket */
-            status = m_state.socket->execute(m_state.m_global.configuration.clienttimeout);
-            if (status < 0) {
+        	 case ClientState::MachineState::retry:
 
-               /* Some serious polling error, stop this */
-               common::log::information << "ClientThread::loop : Error during poll, " << strerror (errno) << "(" << errno << ")" << std::endl;
-               m_state.state = ClientState::failed;
+        		 /* Wait for an amount of time to do a reconnect */
+        		 m_state.socket = nullptr;
+                 {
+        			 std::chrono::milliseconds dura( m_state.m_global.configuration.clientreconnecttime );
+        			 std::this_thread::sleep_for(dura);
+                 }
 
-            } else {
+                 /* Move the state to initialized */
+                 m_state.state = ClientState::MachineState::initialized;
+                 break;
 
-               if (status == 0) {
-                  /* Timeout, do some house keeping if we need to */
-               }
-            }
+        	 case ClientState::MachineState::initialized:
 
+                 /* Initialize the connection */
+                 if (connect())
+                    m_state.state = ClientState::MachineState::connecting;
+                 else
+                    m_state.state = ClientState::MachineState::fatal;
+
+        		 break;
+
+        	 default:
+
+                 /* Execute the socket for all other states */
+                 status = m_state.socket->execute(m_state.m_global.configuration.clienttimeout);
+                 if (status < 0) {
+
+                    /* Some serious polling error, stop this */
+                    common::log::information << "ClientThread::loop : Error during poll, " << strerror (errno) << "(" << errno << ")" << std::endl;
+                    m_state.state = ClientState::failed;
+
+                 } else {
+
+                    if (status == 0) {
+                       /* Timeout, do some house keeping if we need to */
+                    }
+                 }
+
+                 /* If we are in error, enter failed state */
+                 if (m_state.socket->hasError()) {
+                	 m_state.state = ClientState::MachineState::failed;
+                 }
+        	 }
          }
 
          /* Exit */
