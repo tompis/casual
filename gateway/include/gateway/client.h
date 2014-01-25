@@ -58,7 +58,7 @@ namespace casual
         /*
          * The client state
          */
-        enum MachineState {initialized=0, connecting, retry, active=10, failed=100, fatal } state = failed;
+        enum MachineState {initialized=0, connecting, retrying, active=10, failed=100, fatal } state = failed;
 
         /*
          * Remote gateway data

@@ -81,6 +81,7 @@ namespace casual
       {
          common::log::warning << "CASLSocket::handleIncomingConnection : Should never get an event here" << std::endl;
          return common::ipc::Socket::State::error;
+         setStateError (EOPNOTSUPP);
       }
 
       /*
@@ -101,6 +102,8 @@ namespace casual
 
             /* Socket is in error and so is the thread */
             ret = common::ipc::Socket::State::error;
+            setStateError (err);
+            return ret;
          }
 
          /* HANGUP */
@@ -109,12 +112,16 @@ namespace casual
             common::log::information << "CASLSocket::handleConnected : Far end hung up" << std::endl;
 
             /* The other side has hung up */
-            ret = common::ipc::Socket::State::hung_up;
+            ret = common::ipc::Socket::State::error;
+            setStateError (ECONNRESET);
+            return ret;
          }
 
          /* POLLWRNORM */
          if ((events & POLLWRNORM) != 0) {
             ret = dataCanBeWritten ();
+            if (ret != common::ipc::Socket::State::connected)
+            	return ret;
          }
 
          /* POLLRDNORM */
@@ -139,6 +146,7 @@ namespace casual
             int err = getLastError();
             common::log::information << "CASLSocket::handleOutgoingConnection : Error " << strerror (err) << "(" << err << ")" << std::endl;
             ret = common::ipc::Socket::State::error;
+            setStateError (err);
             return ret;
          }
 
@@ -147,7 +155,8 @@ namespace casual
 
             /* The other side has hung up, retry connection */
             common::log::information << "CASLSocket::handleOutgoingConnection : Hung up on far end, try again" << std::endl;
-            ret = common::ipc::Socket::State::hung_up;
+            ret = common::ipc::Socket::State::error;
+            setStateError (ECONNRESET);
             return ret;
          }
 
@@ -312,6 +321,8 @@ namespace casual
                   if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINPROGRESS) {
                      common::log::information << "CASLSocket::dataCanBeRead : Error : " << strerror (errno) << "(" << errno << ")" << std::endl;
                      ret = common::ipc::Socket::State::error;
+                     setStateError (errno);
+                     return ret;
                   }
 
                } else {
@@ -321,7 +332,9 @@ namespace casual
                      common::log::information << "CASLSocket::dataCanBeRead : No data when reading, hangup on far end" << std::endl;
                      common::log::information << "CASLSocket::dataCanBeRead : " << strerror (errno) << "(" << errno << ")" << std::endl;
                      stop = true;
-                     ret = common::ipc::Socket::State::hung_up;
+                     ret = common::ipc::Socket::State::error;
+                     setStateError(ECONNRESET);
+                     return ret;
                   }
 
                }
@@ -490,6 +503,9 @@ namespace casual
                   /* Normal error or not */
                   if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINPROGRESS) {
                      ret = common::ipc::Socket::State::error;
+                     setEventMask (POLLRDNORM | POLLWRNORM);
+                     possibleToWrite = false;
+                     return ret;
                   }
 
                }
@@ -596,7 +612,7 @@ namespace casual
       \**********************************************************************/
       CASLSocket::Buffer::Buffer (common::platform::binary_type &message)
       {
-         int header = 0x4341534c;
+         int header = 0x4341534c; // "CASL"
          buffer << header;
          buffer << message;
          position = 0;
