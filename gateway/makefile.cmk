@@ -1,0 +1,77 @@
+from casual.make.directive import *
+
+Include( '$(CASUAL_BUILD_ENVIRONMENT)')
+
+IncludePaths( ['include',
+    'admin/include',
+    '../common/include',
+    '../configuration/include',
+    '../xatmi/include',
+    '../serviceframework/include',
+    '$(UNITTEST_INCLUDE_PATH)',
+    '$(YAML_INCLUDE_PATH)'])
+
+LibraryPaths( ['../common/bin',
+    '../serviceframework/bin',
+    '../xatmi/bin',
+    '../configuration/bin',
+    '$(YAML_LIBRARY_PATH)',
+    '$(JSON_LIBRARY_PATH)'])
+
+#
+# Gateway library
+#
+
+install_exe = []
+
+
+gw_lib = LinkLibrary( 'casual-gateway', 
+	[ 
+     Compile( 'source/gateway.cpp'),
+     Compile( 'source/wire.cpp'),
+	 Compile( 'source/ipc.cpp'),
+     Compile( 'source/master.cpp'),
+	 Compile( 'source/state.cpp'),
+	 Compile( 'source/casl.cpp'),
+	 Compile( 'source/client.cpp')],
+	['casual-common',
+	'casual-sf',
+	'casual-xatmi',
+    'casual-configuration'])
+	
+#
+# Executable gateway
+#
+gw_tcp = LinkExecutable( 'casual-gateway-tcp',
+	[ Compile( 'source/gateway_main.cpp')],
+	[
+     gw_lib,
+	'casual-common',
+	'casual-sf',
+	'casual-xatmi',
+    'casual-configuration'])
+
+
+install_exe.append( gw_tcp)
+
+#
+# Unittest
+#
+
+
+#Compile( 'unittest/isolated/source/test_ipc.cpp', 'unittest/isolated/obj/test_ipc.o')
+
+isolated = LinkIsolatedUnittest( 'casual-gateway-isolated', 
+	[
+     Compile( 'unittest/isolated/source/test_buffer.cpp'),
+	],
+	[ gw_lib,'casual-common'] )
+
+install_exe.append( isolated)
+	
+#
+# Install
+#
+Install( install_exe,'$CASUAL_HOME/bin/')
+Install( gw_lib, '$CASUAL_HOME/lib/')
+

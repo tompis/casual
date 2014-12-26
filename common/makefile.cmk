@@ -3,18 +3,13 @@ from casual.make.directive import *
 
 
 if sys.platform.startswith('darwin'):
-    
-    
-    platform_specific_libs = [ 'c', 'iconv', 'resolv']
-    
+    platform_specific_libs = [ 'c', 'iconv', 'resolv']    
     platform_specific_lib_paths = [ '/opt/local/lib' ]
-    
-    
 else:
     platform_specific_libs = ['uuid', 'resolv']
-    
     platform_specific_lib_paths = []
-
+    
+    
 
 
 IncludePaths( [ 
@@ -160,12 +155,11 @@ target_test_common = LinkIsolatedUnittest( 'bin/test-casual-common-isolated',
 #
 Dependencies( target_test_common, [ target_simple_process ]);
 
+
 #
 # Install 
 #
 Install( install_libs, '$(CASUAL_HOME)/lib')
-
-
 
 
 
