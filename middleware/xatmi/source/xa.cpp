@@ -10,8 +10,8 @@
 #include "common/error.h"
 
 
-extern "C"
-{
+//extern "C"
+//{
    int ax_reg( int rmid, XID* xid, long flags)
    {
       try
@@ -35,7 +35,7 @@ extern "C"
          return casual::common::error::handler();
       }
    }
-}
+//}
 
 
 

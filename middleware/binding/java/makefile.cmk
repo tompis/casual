@@ -1,0 +1,58 @@
+from casual.middleware.make.dsl import *
+
+Environment('COMPILER', 'gcc')
+
+IncludePaths( [
+   '$(JAVA_HOME)/include',
+   '$(JAVA_HOME)/include/linux',
+   '../../xatmi/include',
+   '../../../../xatmi/include',
+   '$(CASUAL_OPTIONAL_INCLUDE_PATHS)',
+   ])
+
+
+LibraryPaths([
+    '../../../../xatmi/bin',
+    '$(CASUAL_OPTIONAL_LIBRARY_PATHS)',
+    ])
+
+
+install_lib = []
+install_include = []
+
+
+lib_java = LinkLibrary( 'bin/casual-java',
+    [
+     Compile( 'src/java_tx_wrap.c'),
+     Compile( 'src/java_xa_wrap.c'),
+     Compile( 'src/java_xatmi_wrap.c'),
+     Compile( 'src/java_xatmi_server_wrap.c'),
+    ],
+    [
+    ])
+
+install_lib.append( lib_java)
+#install_include.append( 'include/buffer/field.h')
+#install_include.append( 'include/buffer/order.h')
+#install_include.append( 'include/buffer/string.h')
+
+install_bin = []
+
+#
+# Unittest
+#
+#LinkUnittest( 'bin/test-buffer',
+#   [
+#    Compile( 'unittest/isolated/source/test_field_buffer.cpp'),
+#    Compile( 'unittest/isolated/source/test_octet_buffer.cpp'),
+#    Compile( 'unittest/isolated/source/test_order_buffer.cpp'),
+#    Compile( 'unittest/isolated/source/test_string_buffer.cpp'),
+#   ],
+#   [ lib_mono, 'casual-common', 'casual-xatmi'])  
+   
+#
+# Install
+#
+Install( install_lib, '$(CASUAL_HOME)/lib')
+
+

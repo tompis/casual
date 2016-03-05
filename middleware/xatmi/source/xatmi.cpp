@@ -6,6 +6,7 @@
 //!
 
 #include "xatmi.h"
+#include "casual_log.h"
 
 #include "common/buffer/pool.h"
 #include "common/call/context.h"

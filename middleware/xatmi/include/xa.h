@@ -27,6 +27,10 @@
 #ifndef XA_H
 #define XA_H
 
+#ifdef _cplusplus
+extern "C"
+{
+#endif
 
 #define XIDDATASIZE     128             /* size in bytes */
 
@@ -42,11 +46,8 @@ typedef struct xid_t XID;
  * Declarations of routines by which RMs calls TMs
  */
 
-extern "C"
-{
-   extern int ax_reg( int, XID*, long);
-   extern int ax_unreg( int, long);
-}
+   int ax_reg( int, XID*, long);
+   int ax_unreg( int, long);
 
 
 /*
@@ -164,4 +165,9 @@ struct xa_switch_t {
 #define XAER_DUPID   -8    /* the XID already exists */
 #define XAER_OUTSIDE -9    /* resource manager doing work */
 /* outside global transaction */
+
+#ifdef _cplusplus
+}
+#endif
+
 #endif  /*!XA_H*/
