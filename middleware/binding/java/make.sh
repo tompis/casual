@@ -8,5 +8,4 @@ casual-make link
 casual-make install
 javac -d obj/class src/*.java
 jar -cf bin/casual-java.jar obj/class/*
-#mcs -target:library -out:bin/libcasual-mono.dll src/*.cs 
-
+cp bin/casual-java.jar ~/usr/lib/jvm/jre/lib/ext
