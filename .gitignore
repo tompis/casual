@@ -26,3 +26,22 @@ bin/
 
 *.log
 /Debug/
+
+
+
+# IDEA
+*.iml
+.idea/
+
+
+#Gradle
+.gradle/
+build/
+
+#Java
+*.class
+*.jar
+
+
+#VI
+*.swp
