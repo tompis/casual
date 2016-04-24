@@ -9,14 +9,14 @@ class Linux( CommonUNIX):
         
         path = os.path.dirname( os.path.realpath(__file__));
         
-        print
-        print '#'
-        print '# Common stuff'
-        print 'include ' + path + '/../common.mk'
-        print
-        print '# include static platform specific'
-        print 'include ' + path + '/static.mk'
-        print
+        print()
+        print('#')
+        print('# Common stuff')
+        print('include ' + path + '/../common.mk')
+        print()
+        print('# include static platform specific')
+        print('include ' + path + '/static.mk')
+        print()
     
         
         

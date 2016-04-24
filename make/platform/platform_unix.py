@@ -28,7 +28,7 @@ class CommonUNIX( Platform):
         if not paths:
             return ''
         
-        if isinstance( paths, basestring):
+        if isinstance( paths, str):
             paths = paths.split( ' ');
         
         return ' -I' + ' -I'.join( paths)
@@ -37,7 +37,7 @@ class CommonUNIX( Platform):
         if not paths:
             return ''
         
-        if isinstance( paths, basestring):
+        if isinstance( paths, str):
             paths = paths.split( ' ');
         
         return ' -L' + ' -L'.join( paths)
@@ -45,14 +45,14 @@ class CommonUNIX( Platform):
     
     
     def library_name(self, baseFilename):
-        if isinstance(baseFilename, basestring):
+        if isinstance(baseFilename, str):
             return 'lib' + baseFilename + '.so'
         elif isinstance(baseFilename, Output):
             return 'lib' + baseFilename.name + '.so'
             
         
     def archive_name(self, baseFilename):
-        if isinstance(baseFilename, basestring):
+        if isinstance(baseFilename, str):
             return 'lib' + baseFilename + '.a'
         elif isinstance(baseFilename, Output):
             return 'lib' + baseFilename.name + '.a'
@@ -82,12 +82,12 @@ class CommonUNIX( Platform):
         return linker + ' -o ' + output + ' ' + objectfiles + ' $(LIBRARY_PATHS) $(DEFAULT_LIBRARY_PATHS) ' + libs + ' $(DEFAULT_LIBS) ' + directive + ' ' + extraDirective
 
     def link_library(self, output, objectfiles, libs, directive):
-        if isinstance( output, basestring):
+        if isinstance( output, str):
             return self.link_generic( '$(LIBRARY_LINKER)', output, objectfiles, libs, '$(LINK_DIRECTIVES_LIB)', directive)
         elif isinstance( output, Output):
             return '$(LIBRARY_LINKER)' + ' -o ' + output.name + ' ' + '$(LINKER_SONAME_DIRECTIVE)' + output.soname() + ' ' + objectfiles + ' $(LIBRARY_PATHS) $(DEFAULT_LIBRARY_PATHS) ' + libs + ' $(DEFAULT_LIBS) ' + '$(LINK_DIRECTIVES_LIB)' + directive
         else:
-            raise SyntaxError, 'Unknown type for output'
+            raise SyntaxError('Unknown type for output')
     
     def link_executable(self, output, objectfiles, libs, directive):
         return self.link_generic( '$(EXECUTABLE_LINKER)' , output, objectfiles, libs, '$(LINK_DIRECTIVES_EXE)', directive)

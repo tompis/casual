@@ -12,12 +12,12 @@ Created on 14 maj 2012
 import sys
 import os
 import multiprocessing
-from internal.generate import casual_make
+from casual.make.internal.generate import casual_make
 import subprocess
 import re
 
 
-from internal import path
+from casual.make.internal import path
 
 from casual.make.color import color
 
@@ -107,7 +107,7 @@ def reformat( line):
         match = regex.match( line)
                
         if match:
-            return filter( match)
+            return list(filter( match))
         
     return line;
 
@@ -178,7 +178,7 @@ if __name__ == '__main__':
             sys.stderr.write( color.error( 'error: Could not find the casaul make file ') + causal_make_file + '\n')
             sys.exit( 1)
 
-        sys.stdout.write( reformat( 'generates makefile from ' + os.path.abspath( causal_make_file))) 
+        sys.stdout.write( ''.join( reformat( 'generates makefile from ' + os.path.abspath( causal_make_file)))) 
     
         try:
             casual_make( causal_make_file)
@@ -212,7 +212,7 @@ if __name__ == '__main__':
     #
     command = MAKE_PATH + " -j " + str(int(JOB_COUNT)) + " -l " + str(int(MAX_LOAD)) + " " + GMAKE_OPTIONS + " --no-print-directory --no-builtin-rules --no-keep-going -f " + make_file + '\n' 
     
-    print color.header( "executes: ") + command
+    print(color.header( "executes: ") + command)
     
     #
     # Call command
@@ -220,7 +220,7 @@ if __name__ == '__main__':
     process = subprocess.Popen( command.split(), bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
     
     while process.poll() is None:
-        sys.stdout.write( reformat( process.stdout.readline()))
+        sys.stdout.write( ''.join(reformat( process.stdout.readline())))
     
     #
     # Manually "flush" stdout...
@@ -236,9 +236,9 @@ if __name__ == '__main__':
         user_target = args[0]
 
     if process.returncode == 0:
-        print 'target ' + color.blue( user_target) + ': ' + color.green( 'SUCCESS')
+        print('target ' + color.blue( user_target) + ': ' + color.green( 'SUCCESS'))
     else:
-        print 'target ' + color.blue( user_target) + ': ' + color.error( 'FAILED')
+        print('target ' + color.blue( user_target) + ': ' + color.error( 'FAILED'))
     
     #print reformat( process.stdout.readline())
     

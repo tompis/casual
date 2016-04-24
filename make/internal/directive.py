@@ -69,11 +69,11 @@ def base_extract( output, parameter):
     if isinstance( output, Output):
         return parameter
     else:
-        raise SystemError, "Unknown output type"
+        raise SystemError("Unknown output type")
        
 def extract_name( output):
     
-    if isinstance( output, basestring):
+    if isinstance( output, str):
         return output
     else:
         return base_extract( output, output.name)
@@ -89,7 +89,7 @@ def target_name( name):
 
 
 def multiline( values):
-    if isinstance( values, basestring):
+    if isinstance( values, str):
         values = values.split()
 
     return ' \\\n      '.join( values)
@@ -97,7 +97,7 @@ def multiline( values):
 
 def validate_list( value):
     
-    if isinstance( value, basestring):
+    if isinstance( value, str):
         raise SyntaxError( 'not a list - content: ' + value);
 
 

@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 '''
 Created on 13 maj 2012
 
 @author: hbergk
 '''
+from __future__ import print_function
 
 import logging
 logging.basicConfig( filename='.casual/cmk.log',level=logging.DEBUG)
@@ -22,6 +24,7 @@ import casual.make.internal.path as path
 from casual.make.output import Output
 
 _platform = casual.make.platform.platform.platform()
+
 
         
 
@@ -158,19 +161,19 @@ def pre_make_rules():
     # Default targets and such
     #
     
-    print
-    print '#'
-    print '# If no target is given we assume \'all\''
-    print '#'
-    print 'all:'
+    print(u'')
+    print(u'#')
+    print(u'# If no target is given we assume \'all\'')
+    print(u'#')
+    print(u'all:')
     
-    print
-    print '#'
-    print '# Dummy targets to make sure they will run, even if there is a corresponding file'
-    print '# with the same name'
-    print '#'
+    print(u'\n')
+    print(u'#')
+    print(u'# Dummy targets to make sure they will run, even if there is a corresponding file')
+    print(u'# with the same name')
+    print(u'#')
     for target in global_targets:
-        print '.PHONY ' + target + ':' 
+        print(u'.PHONY ' + target + ':') 
     
     
     #
@@ -201,37 +204,37 @@ def produce_build_targets():
             
             if not scoped_build:
                 
-                print
-                print "#"
-                print '# targets to handle recursive stuff for ' + casual_make_file
-                print '#'
-                print make_file + ": " + casual_make_file
-                print "\t@echo generates makefile from " + casual_make_file
-                print "\t@" + _platform.change_directory( casual_make_directory) + ' && ' + def_casual_make + " " + casual_make_file
+                print(u'')
+                print(u"#")
+                print(u'# targets to handle recursive stuff for ' + casual_make_file)
+                print(u'#')
+                print(make_file + u": " + casual_make_file)
+                print(u"\t@echo generates makefile from " + casual_make_file)
+                print(u"\t@" + _platform.change_directory( casual_make_directory) + ' && ' + def_casual_make + " " + casual_make_file)
             
-                print 
-                print build_target_name + ": " + make_file
-                print "\t@echo " + casual_make_file + '  $(MAKECMDGOALS)'
-                print '\t@$(MAKE) -C "' + casual_make_directory + '" $(MAKECMDGOALS) -f ' + make_file
+                print(u'') 
+                print(build_target_name + u": " + make_file)
+                print(u"\t@echo " + casual_make_file + '  $(MAKECMDGOALS)')
+                print(u'\t@$(MAKE) -C "' + casual_make_directory + '" $(MAKECMDGOALS) -f ' + make_file)
 
                 casual_build_targets.append( build_target_name);
                         
-                print
-                print make_target_name + ":"
-                print "\t@echo generates makefile from " + casual_make_file
-                print "\t@" + _platform.change_directory( casual_make_directory) + ' && ' + def_casual_make + " " + casual_make_file
-                print '\t@$(MAKE) -C "' + casual_make_directory + '" $(MAKECMDGOALS) -f ' + make_file
+                print(u'')
+                print(make_target_name + u":")
+                print(u"\t@echo generates makefile from " + casual_make_file)
+                print(u"\t@" + _platform.change_directory( casual_make_directory) + ' && ' + def_casual_make + " " + casual_make_file)
+                print(u'\t@$(MAKE) -C "' + casual_make_directory + '" $(MAKECMDGOALS) -f ' + make_file)
 
                 casual_make_targets.append( make_target_name)
                 
             else:
             
-                print
-                print '#'
-                print '# targets to handle scope build for ' + casual_make_file
-                print '#'
-                print build_target_name + ':' 
-                print '\t@$(MAKE) $(MAKECMDGOALS) -f ' + make_file
+                print(u'')
+                print(u'#')
+                print(u'# targets to handle scope build for ' + casual_make_file)
+                print(u'#')
+                print(build_target_name + u':') 
+                print(u'\t@$(MAKE) $(MAKECMDGOALS) -f ' + make_file)
                 
                 casual_build_targets.append( build_target_name);
                 casual_make_targets.append( build_target_name);
@@ -239,27 +242,27 @@ def produce_build_targets():
                 
 
 
-            print
+            print(u'')
         
         casual_build_targets_name = unique_target_name( 'casual_build_targets')
         
-        print
-        print '#'
-        print '# set up dependences to build-targets'
-        print '#'
-        print casual_build_targets_name + ' = ' + internal.multiline( casual_build_targets)
-        print 
+        print(u'')
+        print(u'#')
+        print(u'# set up dependences to build-targets')
+        print(u'#')
+        print(casual_build_targets_name + u' = ' + internal.multiline( casual_build_targets))
+        print(u'') 
         
         for target in global_build_targets:
-            print target + ': $(' + casual_build_targets_name + ')'
+            print(target + u': $(' + casual_build_targets_name + ')')
        
         casual_make_targets_name = unique_target_name( 'casual_make_targets')
         
-        print 
-        print casual_make_targets_name + ' = ' + internal.multiline( casual_make_targets)
-        print
-        print 'make: $(' + casual_make_targets_name + ')' 
-        print
+        print(u'') 
+        print(casual_make_targets_name + u' = ' + internal.multiline( casual_make_targets))
+        print(u'')
+        print(u'make: $(' + casual_make_targets_name + u')') 
+        print(u'')
          
 
 #
@@ -274,43 +277,43 @@ def post_make_rules():
     #
     _platform.post_make();
 
-    print
-    print '#'
-    print '# Make sure recursive makefiles get the linker'
-    print '#'
-    print 'export EXECUTABLE_LINKER'
+    print(u'')
+    print(u'#')
+    print(u'# Make sure recursive makefiles get the linker')
+    print(u'#')
+    print(u'export EXECUTABLE_LINKER')
     
-    print
-    print '#'
-    print '# de facto target \"all\"'
-    print '#'
-    print 'all: link'
-    print
+    print(u'')
+    print(u'#')
+    print(u'# de facto target \"all\"')
+    print(u'#')
+    print(u'all: link')
+    print(u'')
     
  
     if state().parallel_make is None or state().parallel_make:
-        print
-        print '#'
-        print '# This makefile will run in parallel by default'
-        print '# but, sequential processing can be forced'
-        print '#'
-        print 'ifdef FORCE_NOTPARALLEL'
-        print '.NOTPARALLEL:'
-        print 'endif'
-        print
+        print(u'')
+        print(u'#')
+        print(u'# This makefile will run in parallel by default')
+        print(u'# but, sequential processing can be forced')
+        print(u'#')
+        print(u'ifdef FORCE_NOTPARALLEL')
+        print(u'.NOTPARALLEL:')
+        print(u'endif')
+        print(u'')
     else:   
-        print
-        print '#'
-        print '# This makefile will be processed sequential'
-        print '# but, parallel processing can be forced' 
-        print '#'
-        print 'ifdef FORCE_NOTPARALLEL'
-        print '.NOTPARALLEL:'
-        print 'endif'
-        print 'ifndef FORCE_PARALLEL'
-        print '.NOTPARALLEL:'
-        print 'endif'
-        print
+        print(u'')
+        print(u'#')
+        print(u'# This makefile will be processed sequential')
+        print(u'# but, parallel processing can be forced') 
+        print(u'#')
+        print(u'ifdef FORCE_NOTPARALLEL')
+        print(u'.NOTPARALLEL:')
+        print(u'endif')
+        print(u'ifndef FORCE_PARALLEL')
+        print(u'.NOTPARALLEL:')
+        print(u'endif')
+        print(u'')
     
     
     produce_build_targets()
@@ -321,10 +324,10 @@ def post_make_rules():
     # Targets for creating directories
     #
     for path in state().paths_to_create:
-        print
-        print path + ":"        
-        print "\t" + _platform.make_directory( path)
-        print
+        print(u'')
+        print(path + u":")        
+        print(u"\t" + _platform.make_directory( path))
+        print(u'')
 
     
     #
@@ -332,23 +335,23 @@ def post_make_rules():
     #
     
     
-    print
-    print "clean: clean_object clean_dependency clean_exe"
+    print(u'')
+    print(u"clean: clean_object clean_dependency clean_exe")
     
-    print "clean_object:"
+    print(u"clean_object:")
     for objectpath in state().object_paths_to_clean:
-        print "\t-" + _platform.remove( objectpath + "/*.o")
+        print(u"\t-" + _platform.remove( objectpath + "/*.o"))
         
-    print "clean_dependency:"
+    print(u"clean_dependency:")
     for objectpath in state().object_paths_to_clean:  
-        print "\t-" + _platform.remove( objectpath + "/*.d")
+        print(u"\t-" + _platform.remove( objectpath + "/*.d"))
     
     #
     # Remove all other known files.
     #
-    print "clean_exe:"
+    print(u"clean_exe:")
     for filename in state().files_to_Remove:
-        print "\t-" + _platform.remove( filename)
+        print(u"\t-" + _platform.remove( filename))
 
 #
 # Registration of files that will be removed with clean
@@ -388,12 +391,12 @@ def normalize_path(path, platformSpefic = None):
 
 def extract_path( output):
     
-    if isinstance( output, basestring):
+    if isinstance( output, str):
         return output
     elif isinstance( output, Output):
         return output.name
     else:
-        raise SystemError, "Unknown output type"
+        raise SystemError("Unknown output type")
 
 def shared_library_name_path( path):
 
@@ -462,14 +465,14 @@ def dependency_file_name(objectfile):
 def set_ld_path():
     
     if not set_ld_path.is_set:
-        print "#"
-        print "# Set LD_LIBRARY_PATH so that unittest has access to dependent libraries"
-        print "#"
-        print "space :=  "
-        print "space +=  "
-        print "formattet_library_path = $(subst -L,,$(subst $(space),:,$(LIBRARY_PATHS) $(DEFAULT_LIBRARY_PATHS)))"
-        print "LOCAL_LD_LIBRARY_PATH=$(formattet_library_path):$(PLATFORMLIB_DIR)"
-        print 
+        print(u"#")
+        print(u"# Set LD_LIBRARY_PATH so that unittest has access to dependent libraries")
+        print(u"#")
+        print(u"space :=  ")
+        print(u"space +=  ")
+        print(u"formattet_library_path = $(subst -L,,$(subst $(space),:,$(LIBRARY_PATHS) $(DEFAULT_LIBRARY_PATHS)))")
+        print(u"LOCAL_LD_LIBRARY_PATH=$(formattet_library_path):$(PLATFORMLIB_DIR)")
+        print(u'') 
         #
         # Make sure we don't set it again int this makefile
         #
@@ -483,12 +486,12 @@ def deploy( target, directive):
     
     targetname = 'deploy_' + target.name
     
-    print
-    print 'deploy: ' + targetname
-    print
-    print targetname + ": " + target.name
-    print "\t-@" + def_Deploy + " " + target.file + ' ' + directive
-    print
+    print(u'')
+    print(u'deploy: ' + targetname)
+    print(u'')
+    print(targetname + u": " + target.name)
+    print(u"\t-@" + def_Deploy + " " + target.file + ' ' + directive)
+    print(u'')
 
 
 def build( casual_make_file):
@@ -534,24 +537,24 @@ def library_targets( libs):
             targets.append( lib.name)
 
 
-    print "#"
-    print "# This is the only way I've got it to work. We got to have a INTERMEDIATE target"
-    print "# even if the target exist and have dependency to a file that is older. Don't really get make..." 
-    print "#";
+    print(u"#")
+    print(u"# This is the only way I've got it to work. We got to have a INTERMEDIATE target")
+    print(u"# even if the target exist and have dependency to a file that is older. Don't really get make...") 
+    print(u"#");
     for target in targets:    
-        print ".INTERMEDIATE: " + target
-    print
-    print "#";
-    print "# dummy targets, that will be used if the real target is absent";
+        print(u".INTERMEDIATE: " + target)
+    print(u'')
+    print(u"#");
+    print(u"# dummy targets, that will be used if the real target is absent");
     for target in dummy_targets:    
-        print target + ":"
+        print(target + u":")
     
     return targets
 
 def symlink(filename, linkname):
     
-    print '\t' + platform().remove( linkname)
-    print '\t' + platform().symlink( filename, linkname)
+    print(u'\t' + platform().remove( linkname))
+    print(u'\t' + platform().symlink( filename, linkname))
     
 
 def link( operation, target, objectfiles, libraries, linkdirectives = '', prefix = ''):
@@ -561,8 +564,8 @@ def link( operation, target, objectfiles, libraries, linkdirectives = '', prefix
 
     filename = target.file
                 
-    print "#"
-    print "# Links: " + os.path.basename( filename)
+    print(u"#")
+    print(u"# Links: " + os.path.basename( filename))
      
     #
     # extract file if some is targets
@@ -579,28 +582,28 @@ def link( operation, target, objectfiles, libraries, linkdirectives = '', prefix
 
     destination_path = os.path.dirname( filename)
     
-    print
-    print "link: " + target.name
-    print 
-    print target.name + ': ' + filename
-    print
-    print '   objects_' + target.name + ' = ' + internal.multiline( object_name_list( objectfiles))
-    print
-    print '   libs_'  + target.name + ' = ' + internal.multiline( platform().link_directive( libraries))
-    print
-    print '   #'
-    print '   # possible dependencies to other targets (in this makefile)'
-    print '   depenency_' + target.name + ' = ' + internal.multiline( dependent_targets)
-    print 
-    print filename + ': $(objects_' + target.name + ') $(depenency_' + target.name + ')' + " $(USER_CASUAL_MAKE_FILE) | " + destination_path
-    print '\t' + prefix + operation( filename, '$(objects_' + target.name + ')', '$(libs_' + target.name + ')', linkdirectives)
+    print(u'')
+    print(u"link: " + target.name)
+    print(u'') 
+    print(target.name + u': ' + filename)
+    print(u'')
+    print(u'   objects_' + target.name + u' = ' + internal.multiline( object_name_list( objectfiles)))
+    print(u'')
+    print(u'   libs_'  + target.name + u' = ' + internal.multiline( platform().link_directive( libraries)))
+    print(u'')
+    print(u'   #')
+    print(u'   # possible dependencies to other targets (in this makefile)')
+    print(u'   depenency_' + target.name + u' = ' + internal.multiline( dependent_targets))
+    print(u'') 
+    print(filename + u': $(objects_' + target.name + u') $(depenency_' + target.name + u')' + u" $(USER_CASUAL_MAKE_FILE) | " + destination_path)
+    print(u'\t' + prefix + operation( filename, u'$(objects_' + target.name + u')', u'$(libs_' + target.name + u')', linkdirectives))
     
     if target.output:
         soname_fullpath = target.stem + '.' + target.output.version.soname_version()
         symlink(target.file, soname_fullpath)
         symlink(soname_fullpath, target.stem)
         
-    print
+    print(u'')
     
     
     register_file_for_clean( filename)
@@ -617,7 +620,7 @@ def install(target, destination):
         for t in target:
             install( t, destination)
     
-    elif isinstance( target, basestring):
+    elif isinstance( target, str):
         install( internal.Target( target), destination)
     else:
         
@@ -627,10 +630,10 @@ def install(target, destination):
         
         register_path_for_create( destination);
         
-        print 'install: '+ target.name
-        print
-        print target.name + ": " + filename + ' | ' + destination
-        print "\t" + platform().install( filename, destination)
+        print(u'install: '+ target.name)
+        print(u'')
+        print(target.name + u": " + filename + u' | ' + destination)
+        print(u"\t" + platform().install( filename, destination))
         
         if target.output:
             soname_fullpath = target.stem + '.' + target.output.version.soname_version()

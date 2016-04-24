@@ -9,6 +9,8 @@ Contains the basic syntax to produce makefile
 #
 # Imports
 #
+from __future__ import print_function
+
 import os
 import casual.make.plumbingimpl.directive as plumbing
 import casual.make.platform.platform
@@ -33,8 +35,8 @@ def NoDefaultLibs():
     Makes sure nothing is linked default
     """
 
-    print "DEFAULT_LIBS :=";
-    print
+    print(u"DEFAULT_LIBS :=");
+    print(u'')
 
 
 def DefaultIncludePaths( value = True):
@@ -43,8 +45,8 @@ def DefaultIncludePaths( value = True):
     Default they are used
     """
     if not value:
-        print "DEFAULT_INCLUDE_PATHS :=";
-        print
+        print("DEFAULT_INCLUDE_PATHS :=");
+        print(u'')
 
 
 def DefaultLibraryPaths( value = True):
@@ -53,8 +55,8 @@ def DefaultLibraryPaths( value = True):
     Default they are used
     """
     if not value:
-        print "DEFAULT_LIBRARY_PATHS :="
-        print
+        print("DEFAULT_LIBRARY_PATHS :=")
+        print(u'')
 
 
 
@@ -107,9 +109,9 @@ def Environment( name, value = '', export = True):
     """
     
     if( export):
-        print 'export ' + name + ' = ' + value
+        print('export ' + name + ' = ' + value)
     else:
-        print name + ' = ' + value
+        print(name + ' = ' + value)
     
     
 
@@ -135,25 +137,25 @@ def Compile( sourcefile, objectfile = None, directive = ''):
     dependency_file = plumbing.dependency_file_name( target.file)
     cross_object_file = plumbing.cross_object_name( target.file)
     
-    print "#"
-    print "# compiling {0} to {1}".format( sourcefile, objectfile)
-    print
-    print "-include " + dependency_file
-    print
-    print 'compile: ' + target.name
-    print
-    print target.name + ': ' + target.file
-    print
-    print target.file + ": " + target.source + ' | ' + object_directory
-    print '\t' + platform().compile( target.source, target.file, directive)
-    print '\t' + platform().header_dependency( target.source, [ cross_object_file, target.file], dependency_file)
-    print
-    print 'cross: ' + cross_object_file
-    print 
-    print cross_object_file + ": " + target.source + ' | ' + object_directory
-    print '\t' + platform().cross_compile( target.source, cross_object_file, directive)
-    print '\t' + platform().header_dependency( target.source, [ cross_object_file, target.file], dependency_file)
-    print
+    print(u"#")
+    print(u"# compiling {0} to {1}".format( sourcefile, objectfile))
+    print(u'')
+    print(u"-include " + dependency_file)
+    print(u'')
+    print(u'compile: ' + target.name)
+    print(u'')
+    print(target.name + u': ' + target.file)
+    print(u'')
+    print(target.file + u": " + target.source + u' | ' + object_directory)
+    print(u'\t' + platform().compile( target.source, target.file, directive))
+    print(u'\t' + platform().header_dependency( target.source, [ cross_object_file, target.file], dependency_file))
+    print(u'')
+    print(u'cross: ' + cross_object_file)
+    print(u'') 
+    print(cross_object_file + u": " + target.source + u' | ' + object_directory)
+    print(u'\t' + platform().cross_compile( target.source, cross_object_file, directive))
+    print(u'\t' + platform().header_dependency( target.source, [ cross_object_file, target.file], dependency_file))
+    print(u'')
     
     plumbing.register_object_path_for_clean( object_directory)
     plumbing.register_path_for_create( object_directory)
@@ -237,9 +239,9 @@ def Dependencies( target, dependencies):
         dependant.append( dependency.file)
     
     
-    print '#'
-    print '# explicit dependencies'
-    print target.name + ": " + ' '.join( dependant)
+    print(u'#')
+    print(u'# explicit dependencies')
+    print(target.name + u": " + ' '.join( dependant))
     
 
 
@@ -276,11 +278,11 @@ def LinkUnittest(name,objectfiles,libraries = [], test_target = True):
     plumbing.deploy( target, 'client')
     if test_target:
         plumbing.set_ld_path()
-        print "test: " + 'test_' + target.name    
-        print
-        print 'test_' + target.name + ": " +  target.name
-        print "\t @LD_LIBRARY_PATH=$(LOCAL_LD_LIBRARY_PATH) $(PRE_UNITTEST_DIRECTIVE) " + target.file + " $(ISOLATED_UNITTEST_DIRECTIVES)"
-        print 
+        print(u"test: " + u'test_' + target.name)    
+        print(u'')
+        print(u'test_' + target.name + u": " +  target.name)
+        print(u"\t @LD_LIBRARY_PATH=$(LOCAL_LD_LIBRARY_PATH) $(PRE_UNITTEST_DIRECTIVE) " + target.file + " $(ISOLATED_UNITTEST_DIRECTIVES)")
+        print(u'') 
     return target
     
 

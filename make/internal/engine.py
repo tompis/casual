@@ -14,14 +14,14 @@ This is the module running the "process"
 
 import tempfile
 import string
-import StringIO
+import io
 import sys
 import os
 #
 # Project
 #
 
-import path
+from . import path
 
 #from casual.make.functiondefinitions import *
 #from casual.make.internal import debug
@@ -39,7 +39,7 @@ class Engine(object):
         '''        
         self.test = 0
         
-        self.output = StringIO.StringIO();
+        self.output = io.StringIO();
         sys.stdout = self.output;
         
         
@@ -62,7 +62,7 @@ class Engine(object):
             self.identifier += 1
             name = 'scope_' + str( self.identifier)
         
-        output = StringIO.StringIO();
+        output = io.StringIO();
         sys.stdout = output;
         
         scoped_make_file =  self.makefiles_path + '/' + self.makefile_stem + '_' + name +'.mk';
@@ -88,24 +88,24 @@ class Engine(object):
         
         with open( casual_makefile,'r') as origin:
         
-            cmk = StringIO.StringIO();
+            cmk = io.StringIO();
             
             #
             # This import is needed to be able to use internal_pre_make_rules
             # All other imports needs to be explicit in cmk-file
             #
-            cmk.write( 'from casual.make.plumbingimpl.directive import pre_make_rules, post_make_rules, global_pre_make_statement_stack')
+            cmk.write( u'from casual.make.plumbingimpl.directive import pre_make_rules, post_make_rules, global_pre_make_statement_stack')
             
-            cmk.write( '\n' + 'pre_make_rules()\n');
+            cmk.write( u'\n' + u'pre_make_rules()\n');
             
             
             #
             # write user casual-make-file
             #
             for line in origin:
-                cmk.write( line);    
+                cmk.write( u'' + line);    
             
-            cmk.write( '\n' + 'post_make_rules()\n')
+            cmk.write( u'\n' + u'post_make_rules()\n')
                         
         
             
@@ -121,20 +121,20 @@ class Engine(object):
             #
             # Start by writing CASUALMAKE_PATH
             #
-            makefile.write( "CASUALMAKE_PATH = " + os.path.dirname( os.path.abspath(sys.argv[0] + u"/..")) + '\n')
-            makefile.write( "USER_CASUAL_MAKE_FILE = " + self.casual_make_file + '\n');
+            makefile.write( u"CASUALMAKE_PATH = " + os.path.dirname( os.path.abspath(sys.argv[0] + "/..")) + u'\n')
+            makefile.write( u"USER_CASUAL_MAKE_FILE = " + self.casual_make_file + u'\n')
             
             #
             # Write pre-make-statements. i.e include statements, INCLUDE_PATHS, and such
             #
             for statement in pre_make_statements:
-                makefile.write( statement + '\n')
+                makefile.write( statement + u'\n')
             
             #
             # Write the makefile-output
             #
             for line in stream:
-                makefile.write( line);
+                makefile.write( u'' + line);
                 
     def prepareOutputs(self, casual_makefile):
         
@@ -166,7 +166,7 @@ class Engine(object):
             exec( code, globalVariables)
             
         except (NameError, SyntaxError, TypeError):
-            sys.stderr.write( "Error in " + os.path.realpath( casual_makefile) + ".\n")
+            sys.stderr.write( u"Error in " + os.path.realpath( casual_makefile) + u".\n")
             raise
             
         #

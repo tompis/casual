@@ -24,7 +24,7 @@ def platform():
     if platform == "darwin":
         platform = "osx"
     if not registry: 
-        raise SyntaxError, "No platforms are registered."
+        raise SyntaxError("No platforms are registered.")
     return registry[ platform]();
 
 

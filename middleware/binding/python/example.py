@@ -17,18 +17,18 @@ except exception.CallError as callError:
     """
     raise callError
 
-print reply
+print(reply)
 
 #
 # Another call
 #
-print casual.call( "casual_test1", "echo echo echo")
+print(casual.call( "casual_test1", "echo echo echo"))
 
 #
 # Async call
 #
 id = casual.send( "casual_test1", "async echo async echo async echo")
-print casual.receive( id)
+print(casual.receive( id))
 
 #
 # Cancel async call

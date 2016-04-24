@@ -9,6 +9,7 @@
 #
 # Imports
 #
+from __future__ import print_function
 import os
 
 import casual.make.plumbing
@@ -56,13 +57,13 @@ def LinkServer( name, objectfiles, libraries, serverdefinition, resources=None, 
     if configuration:
         directive += " -xa " + configuration
      
-    if isinstance( serverdefinition, basestring):
+    if isinstance( serverdefinition, str):
         # We assume it is a path to a server-definition-file
         directive += ' -p ' + serverdefinition
          
-        print '# dependency to server definition file'
-        print path + ': ' + serverdefinition
-        print
+        print(u'# dependency to server definition file')
+        print(path + u': ' + serverdefinition)
+        print(u'')
         
     else:
         directive += ' -s ' + ' '.join( serverdefinition)
@@ -115,17 +116,17 @@ def LinkResourceProxy( name, resource, libraries = [], directive = ''):
     directive += ' --link-directives "' + _plumbing.platform().link_directive( libraries) + ' $(INCLUDE_PATHS) $(DEFAULT_INCLUDE_PATHS) $(LIBRARY_PATHS) $(DEFAULT_LIBRARY_PATHS) $(DEFAULT_LIBS) $(LINK_DIRECTIVES_EXE)"'
     
     
-    print
-    print "link: " + target.name
-    print 
-    print target.name + ': ' + target.file
-    print
-    print '   #'
-    print '   # possible dependencies to other targets (in this makefile)'
-    print '   depenency_' + target.name + ' = ' + _plumbing.multiline( dependent_targets)
-    print
-    print target.file + ': $(depenency_' + target.name + ')' + " $(USER_CASUAL_MAKE_FILE) | " + destination_path
-    print '\t' + build_resource_proxy + ' --output ' + target.file + ' --resource-key ' + resource + ' ' + directive
+    print(u'')
+    print(u"link: " + target.name)
+    print(u'') 
+    print(target.name + u': ' + target.file)
+    print(u'')
+    print(u'   #')
+    print(u'   # possible dependencies to other targets (in this makefile)')
+    print(u'   depenency_' + target.name + u' = ' + _plumbing.multiline( dependent_targets))
+    print(u'')
+    print(target.file + u': $(depenency_' + target.name + u')' + u" $(USER_CASUAL_MAKE_FILE) | " + destination_path)
+    print(u'\t' + build_resource_proxy + u' --output ' + target.file + u' --resource-key ' + resource + u' ' + directive)
     
     _plumbing.register_file_for_clean( target.file)
     _plumbing.register_path_for_create( destination_path)
