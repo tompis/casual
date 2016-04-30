@@ -59,7 +59,8 @@ ngx_str_t errorhandler(ngx_http_request_t* r)
 {
    ngx_str_t error;
    u_char message[1024];
-   ngx_sprintf(message, "{'error' : '%s'}", tperrnostring(tperrno));
+   ngx_memzero( message, sizeof( message)/ sizeof(u_char));
+   ngx_sprintf(message, "{\"error\" : \"%s\"}", tperrnostring(tperrno));
    error.len = ngx_strlen(message) + 1;
    error.data = ngx_pcalloc(r->pool, error.len);
    ngx_cpystrn(error.data, message, error.len);
