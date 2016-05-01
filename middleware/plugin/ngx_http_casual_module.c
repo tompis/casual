@@ -244,7 +244,7 @@ static ngx_int_t extractInformation( ngx_http_request_t* r, ngx_http_casual_ctx_
     u_char* start_of_key = 0;
     u_char* end_of_key = 0;
 
-    if ( end_of_service == 0)
+    if ( end_of_service == 0 || end_of_service > &r->uri.data[ r->uri.len])
     {
   	  end_of_service = &r->uri.data[ r->uri.len];
     }
