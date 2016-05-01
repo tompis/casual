@@ -21,6 +21,7 @@ typedef struct
 //
 typedef struct {
     u_char* service;
+    u_char* key;
     u_char* protocol;
     ngx_int_t calling_descriptor;
     ngx_int_t numberOfCalls;
@@ -91,40 +92,6 @@ ngx_module_t ngx_http_casual_module = { NGX_MODULE_V1,
       NULL, /* exit master */
       NGX_MODULE_V1_PADDING };
 
-static ngx_int_t extractArgument( ngx_http_request_t* r, ngx_str_t argument, ngx_str_t* value, ngx_str_t* defaultValue)
-{
-   ngx_str_t s;
-
-   ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: ARGUMENT: %V", &argument);
-   if (ngx_http_arg(r, argument.data, argument.len, &s) == NGX_OK)
-   {
-      value->len = s.len;
-      value->data = ngx_pstrdup( r->pool, &s);
-      ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: VALUE: %V", value);
-      ngx_log_debug0(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: Using selected value");
-   }
-   else
-   {
-      //
-      // Has defaultvalue
-      //
-      if (defaultValue->len > 0)
-      {
-         //
-         // Default
-         //
-         *value = *defaultValue;
-         ngx_log_debug0(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: Using default value");
-      }
-      else
-      {
-         return NGX_ERROR;
-      }
-   }
-
-   return NGX_OK;
-}
-
 static ngx_int_t bufferhandler( ngx_http_request_t* r, ngx_str_t* body)
 {
    //
@@ -133,6 +100,18 @@ static ngx_int_t bufferhandler( ngx_http_request_t* r, ngx_str_t* body)
    if (r->request_body == NULL || r->request_body->bufs == NULL)
    {
       ngx_log_debug0(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: No data in body.");
+      ngx_http_casual_ctx_t* casual_context = ngx_http_get_module_ctx(r, ngx_http_casual_module);
+      if (ngx_strcmp(casual_context->key, "") != 0)
+      {
+          char* payload = "{\"payload\": { \"key\" : %s}}";
+          const int extra = 100;
+          const int key_len = ngx_strlen( casual_context->key);
+          body->data = ngx_palloc(r->pool, key_len + extra);
+          ngx_memzero( body->data, key_len + extra);
+          ngx_sprintf( body->data, payload, casual_context->key);
+          body->len = ngx_strlen( body->data);
+          return NGX_OK;
+      }
       return NGX_DONE;
    }
    else
@@ -252,38 +231,81 @@ static ngx_int_t receive( ngx_http_request_t* r)
    return casual_receive( casual_context->calling_descriptor, &casual_context->reply_buffer, r);
 }
 
-ngx_int_t handleArguments(ngx_http_request_t* r, ngx_str_t* service, ngx_str_t* protocol, ngx_str_t* asynchronous, ngx_str_t* calling_descriptor)
+static ngx_int_t extractInformation( ngx_http_request_t* r, ngx_http_casual_ctx_t* casual_context)
 {
+    ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: uri=%V", &r->uri);
+    u_char service[255];
+    ngx_memzero( service, sizeof(service) / sizeof(u_char));
+    u_char key[255];
+    ngx_memzero( service, sizeof(key) / sizeof(u_char));
 
-   static ngx_str_t noDefault = ngx_null_string;
-   ngx_str_t serviceTag = ngx_string("service");
-   if ( extractArgument( r, serviceTag, service, &noDefault) != NGX_OK)
-   {
-      return NGX_ERROR;
-   }
+    u_char* start_of_service = &r->uri.data[ ngx_strlen("/casual/")];
+    u_char* end_of_service = (u_char*)ngx_strchr( start_of_service, '/');
+    u_char* start_of_key = 0;
+    u_char* end_of_key = 0;
 
-   ngx_str_t protocolTag = ngx_string("protocol");
-   ngx_str_t defaultProtocol = ngx_string("json");
-   extractArgument( r, protocolTag, protocol, &defaultProtocol);
+    if ( end_of_service == 0)
+    {
+  	  end_of_service = &r->uri.data[ r->uri.len];
+    }
+    else
+    {
+  	  //
+  	  // A key is also given
+  	  //
+  	  start_of_key = end_of_service + 1;
+  	  end_of_key = &r->uri.data[ r->uri.len];
+    }
 
-   ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: SERVICE: %V", service);
-   ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: PROTOCOL: %V", protocol);
+    const int service_len = ((end_of_service - start_of_service) / sizeof (u_char));
+    if ( service_len <= 0)
+    {
+  	  return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
 
-   ngx_str_t asynchronousTag = ngx_string("asynchronous");
-   if (extractArgument( r, asynchronousTag, asynchronous, &noDefault) == NGX_OK)
-   {
-      ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: ASYNCHRONOUS: %V", asynchronous);
-   }
-   ngx_str_t calling_descriptorTag = ngx_string("calling_descriptor");
-   if ( extractArgument( r, calling_descriptorTag, calling_descriptor, &noDefault) == NGX_OK)
-   {
-      ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: CALLING_DESCRIPTOR: %V", calling_descriptor);
-   }
+    //
+    // Extract service
+    //
+    ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: service_len=%d", service_len);
+    ngx_memcpy( service, start_of_service, service_len);
+    ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: service=%s", service);
+    //
+    // Extract key
+    //
+    const int key_len = ((end_of_key - start_of_key) / sizeof (u_char));
+    ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: key_len=%d", key_len);
+    ngx_memcpy( key, start_of_key, key_len);
+    ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: key=%s", key);
 
-   return NGX_OK;
+    //
+    // Copy some data to context for later use
+    //
+    //
+    // Service
+    //
+    casual_context->service = ngx_pcalloc(r->pool, ngx_strlen( service) + 1);
+    ngx_memzero( casual_context->service, ngx_strlen( service) + 1);
+    ngx_memcpy( casual_context->service, service, ngx_strlen( service));
+    casual_context->service[ ngx_strlen(service)] = '\0';
+    //
+    // Key
+    //
+    casual_context->key = ngx_pcalloc(r->pool, ngx_strlen( key) + 1);
+    ngx_memzero( casual_context->key, ngx_strlen( key) + 1);
+    ngx_memcpy( casual_context->key, key, ngx_strlen( key));
+    casual_context->key[ ngx_strlen(key)] = '\0';
+    //
+    // Protocol
+    //
+	const int protocol_len = r->headers_in.content_type->value.len;
+	casual_context->protocol = ngx_pcalloc(r->pool, protocol_len + 1);
+	ngx_memcpy( casual_context->protocol, r->headers_in.content_type->value.data, protocol_len);
+	casual_context->protocol[ protocol_len] = '\0';
+
+	return NGX_OK;
 }
 
-static ngx_int_t ngx_casual_backend_handler(ngx_http_request_t* r)
+static ngx_int_t ngx_casual_backend_handler( ngx_http_request_t* r)
 {
    ngx_log_debug0(NGX_LOG_DEBUG_ALL, r->connection->log, 0,
          "casual: ngx_casual_backend_handler.\n");
@@ -294,16 +316,6 @@ static ngx_int_t ngx_casual_backend_handler(ngx_http_request_t* r)
    ngx_str_t call_buffer;
 
    ngx_http_casual_ctx_t* casual_context = ngx_http_get_module_ctx(r, ngx_http_casual_module);
-
-   //
-   // Only POST supported
-   //
-   if( ! ( r->method & (NGX_HTTP_POST)))
-   {
-      return NGX_HTTP_NOT_ALLOWED;
-   }
-
-   r->headers_out.status = NGX_HTTP_OK;
 
    //
    // Extract parameters from URL
@@ -319,42 +331,23 @@ static ngx_int_t ngx_casual_backend_handler(ngx_http_request_t* r)
       //
       // Set unique context for this request
       //
-      ngx_http_set_ctx(r, casual_context, ngx_http_casual_module);
+      ngx_http_set_ctx( r, casual_context, ngx_http_casual_module);
 
-      ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: uri=%V", &r->uri);
-      u_char service[255];
-      ngx_memzero( service, sizeof(service) / sizeof(u_char));
-      u_char* start_of_service = &r->uri.data[ ngx_strlen("/casual/")];
-
-      u_char* end_of_service = (u_char*)ngx_strchr(start_of_service, '/');
-      if ( end_of_service == 0)
+      rc = extractInformation( r, casual_context);
+      if ( rc != NGX_OK)
       {
-    	  end_of_service = &r->uri.data[r->uri.len];
+    	  return rc;
       }
 
-      const int service_len = ((end_of_service - start_of_service) / sizeof (u_char));
-      if ( service_len <= 0)
+	  //
+	  // Only POST supported
+	  //
+	  if(! (r->method & (NGX_HTTP_POST) || ngx_strlen(casual_context->key) > 0))
       {
-    	  return NGX_HTTP_INTERNAL_SERVER_ERROR;
-      }
+	      return NGX_HTTP_NOT_ALLOWED;
+	  }
 
-      ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: service_len=%d", service_len);
-      ngx_memcpy( service, start_of_service, service_len);
-      ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: service=%s", service);
-      //
-      // Copy some data to context for later use
-      //
-      casual_context->service = ngx_pcalloc(r->pool, ngx_strlen( service) + 1);
-      ngx_memzero( casual_context->service, ngx_strlen( service) + 1);
-      ngx_memcpy( casual_context->service, service, ngx_strlen( service));
-      casual_context->service[ ngx_strlen(service)] = '\0';
-
-      //ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: content_type=%V", r->headers_in.content_type->value);
-
-	  const int protocol_len = r->headers_in.content_type->value.len;
-	  casual_context->protocol = ngx_pcalloc(r->pool, protocol_len + 1);
-	  ngx_memcpy( casual_context->protocol, r->headers_in.content_type->value.data, protocol_len);
-	  casual_context->protocol[ protocol_len] = '\0';
+	  r->headers_out.status = NGX_HTTP_OK;
    }
 
    //
