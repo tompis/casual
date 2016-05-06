@@ -237,7 +237,7 @@ static ngx_int_t extractInformation( ngx_http_request_t* r, ngx_http_casual_ctx_
     u_char service[255];
     ngx_memzero( service, sizeof(service) / sizeof(u_char));
     u_char key[255];
-    ngx_memzero( service, sizeof(key) / sizeof(u_char));
+    ngx_memzero( key, sizeof(key) / sizeof(u_char));
 
     u_char* start_of_service = &r->uri.data[ ngx_strlen("/casual/")];
     u_char* end_of_service = (u_char*)ngx_strchr( start_of_service, '/');
@@ -272,7 +272,8 @@ static ngx_int_t extractInformation( ngx_http_request_t* r, ngx_http_casual_ctx_
     //
     // Extract key
     //
-    const int key_len = ((end_of_key - start_of_key) / sizeof (u_char));
+    int key_len = ((end_of_key - start_of_key) / sizeof (u_char));
+    if ( key_len < 0) key_len = 0;
     ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: key_len=%d", key_len);
     ngx_memcpy( key, start_of_key, key_len);
     ngx_log_debug1(NGX_LOG_DEBUG_ALL, r->connection->log, 0, "casual: key=%s", key);
