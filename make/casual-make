@@ -228,7 +228,7 @@ if __name__ == '__main__':
     line = process.stdout.readline()
     
     while( line):
-        sys.stdout.write( reformat( line))
+        sys.stdout.write(  ''.join(reformat( line)))
         line = process.stdout.readline()
 
     user_target = ''
