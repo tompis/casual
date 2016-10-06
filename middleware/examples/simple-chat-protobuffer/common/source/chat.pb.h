@@ -37,357 +37,11 @@ void protobuf_AssignDesc_chat_2eproto();
 void protobuf_ShutdownFile_chat_2eproto();
 
 class Channel;
-class ChannelId;
-class ChannelName;
-class ChannelNick;
 class Channels;
 class ChatMessage;
-class MessageContents;
+class CreateChannel;
 
 // ===================================================================
-
-class ChannelId : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:chat.ChannelId) */ {
- public:
-  ChannelId();
-  virtual ~ChannelId();
-
-  ChannelId(const ChannelId& from);
-
-  inline ChannelId& operator=(const ChannelId& from) {
-    CopyFrom(from);
-    return *this;
-  }
-
-  static const ::google::protobuf::Descriptor* descriptor();
-  static const ChannelId& default_instance();
-
-  void Swap(ChannelId* other);
-
-  // implements Message ----------------------------------------------
-
-  inline ChannelId* New() const { return New(NULL); }
-
-  ChannelId* New(::google::protobuf::Arena* arena) const;
-  void CopyFrom(const ::google::protobuf::Message& from);
-  void MergeFrom(const ::google::protobuf::Message& from);
-  void CopyFrom(const ChannelId& from);
-  void MergeFrom(const ChannelId& from);
-  void Clear();
-  bool IsInitialized() const;
-
-  int ByteSize() const;
-  bool MergePartialFromCodedStream(
-      ::google::protobuf::io::CodedInputStream* input);
-  void SerializeWithCachedSizes(
-      ::google::protobuf::io::CodedOutputStream* output) const;
-  ::google::protobuf::uint8* InternalSerializeWithCachedSizesToArray(
-      bool deterministic, ::google::protobuf::uint8* output) const;
-  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const {
-    return InternalSerializeWithCachedSizesToArray(false, output);
-  }
-  int GetCachedSize() const { return _cached_size_; }
-  private:
-  void SharedCtor();
-  void SharedDtor();
-  void SetCachedSize(int size) const;
-  void InternalSwap(ChannelId* other);
-  private:
-  inline ::google::protobuf::Arena* GetArenaNoVirtual() const {
-    return _internal_metadata_.arena();
-  }
-  inline void* MaybeArenaPtr() const {
-    return _internal_metadata_.raw_arena_ptr();
-  }
-  public:
-
-  ::google::protobuf::Metadata GetMetadata() const;
-
-  // nested types ----------------------------------------------------
-
-  // accessors -------------------------------------------------------
-
-  // optional int32 id = 1;
-  void clear_id();
-  static const int kIdFieldNumber = 1;
-  ::google::protobuf::int32 id() const;
-  void set_id(::google::protobuf::int32 value);
-
-  // @@protoc_insertion_point(class_scope:chat.ChannelId)
- private:
-
-  ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
-  bool _is_default_instance_;
-  ::google::protobuf::int32 id_;
-  mutable int _cached_size_;
-  friend void  protobuf_AddDesc_chat_2eproto();
-  friend void protobuf_AssignDesc_chat_2eproto();
-  friend void protobuf_ShutdownFile_chat_2eproto();
-
-  void InitAsDefaultInstance();
-  static ChannelId* default_instance_;
-};
-// -------------------------------------------------------------------
-
-class ChannelNick : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:chat.ChannelNick) */ {
- public:
-  ChannelNick();
-  virtual ~ChannelNick();
-
-  ChannelNick(const ChannelNick& from);
-
-  inline ChannelNick& operator=(const ChannelNick& from) {
-    CopyFrom(from);
-    return *this;
-  }
-
-  static const ::google::protobuf::Descriptor* descriptor();
-  static const ChannelNick& default_instance();
-
-  void Swap(ChannelNick* other);
-
-  // implements Message ----------------------------------------------
-
-  inline ChannelNick* New() const { return New(NULL); }
-
-  ChannelNick* New(::google::protobuf::Arena* arena) const;
-  void CopyFrom(const ::google::protobuf::Message& from);
-  void MergeFrom(const ::google::protobuf::Message& from);
-  void CopyFrom(const ChannelNick& from);
-  void MergeFrom(const ChannelNick& from);
-  void Clear();
-  bool IsInitialized() const;
-
-  int ByteSize() const;
-  bool MergePartialFromCodedStream(
-      ::google::protobuf::io::CodedInputStream* input);
-  void SerializeWithCachedSizes(
-      ::google::protobuf::io::CodedOutputStream* output) const;
-  ::google::protobuf::uint8* InternalSerializeWithCachedSizesToArray(
-      bool deterministic, ::google::protobuf::uint8* output) const;
-  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const {
-    return InternalSerializeWithCachedSizesToArray(false, output);
-  }
-  int GetCachedSize() const { return _cached_size_; }
-  private:
-  void SharedCtor();
-  void SharedDtor();
-  void SetCachedSize(int size) const;
-  void InternalSwap(ChannelNick* other);
-  private:
-  inline ::google::protobuf::Arena* GetArenaNoVirtual() const {
-    return _internal_metadata_.arena();
-  }
-  inline void* MaybeArenaPtr() const {
-    return _internal_metadata_.raw_arena_ptr();
-  }
-  public:
-
-  ::google::protobuf::Metadata GetMetadata() const;
-
-  // nested types ----------------------------------------------------
-
-  // accessors -------------------------------------------------------
-
-  // optional string nick = 1;
-  void clear_nick();
-  static const int kNickFieldNumber = 1;
-  const ::std::string& nick() const;
-  void set_nick(const ::std::string& value);
-  void set_nick(const char* value);
-  void set_nick(const char* value, size_t size);
-  ::std::string* mutable_nick();
-  ::std::string* release_nick();
-  void set_allocated_nick(::std::string* nick);
-
-  // @@protoc_insertion_point(class_scope:chat.ChannelNick)
- private:
-
-  ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
-  bool _is_default_instance_;
-  ::google::protobuf::internal::ArenaStringPtr nick_;
-  mutable int _cached_size_;
-  friend void  protobuf_AddDesc_chat_2eproto();
-  friend void protobuf_AssignDesc_chat_2eproto();
-  friend void protobuf_ShutdownFile_chat_2eproto();
-
-  void InitAsDefaultInstance();
-  static ChannelNick* default_instance_;
-};
-// -------------------------------------------------------------------
-
-class ChannelName : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:chat.ChannelName) */ {
- public:
-  ChannelName();
-  virtual ~ChannelName();
-
-  ChannelName(const ChannelName& from);
-
-  inline ChannelName& operator=(const ChannelName& from) {
-    CopyFrom(from);
-    return *this;
-  }
-
-  static const ::google::protobuf::Descriptor* descriptor();
-  static const ChannelName& default_instance();
-
-  void Swap(ChannelName* other);
-
-  // implements Message ----------------------------------------------
-
-  inline ChannelName* New() const { return New(NULL); }
-
-  ChannelName* New(::google::protobuf::Arena* arena) const;
-  void CopyFrom(const ::google::protobuf::Message& from);
-  void MergeFrom(const ::google::protobuf::Message& from);
-  void CopyFrom(const ChannelName& from);
-  void MergeFrom(const ChannelName& from);
-  void Clear();
-  bool IsInitialized() const;
-
-  int ByteSize() const;
-  bool MergePartialFromCodedStream(
-      ::google::protobuf::io::CodedInputStream* input);
-  void SerializeWithCachedSizes(
-      ::google::protobuf::io::CodedOutputStream* output) const;
-  ::google::protobuf::uint8* InternalSerializeWithCachedSizesToArray(
-      bool deterministic, ::google::protobuf::uint8* output) const;
-  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const {
-    return InternalSerializeWithCachedSizesToArray(false, output);
-  }
-  int GetCachedSize() const { return _cached_size_; }
-  private:
-  void SharedCtor();
-  void SharedDtor();
-  void SetCachedSize(int size) const;
-  void InternalSwap(ChannelName* other);
-  private:
-  inline ::google::protobuf::Arena* GetArenaNoVirtual() const {
-    return _internal_metadata_.arena();
-  }
-  inline void* MaybeArenaPtr() const {
-    return _internal_metadata_.raw_arena_ptr();
-  }
-  public:
-
-  ::google::protobuf::Metadata GetMetadata() const;
-
-  // nested types ----------------------------------------------------
-
-  // accessors -------------------------------------------------------
-
-  // optional string name = 1;
-  void clear_name();
-  static const int kNameFieldNumber = 1;
-  const ::std::string& name() const;
-  void set_name(const ::std::string& value);
-  void set_name(const char* value);
-  void set_name(const char* value, size_t size);
-  ::std::string* mutable_name();
-  ::std::string* release_name();
-  void set_allocated_name(::std::string* name);
-
-  // @@protoc_insertion_point(class_scope:chat.ChannelName)
- private:
-
-  ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
-  bool _is_default_instance_;
-  ::google::protobuf::internal::ArenaStringPtr name_;
-  mutable int _cached_size_;
-  friend void  protobuf_AddDesc_chat_2eproto();
-  friend void protobuf_AssignDesc_chat_2eproto();
-  friend void protobuf_ShutdownFile_chat_2eproto();
-
-  void InitAsDefaultInstance();
-  static ChannelName* default_instance_;
-};
-// -------------------------------------------------------------------
-
-class MessageContents : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:chat.MessageContents) */ {
- public:
-  MessageContents();
-  virtual ~MessageContents();
-
-  MessageContents(const MessageContents& from);
-
-  inline MessageContents& operator=(const MessageContents& from) {
-    CopyFrom(from);
-    return *this;
-  }
-
-  static const ::google::protobuf::Descriptor* descriptor();
-  static const MessageContents& default_instance();
-
-  void Swap(MessageContents* other);
-
-  // implements Message ----------------------------------------------
-
-  inline MessageContents* New() const { return New(NULL); }
-
-  MessageContents* New(::google::protobuf::Arena* arena) const;
-  void CopyFrom(const ::google::protobuf::Message& from);
-  void MergeFrom(const ::google::protobuf::Message& from);
-  void CopyFrom(const MessageContents& from);
-  void MergeFrom(const MessageContents& from);
-  void Clear();
-  bool IsInitialized() const;
-
-  int ByteSize() const;
-  bool MergePartialFromCodedStream(
-      ::google::protobuf::io::CodedInputStream* input);
-  void SerializeWithCachedSizes(
-      ::google::protobuf::io::CodedOutputStream* output) const;
-  ::google::protobuf::uint8* InternalSerializeWithCachedSizesToArray(
-      bool deterministic, ::google::protobuf::uint8* output) const;
-  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const {
-    return InternalSerializeWithCachedSizesToArray(false, output);
-  }
-  int GetCachedSize() const { return _cached_size_; }
-  private:
-  void SharedCtor();
-  void SharedDtor();
-  void SetCachedSize(int size) const;
-  void InternalSwap(MessageContents* other);
-  private:
-  inline ::google::protobuf::Arena* GetArenaNoVirtual() const {
-    return _internal_metadata_.arena();
-  }
-  inline void* MaybeArenaPtr() const {
-    return _internal_metadata_.raw_arena_ptr();
-  }
-  public:
-
-  ::google::protobuf::Metadata GetMetadata() const;
-
-  // nested types ----------------------------------------------------
-
-  // accessors -------------------------------------------------------
-
-  // optional string message = 1;
-  void clear_message();
-  static const int kMessageFieldNumber = 1;
-  const ::std::string& message() const;
-  void set_message(const ::std::string& value);
-  void set_message(const char* value);
-  void set_message(const char* value, size_t size);
-  ::std::string* mutable_message();
-  ::std::string* release_message();
-  void set_allocated_message(::std::string* message);
-
-  // @@protoc_insertion_point(class_scope:chat.MessageContents)
- private:
-
-  ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
-  bool _is_default_instance_;
-  ::google::protobuf::internal::ArenaStringPtr message_;
-  mutable int _cached_size_;
-  friend void  protobuf_AddDesc_chat_2eproto();
-  friend void protobuf_AssignDesc_chat_2eproto();
-  friend void protobuf_ShutdownFile_chat_2eproto();
-
-  void InitAsDefaultInstance();
-  static MessageContents* default_instance_;
-};
-// -------------------------------------------------------------------
 
 class Channel : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:chat.Channel) */ {
  public:
@@ -449,41 +103,42 @@ class Channel : public ::google::protobuf::Message /* @@protoc_insertion_point(c
 
   // accessors -------------------------------------------------------
 
-  // optional .chat.ChannelId id = 1;
-  bool has_id() const;
-  void clear_id();
-  static const int kIdFieldNumber = 1;
-  const ::chat::ChannelId& id() const;
-  ::chat::ChannelId* mutable_id();
-  ::chat::ChannelId* release_id();
-  void set_allocated_id(::chat::ChannelId* id);
-
-  // optional .chat.ChannelName name = 2;
-  bool has_name() const;
+  // optional string name = 1;
   void clear_name();
-  static const int kNameFieldNumber = 2;
-  const ::chat::ChannelName& name() const;
-  ::chat::ChannelName* mutable_name();
-  ::chat::ChannelName* release_name();
-  void set_allocated_name(::chat::ChannelName* name);
+  static const int kNameFieldNumber = 1;
+  const ::std::string& name() const;
+  void set_name(const ::std::string& value);
+  void set_name(const char* value);
+  void set_name(const char* value, size_t size);
+  ::std::string* mutable_name();
+  ::std::string* release_name();
+  void set_allocated_name(::std::string* name);
 
-  // optional .chat.ChannelNick creator = 3;
-  bool has_creator() const;
-  void clear_creator();
-  static const int kCreatorFieldNumber = 3;
-  const ::chat::ChannelNick& creator() const;
-  ::chat::ChannelNick* mutable_creator();
-  ::chat::ChannelNick* release_creator();
-  void set_allocated_creator(::chat::ChannelNick* creator);
+  // optional string creator_nick = 2;
+  void clear_creator_nick();
+  static const int kCreatorNickFieldNumber = 2;
+  const ::std::string& creator_nick() const;
+  void set_creator_nick(const ::std::string& value);
+  void set_creator_nick(const char* value);
+  void set_creator_nick(const char* value, size_t size);
+  ::std::string* mutable_creator_nick();
+  ::std::string* release_creator_nick();
+  void set_allocated_creator_nick(::std::string* creator_nick);
+
+  // optional int32 id = 3;
+  void clear_id();
+  static const int kIdFieldNumber = 3;
+  ::google::protobuf::int32 id() const;
+  void set_id(::google::protobuf::int32 value);
 
   // @@protoc_insertion_point(class_scope:chat.Channel)
  private:
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
   bool _is_default_instance_;
-  ::chat::ChannelId* id_;
-  ::chat::ChannelName* name_;
-  ::chat::ChannelNick* creator_;
+  ::google::protobuf::internal::ArenaStringPtr name_;
+  ::google::protobuf::internal::ArenaStringPtr creator_nick_;
+  ::google::protobuf::int32 id_;
   mutable int _cached_size_;
   friend void  protobuf_AddDesc_chat_2eproto();
   friend void protobuf_AssignDesc_chat_2eproto();
@@ -554,24 +209,24 @@ class Channels : public ::google::protobuf::Message /* @@protoc_insertion_point(
 
   // accessors -------------------------------------------------------
 
-  // repeated .chat.Channel channel = 1;
-  int channel_size() const;
-  void clear_channel();
-  static const int kChannelFieldNumber = 1;
-  const ::chat::Channel& channel(int index) const;
-  ::chat::Channel* mutable_channel(int index);
-  ::chat::Channel* add_channel();
+  // repeated .chat.Channel channels = 1;
+  int channels_size() const;
+  void clear_channels();
+  static const int kChannelsFieldNumber = 1;
+  const ::chat::Channel& channels(int index) const;
+  ::chat::Channel* mutable_channels(int index);
+  ::chat::Channel* add_channels();
   ::google::protobuf::RepeatedPtrField< ::chat::Channel >*
-      mutable_channel();
+      mutable_channels();
   const ::google::protobuf::RepeatedPtrField< ::chat::Channel >&
-      channel() const;
+      channels() const;
 
   // @@protoc_insertion_point(class_scope:chat.Channels)
  private:
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
   bool _is_default_instance_;
-  ::google::protobuf::RepeatedPtrField< ::chat::Channel > channel_;
+  ::google::protobuf::RepeatedPtrField< ::chat::Channel > channels_;
   mutable int _cached_size_;
   friend void  protobuf_AddDesc_chat_2eproto();
   friend void protobuf_AssignDesc_chat_2eproto();
@@ -579,6 +234,105 @@ class Channels : public ::google::protobuf::Message /* @@protoc_insertion_point(
 
   void InitAsDefaultInstance();
   static Channels* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class CreateChannel : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:chat.CreateChannel) */ {
+ public:
+  CreateChannel();
+  virtual ~CreateChannel();
+
+  CreateChannel(const CreateChannel& from);
+
+  inline CreateChannel& operator=(const CreateChannel& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const CreateChannel& default_instance();
+
+  void Swap(CreateChannel* other);
+
+  // implements Message ----------------------------------------------
+
+  inline CreateChannel* New() const { return New(NULL); }
+
+  CreateChannel* New(::google::protobuf::Arena* arena) const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const CreateChannel& from);
+  void MergeFrom(const CreateChannel& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* InternalSerializeWithCachedSizesToArray(
+      bool deterministic, ::google::protobuf::uint8* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const {
+    return InternalSerializeWithCachedSizesToArray(false, output);
+  }
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  void InternalSwap(CreateChannel* other);
+  private:
+  inline ::google::protobuf::Arena* GetArenaNoVirtual() const {
+    return _internal_metadata_.arena();
+  }
+  inline void* MaybeArenaPtr() const {
+    return _internal_metadata_.raw_arena_ptr();
+  }
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // optional string name = 1;
+  void clear_name();
+  static const int kNameFieldNumber = 1;
+  const ::std::string& name() const;
+  void set_name(const ::std::string& value);
+  void set_name(const char* value);
+  void set_name(const char* value, size_t size);
+  ::std::string* mutable_name();
+  ::std::string* release_name();
+  void set_allocated_name(::std::string* name);
+
+  // optional string creator_nick = 2;
+  void clear_creator_nick();
+  static const int kCreatorNickFieldNumber = 2;
+  const ::std::string& creator_nick() const;
+  void set_creator_nick(const ::std::string& value);
+  void set_creator_nick(const char* value);
+  void set_creator_nick(const char* value, size_t size);
+  ::std::string* mutable_creator_nick();
+  ::std::string* release_creator_nick();
+  void set_allocated_creator_nick(::std::string* creator_nick);
+
+  // @@protoc_insertion_point(class_scope:chat.CreateChannel)
+ private:
+
+  ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
+  bool _is_default_instance_;
+  ::google::protobuf::internal::ArenaStringPtr name_;
+  ::google::protobuf::internal::ArenaStringPtr creator_nick_;
+  mutable int _cached_size_;
+  friend void  protobuf_AddDesc_chat_2eproto();
+  friend void protobuf_AssignDesc_chat_2eproto();
+  friend void protobuf_ShutdownFile_chat_2eproto();
+
+  void InitAsDefaultInstance();
+  static CreateChannel* default_instance_;
 };
 // -------------------------------------------------------------------
 
@@ -642,41 +396,42 @@ class ChatMessage : public ::google::protobuf::Message /* @@protoc_insertion_poi
 
   // accessors -------------------------------------------------------
 
-  // optional .chat.ChannelId id = 1;
-  bool has_id() const;
+  // optional int32 id = 1;
   void clear_id();
   static const int kIdFieldNumber = 1;
-  const ::chat::ChannelId& id() const;
-  ::chat::ChannelId* mutable_id();
-  ::chat::ChannelId* release_id();
-  void set_allocated_id(::chat::ChannelId* id);
+  ::google::protobuf::int32 id() const;
+  void set_id(::google::protobuf::int32 value);
 
-  // optional .chat.MessageContents message = 2;
-  bool has_message() const;
+  // optional string message = 2;
   void clear_message();
   static const int kMessageFieldNumber = 2;
-  const ::chat::MessageContents& message() const;
-  ::chat::MessageContents* mutable_message();
-  ::chat::MessageContents* release_message();
-  void set_allocated_message(::chat::MessageContents* message);
+  const ::std::string& message() const;
+  void set_message(const ::std::string& value);
+  void set_message(const char* value);
+  void set_message(const char* value, size_t size);
+  ::std::string* mutable_message();
+  ::std::string* release_message();
+  void set_allocated_message(::std::string* message);
 
-  // optional .chat.ChannelNick nick = 3;
-  bool has_nick() const;
+  // optional string nick = 3;
   void clear_nick();
   static const int kNickFieldNumber = 3;
-  const ::chat::ChannelNick& nick() const;
-  ::chat::ChannelNick* mutable_nick();
-  ::chat::ChannelNick* release_nick();
-  void set_allocated_nick(::chat::ChannelNick* nick);
+  const ::std::string& nick() const;
+  void set_nick(const ::std::string& value);
+  void set_nick(const char* value);
+  void set_nick(const char* value, size_t size);
+  ::std::string* mutable_nick();
+  ::std::string* release_nick();
+  void set_allocated_nick(::std::string* nick);
 
   // @@protoc_insertion_point(class_scope:chat.ChatMessage)
  private:
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
   bool _is_default_instance_;
-  ::chat::ChannelId* id_;
-  ::chat::MessageContents* message_;
-  ::chat::ChannelNick* nick_;
+  ::google::protobuf::internal::ArenaStringPtr message_;
+  ::google::protobuf::internal::ArenaStringPtr nick_;
+  ::google::protobuf::int32 id_;
   mutable int _cached_size_;
   friend void  protobuf_AddDesc_chat_2eproto();
   friend void protobuf_AssignDesc_chat_2eproto();
@@ -691,443 +446,343 @@ class ChatMessage : public ::google::protobuf::Message /* @@protoc_insertion_poi
 // ===================================================================
 
 #if !PROTOBUF_INLINE_NOT_IN_HEADERS
-// ChannelId
-
-// optional int32 id = 1;
-inline void ChannelId::clear_id() {
-  id_ = 0;
-}
-inline ::google::protobuf::int32 ChannelId::id() const {
-  // @@protoc_insertion_point(field_get:chat.ChannelId.id)
-  return id_;
-}
-inline void ChannelId::set_id(::google::protobuf::int32 value) {
-  
-  id_ = value;
-  // @@protoc_insertion_point(field_set:chat.ChannelId.id)
-}
-
-// -------------------------------------------------------------------
-
-// ChannelNick
-
-// optional string nick = 1;
-inline void ChannelNick::clear_nick() {
-  nick_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-}
-inline const ::std::string& ChannelNick::nick() const {
-  // @@protoc_insertion_point(field_get:chat.ChannelNick.nick)
-  return nick_.GetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-}
-inline void ChannelNick::set_nick(const ::std::string& value) {
-  
-  nick_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
-  // @@protoc_insertion_point(field_set:chat.ChannelNick.nick)
-}
-inline void ChannelNick::set_nick(const char* value) {
-  
-  nick_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
-  // @@protoc_insertion_point(field_set_char:chat.ChannelNick.nick)
-}
-inline void ChannelNick::set_nick(const char* value, size_t size) {
-  
-  nick_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
-      ::std::string(reinterpret_cast<const char*>(value), size));
-  // @@protoc_insertion_point(field_set_pointer:chat.ChannelNick.nick)
-}
-inline ::std::string* ChannelNick::mutable_nick() {
-  
-  // @@protoc_insertion_point(field_mutable:chat.ChannelNick.nick)
-  return nick_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-}
-inline ::std::string* ChannelNick::release_nick() {
-  // @@protoc_insertion_point(field_release:chat.ChannelNick.nick)
-  
-  return nick_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-}
-inline void ChannelNick::set_allocated_nick(::std::string* nick) {
-  if (nick != NULL) {
-    
-  } else {
-    
-  }
-  nick_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), nick);
-  // @@protoc_insertion_point(field_set_allocated:chat.ChannelNick.nick)
-}
-
-// -------------------------------------------------------------------
-
-// ChannelName
+// Channel
 
 // optional string name = 1;
-inline void ChannelName::clear_name() {
+inline void Channel::clear_name() {
   name_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
-inline const ::std::string& ChannelName::name() const {
-  // @@protoc_insertion_point(field_get:chat.ChannelName.name)
+inline const ::std::string& Channel::name() const {
+  // @@protoc_insertion_point(field_get:chat.Channel.name)
   return name_.GetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
-inline void ChannelName::set_name(const ::std::string& value) {
+inline void Channel::set_name(const ::std::string& value) {
   
   name_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
-  // @@protoc_insertion_point(field_set:chat.ChannelName.name)
+  // @@protoc_insertion_point(field_set:chat.Channel.name)
 }
-inline void ChannelName::set_name(const char* value) {
+inline void Channel::set_name(const char* value) {
   
   name_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
-  // @@protoc_insertion_point(field_set_char:chat.ChannelName.name)
+  // @@protoc_insertion_point(field_set_char:chat.Channel.name)
 }
-inline void ChannelName::set_name(const char* value, size_t size) {
+inline void Channel::set_name(const char* value, size_t size) {
   
   name_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
       ::std::string(reinterpret_cast<const char*>(value), size));
-  // @@protoc_insertion_point(field_set_pointer:chat.ChannelName.name)
+  // @@protoc_insertion_point(field_set_pointer:chat.Channel.name)
 }
-inline ::std::string* ChannelName::mutable_name() {
+inline ::std::string* Channel::mutable_name() {
   
-  // @@protoc_insertion_point(field_mutable:chat.ChannelName.name)
+  // @@protoc_insertion_point(field_mutable:chat.Channel.name)
   return name_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
-inline ::std::string* ChannelName::release_name() {
-  // @@protoc_insertion_point(field_release:chat.ChannelName.name)
+inline ::std::string* Channel::release_name() {
+  // @@protoc_insertion_point(field_release:chat.Channel.name)
   
   return name_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
-inline void ChannelName::set_allocated_name(::std::string* name) {
+inline void Channel::set_allocated_name(::std::string* name) {
   if (name != NULL) {
     
   } else {
     
   }
   name_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), name);
-  // @@protoc_insertion_point(field_set_allocated:chat.ChannelName.name)
-}
-
-// -------------------------------------------------------------------
-
-// MessageContents
-
-// optional string message = 1;
-inline void MessageContents::clear_message() {
-  message_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-}
-inline const ::std::string& MessageContents::message() const {
-  // @@protoc_insertion_point(field_get:chat.MessageContents.message)
-  return message_.GetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-}
-inline void MessageContents::set_message(const ::std::string& value) {
-  
-  message_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
-  // @@protoc_insertion_point(field_set:chat.MessageContents.message)
-}
-inline void MessageContents::set_message(const char* value) {
-  
-  message_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
-  // @@protoc_insertion_point(field_set_char:chat.MessageContents.message)
-}
-inline void MessageContents::set_message(const char* value, size_t size) {
-  
-  message_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
-      ::std::string(reinterpret_cast<const char*>(value), size));
-  // @@protoc_insertion_point(field_set_pointer:chat.MessageContents.message)
-}
-inline ::std::string* MessageContents::mutable_message() {
-  
-  // @@protoc_insertion_point(field_mutable:chat.MessageContents.message)
-  return message_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-}
-inline ::std::string* MessageContents::release_message() {
-  // @@protoc_insertion_point(field_release:chat.MessageContents.message)
-  
-  return message_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-}
-inline void MessageContents::set_allocated_message(::std::string* message) {
-  if (message != NULL) {
-    
-  } else {
-    
-  }
-  message_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), message);
-  // @@protoc_insertion_point(field_set_allocated:chat.MessageContents.message)
-}
-
-// -------------------------------------------------------------------
-
-// Channel
-
-// optional .chat.ChannelId id = 1;
-inline bool Channel::has_id() const {
-  return !_is_default_instance_ && id_ != NULL;
-}
-inline void Channel::clear_id() {
-  if (GetArenaNoVirtual() == NULL && id_ != NULL) delete id_;
-  id_ = NULL;
-}
-inline const ::chat::ChannelId& Channel::id() const {
-  // @@protoc_insertion_point(field_get:chat.Channel.id)
-  return id_ != NULL ? *id_ : *default_instance_->id_;
-}
-inline ::chat::ChannelId* Channel::mutable_id() {
-  
-  if (id_ == NULL) {
-    id_ = new ::chat::ChannelId;
-  }
-  // @@protoc_insertion_point(field_mutable:chat.Channel.id)
-  return id_;
-}
-inline ::chat::ChannelId* Channel::release_id() {
-  // @@protoc_insertion_point(field_release:chat.Channel.id)
-  
-  ::chat::ChannelId* temp = id_;
-  id_ = NULL;
-  return temp;
-}
-inline void Channel::set_allocated_id(::chat::ChannelId* id) {
-  delete id_;
-  id_ = id;
-  if (id) {
-    
-  } else {
-    
-  }
-  // @@protoc_insertion_point(field_set_allocated:chat.Channel.id)
-}
-
-// optional .chat.ChannelName name = 2;
-inline bool Channel::has_name() const {
-  return !_is_default_instance_ && name_ != NULL;
-}
-inline void Channel::clear_name() {
-  if (GetArenaNoVirtual() == NULL && name_ != NULL) delete name_;
-  name_ = NULL;
-}
-inline const ::chat::ChannelName& Channel::name() const {
-  // @@protoc_insertion_point(field_get:chat.Channel.name)
-  return name_ != NULL ? *name_ : *default_instance_->name_;
-}
-inline ::chat::ChannelName* Channel::mutable_name() {
-  
-  if (name_ == NULL) {
-    name_ = new ::chat::ChannelName;
-  }
-  // @@protoc_insertion_point(field_mutable:chat.Channel.name)
-  return name_;
-}
-inline ::chat::ChannelName* Channel::release_name() {
-  // @@protoc_insertion_point(field_release:chat.Channel.name)
-  
-  ::chat::ChannelName* temp = name_;
-  name_ = NULL;
-  return temp;
-}
-inline void Channel::set_allocated_name(::chat::ChannelName* name) {
-  delete name_;
-  name_ = name;
-  if (name) {
-    
-  } else {
-    
-  }
   // @@protoc_insertion_point(field_set_allocated:chat.Channel.name)
 }
 
-// optional .chat.ChannelNick creator = 3;
-inline bool Channel::has_creator() const {
-  return !_is_default_instance_ && creator_ != NULL;
+// optional string creator_nick = 2;
+inline void Channel::clear_creator_nick() {
+  creator_nick_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
-inline void Channel::clear_creator() {
-  if (GetArenaNoVirtual() == NULL && creator_ != NULL) delete creator_;
-  creator_ = NULL;
+inline const ::std::string& Channel::creator_nick() const {
+  // @@protoc_insertion_point(field_get:chat.Channel.creator_nick)
+  return creator_nick_.GetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
-inline const ::chat::ChannelNick& Channel::creator() const {
-  // @@protoc_insertion_point(field_get:chat.Channel.creator)
-  return creator_ != NULL ? *creator_ : *default_instance_->creator_;
-}
-inline ::chat::ChannelNick* Channel::mutable_creator() {
+inline void Channel::set_creator_nick(const ::std::string& value) {
   
-  if (creator_ == NULL) {
-    creator_ = new ::chat::ChannelNick;
-  }
-  // @@protoc_insertion_point(field_mutable:chat.Channel.creator)
-  return creator_;
+  creator_nick_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:chat.Channel.creator_nick)
 }
-inline ::chat::ChannelNick* Channel::release_creator() {
-  // @@protoc_insertion_point(field_release:chat.Channel.creator)
+inline void Channel::set_creator_nick(const char* value) {
   
-  ::chat::ChannelNick* temp = creator_;
-  creator_ = NULL;
-  return temp;
+  creator_nick_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:chat.Channel.creator_nick)
 }
-inline void Channel::set_allocated_creator(::chat::ChannelNick* creator) {
-  delete creator_;
-  creator_ = creator;
-  if (creator) {
+inline void Channel::set_creator_nick(const char* value, size_t size) {
+  
+  creator_nick_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:chat.Channel.creator_nick)
+}
+inline ::std::string* Channel::mutable_creator_nick() {
+  
+  // @@protoc_insertion_point(field_mutable:chat.Channel.creator_nick)
+  return creator_nick_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* Channel::release_creator_nick() {
+  // @@protoc_insertion_point(field_release:chat.Channel.creator_nick)
+  
+  return creator_nick_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void Channel::set_allocated_creator_nick(::std::string* creator_nick) {
+  if (creator_nick != NULL) {
     
   } else {
     
   }
-  // @@protoc_insertion_point(field_set_allocated:chat.Channel.creator)
+  creator_nick_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), creator_nick);
+  // @@protoc_insertion_point(field_set_allocated:chat.Channel.creator_nick)
+}
+
+// optional int32 id = 3;
+inline void Channel::clear_id() {
+  id_ = 0;
+}
+inline ::google::protobuf::int32 Channel::id() const {
+  // @@protoc_insertion_point(field_get:chat.Channel.id)
+  return id_;
+}
+inline void Channel::set_id(::google::protobuf::int32 value) {
+  
+  id_ = value;
+  // @@protoc_insertion_point(field_set:chat.Channel.id)
 }
 
 // -------------------------------------------------------------------
 
 // Channels
 
-// repeated .chat.Channel channel = 1;
-inline int Channels::channel_size() const {
-  return channel_.size();
+// repeated .chat.Channel channels = 1;
+inline int Channels::channels_size() const {
+  return channels_.size();
 }
-inline void Channels::clear_channel() {
-  channel_.Clear();
+inline void Channels::clear_channels() {
+  channels_.Clear();
 }
-inline const ::chat::Channel& Channels::channel(int index) const {
-  // @@protoc_insertion_point(field_get:chat.Channels.channel)
-  return channel_.Get(index);
+inline const ::chat::Channel& Channels::channels(int index) const {
+  // @@protoc_insertion_point(field_get:chat.Channels.channels)
+  return channels_.Get(index);
 }
-inline ::chat::Channel* Channels::mutable_channel(int index) {
-  // @@protoc_insertion_point(field_mutable:chat.Channels.channel)
-  return channel_.Mutable(index);
+inline ::chat::Channel* Channels::mutable_channels(int index) {
+  // @@protoc_insertion_point(field_mutable:chat.Channels.channels)
+  return channels_.Mutable(index);
 }
-inline ::chat::Channel* Channels::add_channel() {
-  // @@protoc_insertion_point(field_add:chat.Channels.channel)
-  return channel_.Add();
+inline ::chat::Channel* Channels::add_channels() {
+  // @@protoc_insertion_point(field_add:chat.Channels.channels)
+  return channels_.Add();
 }
 inline ::google::protobuf::RepeatedPtrField< ::chat::Channel >*
-Channels::mutable_channel() {
-  // @@protoc_insertion_point(field_mutable_list:chat.Channels.channel)
-  return &channel_;
+Channels::mutable_channels() {
+  // @@protoc_insertion_point(field_mutable_list:chat.Channels.channels)
+  return &channels_;
 }
 inline const ::google::protobuf::RepeatedPtrField< ::chat::Channel >&
-Channels::channel() const {
-  // @@protoc_insertion_point(field_list:chat.Channels.channel)
-  return channel_;
+Channels::channels() const {
+  // @@protoc_insertion_point(field_list:chat.Channels.channels)
+  return channels_;
+}
+
+// -------------------------------------------------------------------
+
+// CreateChannel
+
+// optional string name = 1;
+inline void CreateChannel::clear_name() {
+  name_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& CreateChannel::name() const {
+  // @@protoc_insertion_point(field_get:chat.CreateChannel.name)
+  return name_.GetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void CreateChannel::set_name(const ::std::string& value) {
+  
+  name_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:chat.CreateChannel.name)
+}
+inline void CreateChannel::set_name(const char* value) {
+  
+  name_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:chat.CreateChannel.name)
+}
+inline void CreateChannel::set_name(const char* value, size_t size) {
+  
+  name_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:chat.CreateChannel.name)
+}
+inline ::std::string* CreateChannel::mutable_name() {
+  
+  // @@protoc_insertion_point(field_mutable:chat.CreateChannel.name)
+  return name_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* CreateChannel::release_name() {
+  // @@protoc_insertion_point(field_release:chat.CreateChannel.name)
+  
+  return name_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void CreateChannel::set_allocated_name(::std::string* name) {
+  if (name != NULL) {
+    
+  } else {
+    
+  }
+  name_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), name);
+  // @@protoc_insertion_point(field_set_allocated:chat.CreateChannel.name)
+}
+
+// optional string creator_nick = 2;
+inline void CreateChannel::clear_creator_nick() {
+  creator_nick_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& CreateChannel::creator_nick() const {
+  // @@protoc_insertion_point(field_get:chat.CreateChannel.creator_nick)
+  return creator_nick_.GetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void CreateChannel::set_creator_nick(const ::std::string& value) {
+  
+  creator_nick_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:chat.CreateChannel.creator_nick)
+}
+inline void CreateChannel::set_creator_nick(const char* value) {
+  
+  creator_nick_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:chat.CreateChannel.creator_nick)
+}
+inline void CreateChannel::set_creator_nick(const char* value, size_t size) {
+  
+  creator_nick_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:chat.CreateChannel.creator_nick)
+}
+inline ::std::string* CreateChannel::mutable_creator_nick() {
+  
+  // @@protoc_insertion_point(field_mutable:chat.CreateChannel.creator_nick)
+  return creator_nick_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* CreateChannel::release_creator_nick() {
+  // @@protoc_insertion_point(field_release:chat.CreateChannel.creator_nick)
+  
+  return creator_nick_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void CreateChannel::set_allocated_creator_nick(::std::string* creator_nick) {
+  if (creator_nick != NULL) {
+    
+  } else {
+    
+  }
+  creator_nick_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), creator_nick);
+  // @@protoc_insertion_point(field_set_allocated:chat.CreateChannel.creator_nick)
 }
 
 // -------------------------------------------------------------------
 
 // ChatMessage
 
-// optional .chat.ChannelId id = 1;
-inline bool ChatMessage::has_id() const {
-  return !_is_default_instance_ && id_ != NULL;
-}
+// optional int32 id = 1;
 inline void ChatMessage::clear_id() {
-  if (GetArenaNoVirtual() == NULL && id_ != NULL) delete id_;
-  id_ = NULL;
+  id_ = 0;
 }
-inline const ::chat::ChannelId& ChatMessage::id() const {
+inline ::google::protobuf::int32 ChatMessage::id() const {
   // @@protoc_insertion_point(field_get:chat.ChatMessage.id)
-  return id_ != NULL ? *id_ : *default_instance_->id_;
-}
-inline ::chat::ChannelId* ChatMessage::mutable_id() {
-  
-  if (id_ == NULL) {
-    id_ = new ::chat::ChannelId;
-  }
-  // @@protoc_insertion_point(field_mutable:chat.ChatMessage.id)
   return id_;
 }
-inline ::chat::ChannelId* ChatMessage::release_id() {
-  // @@protoc_insertion_point(field_release:chat.ChatMessage.id)
+inline void ChatMessage::set_id(::google::protobuf::int32 value) {
   
-  ::chat::ChannelId* temp = id_;
-  id_ = NULL;
-  return temp;
-}
-inline void ChatMessage::set_allocated_id(::chat::ChannelId* id) {
-  delete id_;
-  id_ = id;
-  if (id) {
-    
-  } else {
-    
-  }
-  // @@protoc_insertion_point(field_set_allocated:chat.ChatMessage.id)
+  id_ = value;
+  // @@protoc_insertion_point(field_set:chat.ChatMessage.id)
 }
 
-// optional .chat.MessageContents message = 2;
-inline bool ChatMessage::has_message() const {
-  return !_is_default_instance_ && message_ != NULL;
-}
+// optional string message = 2;
 inline void ChatMessage::clear_message() {
-  if (GetArenaNoVirtual() == NULL && message_ != NULL) delete message_;
-  message_ = NULL;
+  message_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
-inline const ::chat::MessageContents& ChatMessage::message() const {
+inline const ::std::string& ChatMessage::message() const {
   // @@protoc_insertion_point(field_get:chat.ChatMessage.message)
-  return message_ != NULL ? *message_ : *default_instance_->message_;
+  return message_.GetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
-inline ::chat::MessageContents* ChatMessage::mutable_message() {
+inline void ChatMessage::set_message(const ::std::string& value) {
   
-  if (message_ == NULL) {
-    message_ = new ::chat::MessageContents;
-  }
-  // @@protoc_insertion_point(field_mutable:chat.ChatMessage.message)
-  return message_;
+  message_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:chat.ChatMessage.message)
 }
-inline ::chat::MessageContents* ChatMessage::release_message() {
+inline void ChatMessage::set_message(const char* value) {
+  
+  message_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:chat.ChatMessage.message)
+}
+inline void ChatMessage::set_message(const char* value, size_t size) {
+  
+  message_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:chat.ChatMessage.message)
+}
+inline ::std::string* ChatMessage::mutable_message() {
+  
+  // @@protoc_insertion_point(field_mutable:chat.ChatMessage.message)
+  return message_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* ChatMessage::release_message() {
   // @@protoc_insertion_point(field_release:chat.ChatMessage.message)
   
-  ::chat::MessageContents* temp = message_;
-  message_ = NULL;
-  return temp;
+  return message_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
-inline void ChatMessage::set_allocated_message(::chat::MessageContents* message) {
-  delete message_;
-  message_ = message;
-  if (message) {
+inline void ChatMessage::set_allocated_message(::std::string* message) {
+  if (message != NULL) {
     
   } else {
     
   }
+  message_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), message);
   // @@protoc_insertion_point(field_set_allocated:chat.ChatMessage.message)
 }
 
-// optional .chat.ChannelNick nick = 3;
-inline bool ChatMessage::has_nick() const {
-  return !_is_default_instance_ && nick_ != NULL;
-}
+// optional string nick = 3;
 inline void ChatMessage::clear_nick() {
-  if (GetArenaNoVirtual() == NULL && nick_ != NULL) delete nick_;
-  nick_ = NULL;
+  nick_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
-inline const ::chat::ChannelNick& ChatMessage::nick() const {
+inline const ::std::string& ChatMessage::nick() const {
   // @@protoc_insertion_point(field_get:chat.ChatMessage.nick)
-  return nick_ != NULL ? *nick_ : *default_instance_->nick_;
+  return nick_.GetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
-inline ::chat::ChannelNick* ChatMessage::mutable_nick() {
+inline void ChatMessage::set_nick(const ::std::string& value) {
   
-  if (nick_ == NULL) {
-    nick_ = new ::chat::ChannelNick;
-  }
-  // @@protoc_insertion_point(field_mutable:chat.ChatMessage.nick)
-  return nick_;
+  nick_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:chat.ChatMessage.nick)
 }
-inline ::chat::ChannelNick* ChatMessage::release_nick() {
+inline void ChatMessage::set_nick(const char* value) {
+  
+  nick_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:chat.ChatMessage.nick)
+}
+inline void ChatMessage::set_nick(const char* value, size_t size) {
+  
+  nick_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:chat.ChatMessage.nick)
+}
+inline ::std::string* ChatMessage::mutable_nick() {
+  
+  // @@protoc_insertion_point(field_mutable:chat.ChatMessage.nick)
+  return nick_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* ChatMessage::release_nick() {
   // @@protoc_insertion_point(field_release:chat.ChatMessage.nick)
   
-  ::chat::ChannelNick* temp = nick_;
-  nick_ = NULL;
-  return temp;
+  return nick_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
-inline void ChatMessage::set_allocated_nick(::chat::ChannelNick* nick) {
-  delete nick_;
-  nick_ = nick;
-  if (nick) {
+inline void ChatMessage::set_allocated_nick(::std::string* nick) {
+  if (nick != NULL) {
     
   } else {
     
   }
+  nick_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), nick);
   // @@protoc_insertion_point(field_set_allocated:chat.ChatMessage.nick)
 }
 
 #endif  // !PROTOBUF_INLINE_NOT_IN_HEADERS
-// -------------------------------------------------------------------
-
-// -------------------------------------------------------------------
-
-// -------------------------------------------------------------------
-
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

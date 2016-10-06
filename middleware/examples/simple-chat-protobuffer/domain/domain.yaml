@@ -11,7 +11,7 @@ domain:
       # path to the server. If servers path are in PATH environment variable
       # one can omitt the path part, and only use the executable name
       #  
-    - path: ${CASUAL_HOME}/simple-chat-protobuffer/bin/simple-chat-protobuffer
+    - path: ${CASUAL_HOME}/simple-chat-protobuffer/bin/server
       instances: 1 # how many instances should be started
       note: Arbitary information of this server
       

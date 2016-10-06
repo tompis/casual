@@ -1,34 +1,23 @@
 syntax = "proto3";
 package chat;
 
-message ChannelId {
-    int32 id = 1;
-}
-
-message ChannelNick {
-    string nick = 1;
-}
-
-message ChannelName {
-    string name = 1;
-}
-
-message MessageContents {
-    string message = 1;
-}
-
 message Channel {
-    ChannelId id = 1;
-    ChannelName name = 2;
-    ChannelNick creator = 3;
+    string name = 1;
+    string creator_nick = 2;
+    int32 id = 3;
 }
 
 message Channels {
-    repeated Channel channel = 1;
+    repeated Channel channels = 1;
+}
+
+message CreateChannel {
+    string name = 1;
+    string creator_nick = 2;
 }
 
 message ChatMessage {
-    ChannelId id = 1;
-    MessageContents message = 2;
-    ChannelNick nick = 3;
+    int32 id = 1;
+    string message = 2;
+    string nick = 3;
 }
