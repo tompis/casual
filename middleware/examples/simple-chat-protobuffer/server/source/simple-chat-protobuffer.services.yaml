@@ -8,10 +8,10 @@ server:
   services:
       
       # name of the service
-    - name: casual.simple-chat-protobuffer.echo
+    - name: casual.simple-chat-protobuffer.create_chat_room
       
       # name of the function the service should bind to
-      function: simple_chat_protobuffer_echo
+      function: create_chat_room
       
       # transation characteristics
       # Can be one of the following

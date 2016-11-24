@@ -7,6 +7,7 @@ IncludePaths( ['server/include',
     ])
     
 LibraryPaths( [ 'server/bin',
+    '/usr/lib',
     '../../xatmi/bin',
     '../../common/bin',
     '../../queue/bin',
@@ -21,17 +22,30 @@ LibraryPaths( [ 'server/bin',
 install_bin = []
 
 
-target = LinkServer( 'server/bin/simple-chat-protobuffer',
-    [ Compile( 'server/source/server.cpp')],
-    [ Compile( 'common/source/chat.pb.cpp')],
+target = LinkServer( 'server/bin/simple-chat-protobuffer-server',
+    [ 
+      Compile( 'server/source/server.cpp'),
+      Compile( 'common/source/chat.pb.cpp')
+    ],
     [ 
         'casual-xatmi', 
+         'protobuf'
     ],
     'server/source/simple-chat-protobuffer.services.yaml')
 
 install_bin.append( target)
 
+target = LinkExecutable( 'client/bin/simple-chat-protobuffer-client',
+    [ 
+      Compile( 'client/source/client.cpp'),
+      Compile( 'common/source/chat.pb.cpp')
+    ],
+    [ 
+        'casual-xatmi', 
+      'protobuf'
+    ])
 
+install_bin.append( target)
 
 
 #
