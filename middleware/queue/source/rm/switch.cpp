@@ -1,8 +1,5 @@
 //!
-//! switch.cpp
-//!
-//! Created on: Jul 7, 2014
-//!     Author: Lazan
+//! casual
 //!
 
 #include "queue/rm/switch.h"
@@ -66,7 +63,7 @@ namespace casual
                         request.process = common::process::handle();
                         request.flags = flags;
 
-                        common::communication::ipc::blocking::send( environment::broker::queue::id(), request);
+                        common::communication::ipc::blocking::send( common::communication::ipc::queue::broker::device(), request);
                      }
 
                      reply_message reply;

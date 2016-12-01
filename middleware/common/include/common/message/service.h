@@ -1,8 +1,5 @@
 //!
-//! service.h
-//!
-//! Created on: Jul 2, 2015
-//!     Author: Lazan
+//! casual
 //!
 
 #ifndef CASUAL_COMMON_MESSAGE_SERVICE_H_
@@ -13,6 +10,8 @@
 #include "common/transaction/id.h"
 #include "common/buffer/type.h"
 #include "common/uuid.h"
+
+#include "common/service/header.h"
 
 namespace casual
 {
@@ -33,37 +32,48 @@ namespace casual
                   archive & trid;
                   archive & state;
                })
+
+               friend std::ostream& operator << ( std::ostream& out, const Transaction& message);
             };
 
+            enum class Location : char
+            {
+               local,
+               remote
+            };
 
             struct Advertise : basic_message< Type::service_advertise>
             {
-
-               std::string serverPath;
-               process::Handle process;
+               common::process::Handle process;
                std::vector< Service> services;
+               Location location = Location::local;
 
                CASUAL_CONST_CORRECT_MARSHAL(
                {
                   base_type::marshal( archive);
-                  archive & serverPath;
                   archive & process;
                   archive & services;
+                  archive & location;
                })
+
+               friend std::ostream& operator << ( std::ostream& out, const Advertise& message);
             };
 
             struct Unadvertise : basic_message< Type::service_unadvertise>
             {
-               process::Handle process;
+               common::process::Handle process;
                std::vector< Service> services;
+               Location location = Location::local;
 
                CASUAL_CONST_CORRECT_MARSHAL(
                {
                   base_type::marshal( archive);
                   archive & process;
                   archive & services;
+                  archive & location;
                })
             };
+
 
 
             namespace lookup
@@ -77,14 +87,15 @@ namespace casual
                   {
                      regular,
                      no_reply,
-                     forward
+                     forward,
+                     gateway,
                   };
                   Request() = default;
                   Request( Request&&) = default;
                   Request& operator = ( Request&&) = default;
 
                   std::string requested;
-                  process::Handle process;
+                  common::process::Handle process;
                   Context context = Context::regular;
 
                   CASUAL_CONST_CORRECT_MARSHAL(
@@ -102,7 +113,7 @@ namespace casual
                struct Reply : basic_message< Type::service_name_lookup_reply>
                {
                   Service service;
-                  process::Handle process;
+                  common::process::Handle process;
 
                   enum class State : char
                   {
@@ -143,13 +154,16 @@ namespace casual
                   base_call& operator = ( const base_call&) = delete;
 
                   platform::descriptor_type descriptor = 0;
-                  process::Handle process;
+                  common::process::Handle process;
 
                   Service service;
                   std::string parent;
 
                   common::transaction::ID trid;
                   std::int64_t flags = 0;
+
+                  std::vector< common::service::header::Field> header;
+
 
                   CASUAL_CONST_CORRECT_MARSHAL(
                   {
@@ -158,9 +172,9 @@ namespace casual
                      archive & process;
                      archive & service;
                      archive & parent;
-                     archive & execution;
                      archive & trid;
                      archive & flags;
+                     archive & header;
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const base_call& value);
@@ -233,7 +247,6 @@ namespace casual
 
                //!
                //! Represent service reply.
-               //! @todo: change to service::call::Reply
                //!
                struct Reply :  basic_message< Type::service_reply>
                {
@@ -247,8 +260,8 @@ namespace casual
                   int descriptor = 0;
                   int error = 0;
                   long code = 0;
-                  buffer::Payload buffer;
                   Transaction transaction;
+                  buffer::Payload buffer;
 
                   CASUAL_CONST_CORRECT_MARSHAL(
                   {
@@ -256,9 +269,11 @@ namespace casual
                      archive & descriptor;
                      archive & error;
                      archive & code;
-                     archive & buffer;
                      archive & transaction;
+                     archive & buffer;
                   })
+
+                  friend std::ostream& operator << ( std::ostream& out, const Reply& message);
 
                };
 
@@ -270,7 +285,7 @@ namespace casual
                {
 
                   std::string service;
-                  process::Handle process;
+                  common::process::Handle process;
 
                   CASUAL_CONST_CORRECT_MARSHAL(
                   {

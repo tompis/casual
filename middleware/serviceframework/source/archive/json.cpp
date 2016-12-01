@@ -19,8 +19,6 @@
 #include <functional>
 
 
-#include <iostream> // debug
-
 namespace casual
 {
    namespace sf
@@ -31,42 +29,69 @@ namespace casual
          namespace json
          {
 
+            namespace
+            {
+               namespace local
+               {
+
+                  rapidjson::Document& parse( rapidjson::Document& document, const char* const json)
+                  {
+                     //
+                     // To support empty documents
+                     //
+                     if( ! json || json[ 0] == '\0')
+                     {
+                        document.Parse( "{}");
+                     }
+                     else
+                     {
+                        document.Parse( json);
+                     }
+
+                     if( document.HasParseError())
+                     {
+                        throw exception::archive::invalid::Document{ rapidjson::GetParseError_En( document.GetParseError())};
+                     }
+
+                     return document;
+                  }
+
+               } // local
+            }
+
             Load::Load() = default;
             Load::~Load() = default;
 
-            const rapidjson::Document& Load::serialize( std::istream& stream)
+            const rapidjson::Document& Load::operator() () const noexcept
             {
-               const std::string json{
+               return m_document;
+            }
+
+            const rapidjson::Document& Load::operator() ( std::istream& stream)
+            {
+               const std::string buffer{
                   std::istream_iterator< char>( stream),
                   std::istream_iterator< char>()};
 
-               return serialize( json);
+               return local::parse( m_document, buffer.c_str());
             }
 
-            const rapidjson::Document& Load::serialize( const std::string& json)
+            const rapidjson::Document& Load::operator() ( const std::string& json)
             {
-               return serialize( json.c_str());
+               return local::parse( m_document, json.c_str());
             }
 
-            const rapidjson::Document& Load::serialize( const char* const json)
+            const rapidjson::Document& Load::operator() ( const char* const json, const std::size_t size)
             {
-               //return m_document.Parse( json);
-
-               m_document.Parse( json);
-
-               if( m_document.HasParseError())
-               {
-                  throw exception::archive::invalid::Document{ rapidjson::GetParseError_En( m_document.GetParseError())};
-               }
-
-               return m_document;
+               // To ensure null-terminated string
+               const std::string buffer{ json, size};
+               return local::parse( m_document, buffer.c_str());
             }
 
-            const rapidjson::Document& Load::source() const
+            const rapidjson::Document& Load::operator() ( const char* const json)
             {
-               return m_document;
+               return local::parse( m_document, json);
             }
-
 
             namespace reader
             {
@@ -220,13 +245,18 @@ namespace casual
 
             Save::~Save() = default;
 
-            void Save::serialize( std::ostream& stream) const
+            rapidjson::Document& Save::operator() () noexcept
+            {
+               return m_document;
+            }
+
+            void Save::operator() ( std::ostream& json) const
             {
                rapidjson::StringBuffer buffer;
                rapidjson::PrettyWriter<rapidjson::StringBuffer> writer( buffer);
                if( m_document.Accept( writer))
                {
-                  stream << buffer.GetString();
+                  json << buffer.GetString();
                }
                else
                {
@@ -238,7 +268,7 @@ namespace casual
                }
             }
 
-            void Save::serialize( std::string& json) const
+            void Save::operator() ( std::string& json) const
             {
                rapidjson::StringBuffer buffer;
                rapidjson::PrettyWriter<rapidjson::StringBuffer> writer( buffer);
@@ -257,12 +287,6 @@ namespace casual
                }
 
             }
-
-            rapidjson::Document& Save::target()
-            {
-               return m_document;
-            }
-
 
             namespace writer
             {

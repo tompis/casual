@@ -1,8 +1,5 @@
 //!
-//! domain.h
-//!
-//! Created on: Aug 3, 2013
-//!     Author: Lazan
+//! casual
 //!
 
 #ifndef CONFIG_DOMAIN_H_
@@ -10,6 +7,7 @@
 
 
 #include "config/environment.h"
+#include "config/gateway.h"
 
 
 #include "sf/namevaluepair.h"
@@ -49,6 +47,8 @@ namespace casual
                archive & CASUAL_MAKE_NVP( memberships);
                archive & CASUAL_MAKE_NVP( environment);
             )
+
+            friend bool operator == ( const Executable& lhs, const Executable& rhs);
          };
 
          namespace transaction
@@ -94,6 +94,8 @@ namespace casual
                archive & CASUAL_MAKE_NVP( note);
                archive & CASUAL_MAKE_NVP( transaction);
             )
+
+            friend bool operator == ( const Service& lhs, const Service& rhs);
          };
 
          struct Resource
@@ -129,6 +131,8 @@ namespace casual
                archive & CASUAL_MAKE_NVP( resources);
                archive & CASUAL_MAKE_NVP( dependencies);
             )
+
+            friend bool operator == ( const Group& lhs, const Group& rhs);
          };
 
 
@@ -166,6 +170,9 @@ namespace casual
             std::vector< Executable> executables;
             std::vector< Service> services;
 
+            gateway::Gateway gateway;
+
+
             CASUAL_CONST_CORRECT_SERIALIZE
             (
                archive & CASUAL_MAKE_NVP( name);
@@ -175,10 +182,19 @@ namespace casual
                archive & CASUAL_MAKE_NVP( servers);
                archive & CASUAL_MAKE_NVP( executables);
                archive & CASUAL_MAKE_NVP( services);
+               archive & CASUAL_MAKE_NVP( gateway);
+
             )
+
+            Domain& operator += ( const Domain& rhs);
+            Domain& operator += ( Domain&& rhs);
+
+            friend Domain operator + ( const Domain& lhs, const Domain& rhs);
          };
 
+
          Domain get( const std::string& file);
+         Domain get( const std::vector< std::string>& files);
 
          //!
          //! Deserialize the domain configuration
@@ -186,6 +202,13 @@ namespace casual
          //! @return domain configuration
          //!
          Domain get();
+
+         //!
+         //! Complement with defaults and validates
+         //!
+         //! @param configuration domain configuration
+         //!
+         void finalize( Domain& configuration);
 
 
          namespace filter

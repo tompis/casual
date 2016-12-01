@@ -1,9 +1,6 @@
-/*
- * casual_archivewriter.h
- *
- *  Created on: Sep 16, 2012
- *      Author: lazan
- */
+//!
+//! casual
+//!
 
 #ifndef CASUAL_SF_ARCHIVE_H_
 #define CASUAL_SF_ARCHIVE_H_
@@ -24,8 +21,6 @@ namespace casual
    {
       namespace archive
       {
-
-
 
          class Base
          {

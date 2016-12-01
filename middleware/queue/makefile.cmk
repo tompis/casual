@@ -31,11 +31,17 @@ install_lib = []
 install_bin = []
 
 #
+# So we get the local build-rm
+#
+Environment( 'PATH', '../tools/bin:$(PATH)')
+
+#
 # Common stuff
 #
 
 common = LinkLibrary( 'bin/casual-queue-common',
    [
+    Compile( 'source/common/log.cpp'),
     Compile( 'source/common/environment.cpp'),
     Compile( 'source/common/transform.cpp'),
     Compile( 'source/common/queue.cpp'),
@@ -136,7 +142,8 @@ queue_api = LinkLibrary( 'bin/casual-queue-api',
    [
        Compile( 'source/api/queue.cpp')
    ],
-   [ 
+   [
+    common, 
     'casual-sf', 
     'casual-common', 
     ])
@@ -219,7 +226,7 @@ test_casual_queue = LinkUnittest( 'unittest/bin/test-casual-queue',
      Compile( 'unittest/isolated/source/test_broker_state.cpp'),
      Compile( 'unittest/isolated/source/test_group_database.cpp'),
      Compile( 'unittest/isolated/source/test_transform.cpp'),
-     Compile( 'unittest/isolated/source/test_broker_handle.cpp'),
+#     Compile( 'unittest/isolated/source/test_broker_handle.cpp'),
      Compile( 'unittest/isolated/source/test_group_pending.cpp'),
      Compile( 'unittest/isolated/source/test_queue.cpp'),
     ],

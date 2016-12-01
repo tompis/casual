@@ -1,8 +1,5 @@
 //!
-//! archive_jsaon.h
-//!
-//! Created on: Jul 10, 2013
-//!     Author: Lazan
+//! casual
 //!
 
 #ifndef ARCHIVE_JSON_H_
@@ -41,19 +38,12 @@ namespace casual
                Load();
                ~Load();
 
-               const rapidjson::Document& serialize( std::istream& stream);
-               const rapidjson::Document& serialize( const std::string& json);
-               // TODO: make this a binary::Stream instead
-               const rapidjson::Document& serialize( const char* json);
+               const rapidjson::Document& operator() () const noexcept;
 
-               const rapidjson::Document& source() const;
-
-
-               template<typename T>
-               const rapidjson::Document& operator() ( T&& json)
-               {
-                  return serialize( std::forward<T>( json));
-               }
+               const rapidjson::Document& operator() ( std::istream& stream);
+               const rapidjson::Document& operator() ( const std::string& json);
+               const rapidjson::Document& operator() ( const char* json, std::size_t size);
+               const rapidjson::Document& operator() ( const char* json);
 
 
             private:
@@ -132,21 +122,13 @@ namespace casual
 
             public:
 
-               typedef rapidjson::Document target_type;
-
                Save();
                ~Save();
 
-               void serialize( std::ostream& stream) const;
-               void serialize( std::string& json) const;
-               // TODO: make a binary::Stream overload
+               rapidjson::Document& operator() () noexcept;
 
-               rapidjson::Document& target();
-
-               rapidjson::Document& operator() ()
-               {
-                  return target();
-               }
+               void operator() ( std::ostream& json) const;
+               void operator() ( std::string& json) const;
 
 
             private:

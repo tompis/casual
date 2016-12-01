@@ -1,14 +1,11 @@
 //!
-//! terminal.h
-//!
-//! Created on: Dec 22, 2014
-//!     Author: Lazan
+//! casual
 //!
 
 #ifndef COMMON_TERMINAL_H_
 #define COMMON_TERMINAL_H_
 
-#include "common/move.h"
+#include "common/pimpl.h"
 
 #include <string>
 #include <ostream>
@@ -101,13 +98,14 @@ namespace casual
 
             struct Directives
             {
+               Directives( bool porcelain = false, bool colors = false, bool headers = false, std::string delimiter = "  ")
+                  : porcelain( porcelain), colors( colors), headers( headers), delimiter( std::move( delimiter)) {}
 
-               Directives( bool porcelain = false, bool colors = false, bool headers = false)
-                  : porcelain( porcelain), colors( colors), headers( headers) {}
 
                bool porcelain;
                bool colors;
                bool headers;
+               std::string delimiter;
             };
 
             template< typename T>
@@ -118,7 +116,7 @@ namespace casual
 
                template< typename... Columns>
                formatter( Directives directives, Columns&&... columns)
-                  : m_directives( directives),
+                  : m_directives( std::move( directives)),
                   m_columns( initialize( std::forward< Columns>( columns)...))
                {
 
@@ -153,7 +151,7 @@ namespace casual
                            out << std::left << std::setw( current->width()) << current->name();
                            if( current + 1 != std::end( m_columns))
                            {
-                              out << "  ";
+                              out << m_directives.delimiter;
                            }
                         }
 
@@ -170,7 +168,7 @@ namespace casual
                            out << std::string( current->width(), '-');
                            if( current + 1 != std::end( m_columns))
                            {
-                              out << "  ";
+                              out <<  m_directives.delimiter;
                            }
                         }
 
@@ -211,7 +209,7 @@ namespace casual
                            current->print( out, *first, m_directives.colors);
                            if( current + 1 != std::end( m_columns))
                            {
-                              out << "  ";
+                              out <<  m_directives.delimiter;
                            }
                         }
                         out << std::endl;
@@ -326,7 +324,7 @@ namespace casual
                {
                   auto result = initialize( std::forward< Columns>( columns)...);
 
-                  std::unique_ptr< base_column> basic{ new basic_column< typename std::decay< C>::type>( std::forward< C>( column))};
+                  auto basic = make::unique< basic_column< typename std::decay< C>::type>>( std::forward< C>( column));
 
                   result.emplace( std::begin( result), std::move( basic));
                   return result;

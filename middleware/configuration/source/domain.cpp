@@ -20,6 +20,8 @@
 
 namespace casual
 {
+   using namespace common;
+
    namespace config
    {
       namespace domain
@@ -86,8 +88,8 @@ namespace casual
 
                   inline void defaultValues( Domain& domain)
                   {
-                     Default applyDefaults( domain.casual_default);
-                     applyDefaults( domain);
+                     Default defaults( domain.casual_default);
+                     defaults( domain);
                   }
 
                } // complement
@@ -97,35 +99,121 @@ namespace casual
 
                }
 
-            } //
+               template< typename LHS, typename RHS>
+               void replace_or_add( LHS& lhs, RHS&& rhs)
+               {
+                  for( auto& value : rhs)
+                  {
+                     auto found = range::find( lhs, value);
+
+                     if( found)
+                     {
+                        *found = std::move( value);
+                     }
+                     else
+                     {
+                        lhs.push_back( std::move( value));
+                     }
+                  }
+               }
+
+               template< typename D>
+               Domain& append( Domain& lhs, D&& rhs)
+               {
+                  if( ! rhs.name.empty()) { lhs.name = std::move( rhs.name);}
+
+                  local::replace_or_add( lhs.groups, rhs.groups);
+                  local::replace_or_add( lhs.executables, rhs.executables);
+                  local::replace_or_add( lhs.servers, rhs.servers);
+                  local::replace_or_add( lhs.services, rhs.services);
+
+                  lhs.gateway += std::move( rhs.gateway);
+
+                  return lhs;
+               }
+
+               Domain get( Domain domain, const std::string& file)
+               {
+                  //
+                  // Create the reader and deserialize configuration
+                  //
+                  auto reader = sf::archive::reader::from::file( file);
+
+                  reader >> CASUAL_MAKE_NVP( domain);
+
+                  finalize( domain);
+
+                  return domain;
+
+               }
+
+            } // unnamed
          } // local
 
-         Domain get( const std::string& file)
+         bool operator == ( const Executable& lhs, const Executable& rhs)
          {
-            Domain domain;
+            return coalesce( lhs.alias, lhs.path) == coalesce( rhs.alias, rhs.path);
+         }
 
-            //
-            // Create the reader and deserialize configuration
-            //
-            auto reader = sf::archive::reader::from::file( file);
+         bool operator == ( const Group& lhs, const Group& rhs)
+         {
+            return lhs.name == rhs.name;
+         }
 
-            reader >> CASUAL_MAKE_NVP( domain);
+         bool operator == ( const Service& lhs, const Service& rhs)
+         {
+            return lhs.name == rhs.name;
+         }
 
-            //local::normalize::path( domain);
+         Domain& Domain::operator += ( const Domain& rhs)
+         {
+            return local::append( *this, rhs);
+         }
 
+         Domain& Domain::operator += ( Domain&& rhs)
+         {
+            return local::append( *this, std::move( rhs));
+         }
+
+         Domain operator + ( const Domain& lhs, const Domain& rhs)
+         {
+            auto result = lhs;
+            result += rhs;
+            return result;
+         }
+
+         void finalize( Domain& configuration)
+         {
             //
             // Complement with default values
             //
-            local::complement::defaultValues( domain);
+            local::complement::defaultValues( configuration);
 
             //
             // Make sure we've got valid configuration
             //
-            local::validate( domain);
+            local::validate( configuration);
 
-            return domain;
+            configuration.gateway.finalize();
 
          }
+
+
+         Domain get( const std::string& file)
+         {
+            return local::get( Domain{}, file);
+         }
+
+         Domain get( const std::vector< std::string>& files)
+         {
+            if( files.empty())
+            {
+               return get();
+            }
+
+            return range::accumulate( files, Domain{}, &local::get);
+         }
+
 
          Domain get()
          {

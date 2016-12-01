@@ -16,6 +16,22 @@ namespace casual
       {
          namespace service
          {
+
+            std::ostream& operator << ( std::ostream& out, const Transaction& message)
+            {
+               return out << "{ trid: " << message.trid
+                     << ", state: " << message.state
+                     << '}';
+            }
+
+            std::ostream& operator << ( std::ostream& out, const Advertise& message)
+            {
+               return out << "{ process: " << message.process
+                     << ", services: " << range::make( message.services)
+                     << '}';
+            }
+
+
             namespace lookup
             {
 
@@ -39,10 +55,13 @@ namespace casual
 
                std::ostream& operator << ( std::ostream& out, const base_call& value)
                {
+                  auto& header = common::service::header::fields();
+
                   return out << "{ process: " << value.process
                      << ", service: " << value.service
                      << ", parent: " << value.parent
                      << ", flags: " << value.flags
+                     << ", header: " << range::make( header)
                      << '}';
                }
 
@@ -54,6 +73,16 @@ namespace casual
                   }
 
                } // caller
+
+               std::ostream& operator << ( std::ostream& out, const Reply& message)
+               {
+                  return out << "{ descriptor: " << message.descriptor
+                        << ", transaction: " << message.transaction
+                        << ", error: " << message.error
+                        << ", code: " << message.code
+                        << ", buffer: " << message.buffer
+                        << '}';
+               }
 
             } // call
          }

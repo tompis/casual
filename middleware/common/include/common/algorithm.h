@@ -1,8 +1,5 @@
 //!
-//! algorithm.h
-//!
-//! Created on: Nov 10, 2013
-//!     Author: Lazan
+//! casual
 //!
 
 #ifndef CASUAL_COMMON_ALGORITHM_H_
@@ -12,6 +9,8 @@
 #include "common/traits.h"
 #include "common/error.h"
 #include "common/platform.h"
+#include "common/move.h"
+#include "common/cast.h"
 
 #include <algorithm>
 #include <numeric>
@@ -21,6 +20,7 @@
 #include <sstream>
 
 #include <functional>
+#include <memory>
 
 #include <cassert>
 #include <cstring>
@@ -36,11 +36,20 @@ namespace casual
 
       namespace scope
       {
-         struct Execute
-         {
-            Execute( std::function< void()> executer) : m_execute( std::move( executer)) {}
 
-            ~Execute()
+         //!
+         //! executes an action ones.
+         //! If the action has not been executed the
+         //! destructor will perform the execution
+         //!
+         template< typename E>
+         struct basic_execute
+         {
+            using execute_type = E;
+
+            basic_execute( execute_type&& execute) : m_execute( std::move( execute)) {}
+
+            ~basic_execute()
             {
                try
                {
@@ -52,25 +61,40 @@ namespace casual
                }
             }
 
+            basic_execute( basic_execute&&) noexcept = default;
+            basic_execute& operator = ( basic_execute&&) noexcept = default;
+
+            //!
+            //! executes the actions ones.
+            //! no-op if already executed
+            //!
             void operator () ()
             {
-               if( m_execute)
+               if( ! m_moved)
                {
-                  std::function< void()> executer;
-                  std::swap( m_execute, executer);
-                  executer();
+                  m_execute();
+                  release();
                }
             }
 
-            void release()
-            {
-               m_execute = nullptr;
-            }
+            void release() { m_moved.release();}
 
          private:
-
-            std::function< void()> m_execute;
+            execute_type m_execute;
+            move::Moved m_moved;
          };
+
+         //!
+         //! returns an executer that will do an action ones.
+         //! If the action has not been executed the
+         //! destructor will perform the execution
+         //!
+         template< typename E>
+         auto execute( E&& executor) -> decltype( basic_execute< E>{ std::forward< E>( executor)})
+         {
+            return basic_execute< E>{ std::forward< E>( executor)};
+         }
+
       } // scope
 
       namespace chain
@@ -232,11 +256,72 @@ namespace casual
 
       } // compare
 
-
-      template< typename Enum>
-      auto as_integer( Enum value) -> typename std::underlying_type< Enum>::type
+      namespace detail
       {
-         return static_cast< typename std::underlying_type< Enum>::type>(value);
+         namespace coalesce
+         {
+            template< typename T>
+            bool empty( T& value) { return value.empty();}
+
+            template< typename T>
+            bool empty( T* value) { return value == nullptr;}
+
+            template< typename R, typename T>
+            R implementation( T&& value)
+            {
+               return std::forward< T>( value);
+            }
+
+            template< typename R, typename T, typename... Args>
+            R implementation( T&& value, Args&&... args)
+            {
+               if( empty( value)) { return implementation< R>( std::forward< Args>( args)...);}
+               return std::forward< T>( value);
+            }
+
+         } // coalesce
+
+      } // detail
+
+
+
+      template< typename T1, typename T2, typename... Args>
+      struct is_same : std::integral_constant< bool, is_same< T1, T2>::value && is_same< T2, Args...>::value>
+      {
+
+      };
+
+      template< typename T1, typename T2>
+      struct is_same< T1, T2> : std::is_same< T1, T2>
+      {
+      };
+
+
+      //!
+      //! Chooses the first argument that is not 'empty'
+      //!
+      //! @note if all parameters has exactly the same type the return type will be
+      //!  exactly that. Otherwise it will be the common type of all types
+      //!
+      //! @return the first argument that is not 'empty'
+      //!
+      template< typename T, typename... Args>
+      auto coalesce( T&& value,  Args&&... args)
+         -> typename std::conditional<
+               is_same< T, Args...>::value,
+               T, // only if T1 and T1 are exactly the same
+               typename std::common_type< T, Args...>::type
+            >::type
+
+
+      {
+         using return_type = typename std::conditional<
+               is_same< T, Args...>::value,
+               T, // only if T1 and T1 are exactly the same
+               typename std::common_type< T, Args...>::type
+            >::type;
+
+         return detail::coalesce::implementation< return_type>( std::forward< T>( value), std::forward< Args>( args)...);
       }
 
 
@@ -273,11 +358,8 @@ namespace casual
          operator T() const = delete;
 
 
-         reference operator * () { return *m_first;}
-         const reference operator * () const { return *m_first;}
-
-
-         iterator operator -> () { return m_first;}
+         reference operator * () const { return *m_first;}
+         iterator operator -> () const { return m_first;}
 
 
          Range operator ++ ()
@@ -417,6 +499,16 @@ namespace casual
       }
 
 
+      namespace make
+      {
+         template< typename T, typename... Args>
+         std::unique_ptr< T> unique( Args&&... args)
+         {
+            return std::unique_ptr< T>( new T( std::forward< Args>( args)...));
+         }
+      } // make
+
+
       //!
       //! This is not intended to be a serious attempt at a range-library
       //! Rather an abstraction that helps our use-cases and to get a feel for
@@ -457,7 +549,7 @@ namespace casual
          }
 
          template< typename Iter>
-         Range< Iter> make( Range< Iter> range)
+         constexpr Range< Iter> make( Range< Iter> range)
          {
             return range;
          }
@@ -471,12 +563,15 @@ namespace casual
          template< typename C>
          struct type_traits
          {
-            using type = decltype( make( std::begin( std::declval< C>()), 0));
+            using type = decltype( make( std::declval< C>().begin(), std::size_t{}));
          };
 
 
          template< typename C>
          using type_t = typename type_traits< C>::type;
+
+         template< typename C>
+         using const_type_t = typename type_traits< const C>::type;
 
          template< typename R>
          typename std::enable_if< std::is_array< typename std::remove_reference< R>::type>::value, std::size_t>::type
@@ -705,7 +800,7 @@ namespace casual
          //! @param destination sets the maximum what will be copied
          //!
          template< typename Range1, typename Range2>
-         void copy_max( Range1&& source, Range2 destination)
+         void copy_max( Range1&& source, Range2&& destination)
          {
             auto max = range::size( destination);
             auto wanted = range::size( source);
@@ -781,11 +876,11 @@ namespace casual
          //! @return std::vector with the transformed values
          //!
          template< typename R, typename T>
-         auto transform( R&& range, T transform) -> std::vector< decltype( transform( *std::begin( range)))>
+         auto transform( R&& range, T transformer) -> std::vector< typename std::remove_reference< decltype( transformer( *std::begin( range)))>::type>
          {
-            std::vector< decltype( transform( *std::begin( range)))> result;
+            std::vector< typename std::remove_reference< decltype( transformer( *std::begin( range)))>::type> result;
             result.reserve( range.size());
-            std::transform( std::begin( range), std::end( range), std::back_inserter( result), transform);
+            std::transform( std::begin( range), std::end( range), std::back_inserter( result), transformer);
             return result;
          }
 
@@ -831,6 +926,13 @@ namespace casual
             container.erase( std::begin( range), std::end( range));
             return container;
          }
+
+         template< typename R, typename T>
+         auto remove( R&& range, const T& value) -> decltype( make( std::forward< R>( range)))
+         {
+            return make( std::begin( range), std::remove( std::begin( range), std::end( range), value));
+         }
+
 
          template< typename R, typename P>
          auto remove_if( R&& range, P predicate) -> decltype( make( std::forward< R>( range)))
@@ -963,6 +1065,12 @@ namespace casual
             return std::make_tuple( make( std::begin( range), divider), make( divider, std::end( range)));
          }
 
+         template< typename R1, typename R2>
+         auto search( R1&& range, R2&& to_find) -> decltype( make( range))
+         {
+            auto first = std::search( std::begin( range), std::end( range), std::begin( to_find), std::end( to_find));
+            return { first, std::end( range)};
+         }
 
 
          template< typename R1, typename R2, typename F>
@@ -1099,6 +1207,18 @@ namespace casual
 
             return make( std::min_element( std::begin( result), std::end( result), functor), std::end( result));
          }
+
+         template< typename R>
+         auto min( R&& range) -> decltype( make( range))
+         {
+            //
+            // Just to make sure range is not an rvalue container. we could use enable_if instead.
+            //
+            auto result = make( std::forward< R>( range));
+
+            return make( std::min_element( std::begin( result), std::end( result)), std::end( result));
+         }
+
 
          //!
          //! @return true if all elements in @p other is found in @p source
@@ -1285,6 +1405,12 @@ namespace casual
          return range::equal( lhs, rhs);
       }
 
+      template< typename Iter>
+      bool operator == ( const Range< Iter>& lhs, bool rhs)
+      {
+         return static_cast< bool>( lhs) ==  rhs;
+      }
+
 
    } // common
 } // casual
@@ -1295,7 +1421,7 @@ namespace std
    typename enable_if< is_enum< Enum>::value, ostream&>::type
    operator << ( ostream& out, Enum value)
    {
-     return out << casual::common::as_integer( value);
+     return out << casual::common::cast::underlying( value);
    }
 
 } // std

@@ -1,8 +1,5 @@
 //!
-//! message_dispatch.h
-//!
-//! Created on: Dec 1, 2012
-//!     Author: Lazan
+//! casual
 //!
 
 #ifndef MESSAGE_DISPATCH_H_
@@ -34,6 +31,9 @@ namespace casual
 
                Handler()  = default;
 
+               Handler( Handler&&) = default;
+               Handler& operator = ( Handler&&) = default;
+
                template< typename... Args>
                Handler( Args&& ...handlers) : m_handlers( assign( std::forward< Args>( handlers)...))
                {
@@ -59,6 +59,16 @@ namespace casual
                std::vector< message_type> types() const;
 
 
+               //!
+               //! Inserts handler, that is, adds new handlers
+               //!
+               //! @param handlers
+               template< typename... Args>
+               void insert( Args&&... handlers)
+               {
+                  assign( m_handlers, std::forward< Args>( handlers)...);
+               }
+
             private:
 
                bool dispatch( communication::message::Complete& complete) const;
@@ -81,7 +91,9 @@ namespace casual
                   using traits_type = traits::function< H>;
 
                   static_assert( traits_type::arguments() == 1, "handlers has to have this signature: void( <some message>), can be declared const");
-                  static_assert( std::is_same< typename traits_type::result_type, void>::value, "handlers has to have this signature: void( <some message>), can be declared const");
+                  static_assert(
+                        std::is_same< typename traits_type::result_type, void>::value
+                        || std::is_same< typename traits_type::result_type, bool>::value , "handlers has to have this signature: void|bool( <some message>), can be declared const");
 
                   using message_type = typename std::decay< typename traits_type::template argument< 0>::type>::type;
 
@@ -121,9 +133,12 @@ namespace casual
                {
                   using handle_type = handle_holder< typename std::decay< H>::type>;
 
-                  assert( result.count( handle_type::message_type::type()) == 0);
+                  //
+                  //  We need to override handlers in unittest.
+                  //
+                  // assert( result.count( handle_type::message_type::type()) == 0);
 
-                  std::unique_ptr< base_handler> holder{ new handle_type( std::forward< H>( handler))};
+                  auto holder = make::unique< handle_type>( std::forward< H>( handler));
 
                   result.emplace(
                         handle_type::message_type::type(),
@@ -154,6 +169,22 @@ namespace casual
                   ;
                }
             }
+
+            namespace blocking
+            {
+               template< typename D>
+               void pump( Handler& handler, D& device)
+               {
+                  using device_type = typename std::decay< decltype( device)>::type;
+
+                  while( true)
+                  {
+                     handler( device.next( typename device_type::blocking_policy{}));
+                  }
+               }
+
+            } // blocking
+
          } // dispatch
       } // message
    } // common

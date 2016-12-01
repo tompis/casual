@@ -1,8 +1,5 @@
 //!
-//! server.cpp
-//!
-//! Created on: Oct 2, 2014
-//!     Author: Lazan
+//! casual
 //!
 
 #include "queue/broker/admin/server.h"
@@ -72,7 +69,7 @@ namespace casual
                         auto service_io = local::server->createService( serviceInfo);
 
 
-                        auto serviceReturn = admin::list_queues( state);
+                        auto serviceReturn = service_io.call( &admin::list_queues, state);
 
                         service_io << CASUAL_MAKE_NVP( serviceReturn);
 
@@ -103,7 +100,7 @@ namespace casual
                         std::string queue;
                         service_io >> CASUAL_MAKE_NVP( queue);
 
-                        auto serviceReturn = admin::list_messages( state, queue);
+                        auto serviceReturn = service_io.call( &admin::list_messages, state, queue);
 
                         service_io << CASUAL_MAKE_NVP( serviceReturn);
 

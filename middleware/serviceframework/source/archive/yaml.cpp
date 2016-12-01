@@ -1,13 +1,11 @@
-/*
- * yaml.cpp
- *
- *  Created on: Jan 23, 2015
- *      Author: kristone
- */
+//!
+//! casual
+//!
 
 #include "sf/archive/yaml.h"
 
 #include "sf/exception.h"
+#include "sf/log.h"
 
 #include "common/transcode.h"
 
@@ -20,11 +18,49 @@ namespace casual
       {
          namespace yaml
          {
+            namespace local
+            {
+               namespace
+               {
+                  const std::string& empty()
+                  {
+                     sf::log::sf << "archive::yaml::local::empty\n";
+
+                     static const std::string document{ "---\n"};
+                     return document;
+                  }
+
+                  std::istringstream stream( const std::string& yaml)
+                  {
+                     if( yaml.empty())
+                     {
+                        return std::istringstream{ empty()};
+                     }
+                     return std::istringstream{ yaml};
+                  }
+
+                  std::istringstream stream( const char* const yaml)
+                  {
+                     if( ! yaml || yaml[ 0] == '\0')
+                     {
+                        return std::istringstream{ empty()};
+                     }
+                     return std::istringstream{ yaml};
+                  }
+
+               } // <unnamed>
+            } // local
 
             Load::Load() = default;
             Load::~Load() = default;
 
-            const YAML::Node& Load::serialize( std::istream& stream)
+            const YAML::Node& Load::operator() () const noexcept
+            {
+               return m_document;
+            }
+
+
+            const YAML::Node& Load::operator() ( std::istream& stream)
             {
                try
                {
@@ -39,24 +75,26 @@ namespace casual
                   throw exception::archive::invalid::Document{ e.what()};
                }
 
-               return source();
-            }
-
-            const YAML::Node& Load::serialize( const std::string& yaml)
-            {
-               std::istringstream stream( yaml);
-               return serialize( stream);
-            }
-
-            const YAML::Node& Load::serialize( const char* const yaml)
-            {
-               std::istringstream stream( yaml);
-               return serialize( stream);
-            }
-
-            const YAML::Node& Load::source() const
-            {
                return m_document;
+            }
+
+            const YAML::Node& Load::operator() ( const std::string& yaml)
+            {
+               auto stream = local::stream( yaml);
+               return (*this)( stream);
+            }
+
+            const YAML::Node& Load::operator() ( const char* const yaml, const std::size_t size)
+            {
+               auto stream = local::stream( std::string( yaml, size));
+               return (*this)( stream);
+            }
+
+
+            const YAML::Node& Load::operator() ( const char* const yaml)
+            {
+               auto stream = local::stream( yaml);
+               return (*this)( stream);
             }
 
             namespace reader
@@ -205,21 +243,19 @@ namespace casual
             Save::Save() = default;
             Save::~Save() = default;
 
-            void Save::serialize( std::ostream& stream) const
-            {
-               stream << m_emitter.c_str();
-            }
-
-            void Save::serialize( std::string& yaml) const
-            {
-               yaml = m_emitter.c_str();
-            }
-
-            YAML::Emitter& Save::target()
+            YAML::Emitter& Save::operator() () noexcept
             {
                return m_emitter;
             }
+            void Save::operator() ( std::ostream& yaml) const
+            {
+               yaml << m_emitter.c_str();
+            }
 
+            void Save::operator() ( std::string& yaml) const
+            {
+               yaml = m_emitter.c_str();
+            }
 
             namespace writer
             {

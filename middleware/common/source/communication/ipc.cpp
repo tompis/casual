@@ -1,13 +1,12 @@
 //!
-//! ipc.cpp
-//!
-//! Created on: Jan 5, 2016
-//!     Author: Lazan
+//! casual
 //!
 
 #include "common/communication/ipc.h"
+#include "common/communication/log.h"
 #include "common/environment.h"
 #include "common/error.h"
+#include "common/trace.h"
 
 
 #include <fstream>
@@ -26,12 +25,17 @@ namespace casual
 
             namespace native
             {
-               bool send( handle_type id, const message::Transport& transport, long flags)
+               bool send( handle_type id, const message::Transport& transport, common::Flags< Flag> flags)
                {
 
                   auto size = message::Transport::header_size + transport.size();
 
-                  auto result = msgsnd( id, &const_cast< message::Transport&>( transport).message, size, flags);
+                  //
+                  // before we might block we check signals.
+                  //
+                  common::signal::handle();
+
+                  auto result = msgsnd( id, &const_cast< message::Transport&>( transport).message, size, flags.underlaying());
 
                   if( result == -1)
                   {
@@ -45,7 +49,7 @@ namespace casual
                         }
                         case EINTR:
                         {
-                           log::internal::ipc << "ipc::native::send - signal received\n";
+                           log << "ipc::native::send - signal received\n";
                            common::signal::handle();
 
                            //
@@ -82,13 +86,18 @@ namespace casual
                      }
                   }
 
-                  log::internal::ipc << "---> [" << id << "] send transport: " << transport << " - flags: " << flags << '\n';
+                  log << "---> [" << id << "] send transport: " << transport << " - flags: " << flags << '\n';
 
                   return true;
                }
-               bool receive( handle_type id, message::Transport& transport, long flags)
+               bool receive( handle_type id, message::Transport& transport, common::Flags< Flag> flags)
                {
-                  auto result = msgrcv( id, &transport.message, message::Transport::message_max_size, 0, flags);
+                  //
+                  // before we might block we check signals.
+                  //
+                  common::signal::handle();
+
+                  auto result = msgrcv( id, &transport.message, message::Transport::message_max_size, 0, flags.underlaying());
 
                   if( result == -1)
                   {
@@ -98,7 +107,7 @@ namespace casual
                      {
                         case EINTR:
                         {
-                           log::internal::ipc << "ipc::native::receive - signal received\n";
+                           log << "ipc::native::receive - signal received\n";
 
                            common::signal::handle();
 
@@ -121,13 +130,13 @@ namespace casual
                         {
                            std::ostringstream msg;
                            msg << "ipc < [" << id << "] receive failed - transport: " << transport << " - flags: " << flags << " - " << common::error::string();
-                           log::internal::ipc << msg.str() << std::endl;
+                           log << msg.str() << std::endl;
                            throw exception::invalid::Argument( msg.str(), __FILE__, __LINE__);
                         }
                      }
                   }
 
-                  log::internal::ipc << "<--- [" << id << "] receive transport: " << transport << " - flags: " << flags << '\n';
+                  log << "<--- [" << id << "] receive transport: " << transport << " - flags: " << flags << '\n';
 
                   return true;
 
@@ -145,7 +154,7 @@ namespace casual
                   {
                      throw exception::invalid::Argument( "ipc queue create failed - " + common::error::string(), __FILE__, __LINE__);
                   }
-                  log::internal::ipc << "queue id: " << m_id << " created\n";
+                  log << "queue id: " << m_id << " created\n";
                }
 
                Connector::~Connector()
@@ -162,6 +171,13 @@ namespace casual
                   Connector temp{ std::move( rhs)};
                   swap( *this, temp);
                   return *this;
+               }
+
+               handle_type Connector::id() const { return m_id;}
+
+               std::ostream& operator << ( std::ostream& out, const Connector& rhs)
+               {
+                  return out << "{ id: " << rhs.m_id << '}';
                }
 
 
@@ -182,92 +198,246 @@ namespace casual
                {
                   return device().connector().id();
                }
-
             } // inbound
+
+            namespace outbound
+            {
+               Connector::Connector( handle_type id) : m_id( id)
+               {}
+
+               Connector::operator handle_type() const { return m_id;}
+
+               Connector::handle_type Connector::id() const { return m_id;}
+
+               std::ostream& operator << ( std::ostream& out, const Connector& rhs)
+               {
+                  return out << "{ id: " << rhs.m_id << '}';
+               }
+
+
+               namespace instance
+               {
+                  namespace local
+                  {
+                     namespace
+                     {
+                        platform::ipc::id::type fetch( const Uuid& identity, const std::string& environment)
+                        {
+                           if( environment::variable::exists( environment))
+                           {
+                              auto result = environment::variable::get< platform::ipc::id::type>( environment);
+
+                              if( communication::ipc::exists( result))
+                              {
+                                 return result;
+                              }
+                           }
+
+                           auto result = process::instance::fetch::handle( identity).queue;
+
+                           if( ! environment.empty())
+                           {
+                              environment::variable::set( environment, result);
+                           }
+                           return result;
+                        }
+
+                     } // <unnamed>
+                  } // local
+
+
+                  Connector::Connector( const Uuid& identity, std::string environment)
+                     : outbound::Connector( local::fetch( identity, environment)),
+                       m_identity{ identity}, m_environment{ std::move( environment)}
+                  {
+
+                  }
+
+                  void Connector::reconnect()
+                  {
+                     Trace trace{ "ipc::outbound::instance::Connector::reconnect"};
+
+                     m_id = local::fetch( m_identity, m_environment);
+                  }
+
+               } // instance
+
+               namespace domain
+               {
+                  namespace local
+                  {
+                     namespace
+                     {
+
+                        platform::ipc::id::type reconnect()
+                        {
+                           auto from_environment = []()
+                                 {
+                                    if( environment::variable::exists( environment::variable::name::ipc::domain::manager()))
+                                    {
+                                       return environment::variable::get< platform::ipc::id::type>( environment::variable::name::ipc::domain::manager());
+                                    }
+                                    return platform::ipc::id::type( 0);
+                                 };
+
+                           auto queue = from_environment();
+
+
+                           if( ipc::exists( queue))
+                           {
+                              return queue;
+                           }
+
+                           log << "failed to locate domain manager via " << environment::variable::name::ipc::domain::manager() << " - trying 'singleton file'\n";
+
+                           auto from_singleton_file = []()
+                                 {
+                                    std::ifstream file{ common::environment::domain::singleton::file()};
+
+                                    platform::ipc::id::type ipc = 0;
+
+                                    if( file)
+                                    {
+                                       file >> ipc;
+                                       environment::variable::set( environment::variable::name::ipc::domain::manager(), ipc);
+                                    }
+                                    return ipc;
+                                 };
+
+                           queue = from_singleton_file();
+
+                           if( ! ipc::exists( queue))
+                           {
+                              throw exception::invalid::Semantic{ "failed to locate domain manager"};
+                           }
+
+                           return queue;
+                        }
+
+                     } // <unnamed>
+                  } // local
+
+                  Connector::Connector() : outbound::Connector{ local::reconnect()}
+                  {
+
+                  }
+
+                  void Connector::reconnect()
+                  {
+                     Trace trace{ "ipc::outbound::domain::Connector::reconnect"};
+
+                     m_id = local::reconnect();
+                  }
+               } // domain
+
+            } // outbound
 
 
 
             namespace policy
             {
 
-               namespace prefix
+               bool Blocking::operator() ( inbound::Connector& ipc, message::Transport& transport)
                {
-
-                  Signal::Signal()
-                  {
-                     common::signal::handle();
-                  }
-
-
-               } // prefix
-
-
-
-               bool basic_blocking::operator() ( inbound::Connector& ipc, message::Transport& transport)
-               {
-                  return native::receive( ipc.id(), transport, 0);
+                  return native::receive( ipc.id(), transport, {});
                }
 
-               bool basic_blocking::operator() ( const outbound::Connector& ipc, const message::Transport& transport)
+               bool Blocking::operator() ( const outbound::Connector& ipc, const message::Transport& transport)
                {
-                  return native::send( ipc, transport, 0);
+                  return native::send( ipc, transport, {});
                }
 
 
                namespace non
                {
-                  bool basic_blocking::operator() ( inbound::Connector& ipc, message::Transport& transport)
+                  bool Blocking::operator() ( inbound::Connector& ipc, message::Transport& transport)
                   {
-                     return native::receive( ipc.id(), transport, platform::cIPC_NO_WAIT);
+                     return native::receive( ipc.id(), transport, native::Flag::non_blocking);
                   }
 
-                  bool basic_blocking::operator() ( const outbound::Connector& ipc, const message::Transport& transport)
+                  bool Blocking::operator() ( const outbound::Connector& ipc, const message::Transport& transport)
                   {
-                     return native::send( ipc, transport, platform::cIPC_NO_WAIT);
+                     return native::send( ipc, transport, native::Flag::non_blocking);
                   }
 
                } // non
             } // policy
 
-            namespace local
-            {
-               namespace
-               {
-                  outbound::Device initialize_broker_device()
-                  {
-                     static const std::string brokerFile = common::environment::file::broker::device();
-
-                     std::ifstream file( brokerFile.c_str());
-
-                     if( ! file)
-                     {
-                        log::internal::ipc << "Failed to open broker queue configuration file" << std::endl;
-                        throw common::exception::xatmi::System( "Failed to open broker queue configuration file: " + brokerFile);
-                     }
-
-                     handle_type id{ 0};
-                     file >> id;
-
-                     return { id};
-
-                  }
-               } // <unnamed>
-            } // local
 
             namespace broker
             {
-               outbound::Device& device()
+               outbound::instance::Device& device()
                {
-                  static outbound::Device singelton = local::initialize_broker_device();
+                  static outbound::instance::Device singelton{
+                     process::instance::identity::broker(),
+                     environment::variable::name::ipc::broker()};
+
                   return singelton;
                }
 
-               handle_type id()
-               {
-                  return device().connector().id();
-               }
-
             } // broker
+
+            namespace transaction
+            {
+               namespace manager
+               {
+                  outbound::instance::Device& device()
+                  {
+                     static outbound::instance::Device singelton{
+                        process::instance::identity::transaction::manager(),
+                        environment::variable::name::ipc::transaction::manager()};
+                     return singelton;
+                  }
+
+               } // manager
+            } // transaction
+
+            namespace gateway
+            {
+               namespace manager
+               {
+                  outbound::instance::Device& device()
+                  {
+                     static outbound::instance::Device singelton{
+                        process::instance::identity::gateway::manager(),
+                        environment::variable::name::ipc::gateway::manager()};
+
+                     return singelton;
+                  }
+               } // manager
+            } // gateway
+
+            namespace queue
+            {
+               namespace broker
+               {
+                  outbound::instance::Device& device()
+                  {
+                     static outbound::instance::Device singelton{
+                        process::instance::identity::queue::broker(),
+                        environment::variable::name::ipc::queue::broker()};
+
+                     return singelton;
+                  }
+               } // broker
+            } // queue
+
+
+            namespace domain
+            {
+               namespace manager
+               {
+                  outbound::domain::Device& device()
+                  {
+                     static outbound::domain::Device singelton;
+                     return singelton;
+                  }
+
+               } // manager
+            } // domain
+
+
+
 
             bool exists( handle_type id)
             {
@@ -282,7 +452,7 @@ namespace casual
                {
                   if( msgctl( id, IPC_RMID, nullptr) == 0)
                   {
-                     log::internal::ipc << "queue id: " << id << " removed\n";
+                     log << "queue id: " << id << " removed\n";
                      return true;
                   }
                   else

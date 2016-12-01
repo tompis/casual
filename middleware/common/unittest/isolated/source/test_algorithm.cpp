@@ -219,6 +219,14 @@ namespace casual
 
       }
 
+
+      TEST( casual_common_algorithm, search)
+      {
+         auto found = range::search( "some text to search", std::string{ "some"});
+         EXPECT_TRUE( ! found.empty());
+
+      }
+
       TEST( casual_common_algorithm, uniform__true)
       {
          std::vector< int> uniform{ 1, 1, 1, 1, 1, 1, 1, 1, 1};
@@ -271,31 +279,6 @@ namespace casual
          EXPECT_TRUE( set.at( 0) == 1);
          EXPECT_TRUE( set.at( 1) == 2);
          EXPECT_TRUE( set.at( 2) == 3);
-      }
-
-      enum class Enum
-      {
-         zero,
-         one,
-         two,
-      };
-
-      TEST( casual_common_algorithm, enum_as_integer)
-      {
-         auto e = Enum::two;
-
-         EXPECT_TRUE( common::as_integer( e) == 2);
-      }
-
-      TEST( casual_common_algorithm, enum_ostream)
-      {
-         auto e = Enum::two;
-
-         std::ostringstream out;
-
-         out << e;
-
-         EXPECT_TRUE( out.str() == "2");
       }
 
 
@@ -484,6 +467,67 @@ namespace casual
          EXPECT_TRUE( std::get< 1>( split) == ( std::vector< int>{ 9, 7, 8, 6}));
       }
 
+
+      TEST( casual_common_algorithm_coalesce, lvalue_string__expect_lvalue)
+      {
+         std::string first;
+         std::string second;
+
+         EXPECT_TRUE( std::is_lvalue_reference< decltype( coalesce( first, second))>::value);
+      }
+
+      TEST( casual_common_algorithm_coalesce, rvalue_string_first__expect_rvalue)
+      {
+         std::string first;
+         std::string second;
+
+         EXPECT_TRUE( ! std::is_lvalue_reference< decltype( coalesce( std::move( first), second))>::value);
+      }
+
+      TEST( casual_common_algorithm_coalesce, lvalue_string_first__literal_string_second__expect_string_rvalue)
+      {
+         std::string first;
+
+         EXPECT_TRUE( ! std::is_lvalue_reference< decltype( coalesce( first, "0"))>::value);
+         EXPECT_TRUE( ( std::is_same< decltype( coalesce( first, "0")), std::string>::value));
+         EXPECT_TRUE( coalesce( first, "0") == "0");
+      }
+
+      TEST( casual_common_algorithm_coalesce, int_nullptr_first__int_pointer_second__expect_second)
+      {
+         int* first = nullptr;
+         int temp = 42;
+         int* second = &temp;
+
+         EXPECT_TRUE( coalesce( first, second) == second);
+         EXPECT_TRUE( *coalesce( first, second) == 42);
+      }
+
+
+      TEST( casual_common_algorithm_coalesce, lvalue_string_10__last_literal___expect_string_rvalue)
+      {
+         auto coalesce_strings = []() {
+            std::vector< std::string> strings( 10);
+
+            return coalesce(
+                  strings.at( 0),
+                  strings.at( 1),
+                  strings.at( 2),
+                  strings.at( 3),
+                  strings.at( 4),
+                  strings.at( 5),
+                  strings.at( 6),
+                  strings.at( 7),
+                  strings.at( 8),
+                  strings.at( 9),
+                  "0");
+
+         };
+
+         EXPECT_TRUE( ! std::is_lvalue_reference< decltype( coalesce_strings())>::value);
+         EXPECT_TRUE( ( std::is_same< decltype( coalesce_strings()), std::string>::value));
+         EXPECT_TRUE(coalesce_strings() == "0");
+      }
 
 
 

@@ -1,15 +1,10 @@
 //!
-//! handle.cpp
-//!
-//! Created on: Jun 20, 2014
-//!     Author: Lazan
+//! casual
 //!
 
 #include "queue/broker/handle.h"
+#include "queue/common/log.h"
 
-#include "common/log.h"
-#include "common/internal/log.h"
-#include "common/trace.h"
 #include "common/error.h"
 #include "common/exception.h"
 #include "common/process.h"
@@ -37,7 +32,7 @@ namespace casual
                         // We put a dead process event on our own ipc device, that
                         // will be handled later on.
                         //
-                        common::message::dead::process::Event event{ exit};
+                        common::message::domain::process::termination::Event event{ exit};
                         common::communication::ipc::inbound::device().push( std::move( event));
                      }
                   }
@@ -92,7 +87,7 @@ namespace casual
 
                void Exit::apply( const common::process::lifetime::Exit& exit)
                {
-                  common::Trace trace{ "handle::process::Exit", common::log::internal::queue};
+                  Trace trace{ "handle::process::Exit"};
 
                   {
                      auto found = common::range::find_if( m_state.groups, [=]( const State::Group& g){
@@ -172,7 +167,7 @@ namespace casual
 
                void Request::operator () ( message_type& message)
                {
-                  common::Trace trace{ "handle::lookup::Request", common::log::internal::queue};
+                  Trace trace{ "handle::lookup::Request"};
 
                   auto found =  common::range::find( m_state.queues, message.name);
 
@@ -271,7 +266,7 @@ namespace casual
                         //
                         // Make sure we correlate the coming replies.
                         //
-                        common::log::internal::queue << "forward request to groups - correlate response to: " << message.process << "\n";
+                        log << "forward request to groups - correlate response to: " << message.process << "\n";
 
                         state.correlation.emplace(
                               std::piecewise_construct,
@@ -289,7 +284,7 @@ namespace casual
                   }
                   else
                   {
-                     common::log::internal::queue << "XAER_NOTA - trid: " << message.trid << " could not be found\n";
+                     log << "XAER_NOTA - trid: " << message.trid << " could not be found\n";
                      sendError( XAER_NOTA);
                   }
 
@@ -325,7 +320,7 @@ namespace casual
                      reply.correlation = found->second.reply_correlation;
                      reply.state = found->second.stage() == State::Correlation::Stage::replied ? XA_OK : XAER_RMFAIL;
 
-                     common::log::internal::queue << "all groups has responded - send reply to RM: " << found->second.caller << std::endl;
+                     log << "all groups has responded - send reply to RM: " << found->second.caller << std::endl;
 
                      ipc::device().blocking_send( found->second.caller.queue, reply);
 

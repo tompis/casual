@@ -1,11 +1,9 @@
 //!
-//! broker.cpp
-//!
-//! Created on: Jun 20, 2014
-//!     Author: Lazan
+//! casual
 //!
 
 #include "queue/broker/broker.h"
+#include "queue/common/log.h"
 
 
 #include "queue/broker/handle.h"
@@ -136,7 +134,7 @@ namespace casual
          {
             void pump( State& state)
             {
-               common::log::internal::queue << "qeueue broker start" << std::endl;
+               log << "qeueue broker start" << std::endl;
 
                casual::common::message::dispatch::Handler handler{
                   broker::handle::process::Exit{ state},
@@ -150,8 +148,8 @@ namespace casual
                   broker::handle::transaction::rollback::Reply{ state},
                   //broker::handle::peek::queue::Request{ m_state},
                   common::server::handle::basic_admin_call{
-                     ipc::device().device(), broker::admin::services( state), environment::broker::identification(),
-                           ipc::device().error_handler()},
+                     broker::admin::services( state),
+                     ipc::device().error_handler()},
                   common::message::handle::ping(),
                };
 
@@ -169,7 +167,7 @@ namespace casual
 
          std::vector< common::message::queue::information::queues::Reply> queues( State& state)
          {
-            common::trace::internal::Scope trace( "broker::queues", common::log::internal::queue);
+            Trace trace( "broker::queues");
 
             auto send = [&]( const broker::State::Group& group)
                {
@@ -225,11 +223,12 @@ namespace casual
 
       Broker::Broker( broker::Settings settings) : m_state{ broker::local::transform::state( settings)}
       {
-         //
-         // Will throw if another queue-broker is up and running.
-         //
-         common::server::connect( environment::broker::identification());
+         Trace trace( "queue::Broker::Broker");
 
+         //
+         // Connect to domain
+         //
+         common::process::instance::connect( common::process::instance::identity::queue::broker());
 
 
          if( ! settings.configuration.empty())
@@ -245,6 +244,8 @@ namespace casual
 
       Broker::~Broker()
       {
+         Trace trace( "queue::Broker::~Broker");
+
          try
          {
 
@@ -269,7 +270,7 @@ namespace casual
 
       void Broker::start()
       {
-         common::log::internal::queue << "qeueue broker start" << std::endl;
+         log << "qeueue broker start" << std::endl;
 
          broker::message::pump( m_state);
       }

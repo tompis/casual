@@ -1,9 +1,6 @@
-/*
- * xml.cpp
- *
- *  Created on: Jan 21, 2015
- *      Author: kristone
- */
+//!
+//! casual
+//!
 
 #include "sf/archive/xml.h"
 
@@ -23,38 +20,76 @@ namespace casual
       {
          namespace xml
          {
+
             namespace
             {
-               void check( const pugi::xml_parse_result& result)
+               namespace local
                {
-                  if( !result) throw exception::archive::invalid::Document{ result.description()};
-               }
+                  void check( const pugi::xml_parse_result& result)
+                  {
+                     if( !result) throw exception::archive::invalid::Document{ result.description()};
+                  }
+
+                  namespace empty
+                  {
+                     const std::string& document()
+                     {
+                        static std::string empty{ R"(<?xml version="1.0"?><value></value>)"};
+                        return empty;
+                     }
+
+
+                  } // empty
+
+               } // local
             }
 
             Load::Load() = default;
             Load::~Load() = default;
 
-            const pugi::xml_document& Load::serialize( std::istream& stream)
+            const pugi::xml_document& Load::operator() () const noexcept
             {
-               check( m_document.load( stream));
-               return source();
+               return m_document;
             }
 
-            const pugi::xml_document& Load::serialize( const std::string& xml)
+
+            const pugi::xml_document& Load::operator() ( std::istream& stream)
             {
-               check( m_document.load_buffer( xml.data(), xml.size()));
-               return source();
+               local::check( m_document.load( stream));
+               return m_document;
             }
 
-            const pugi::xml_document& Load::serialize( const char* const xml)
+            const pugi::xml_document& Load::operator() ( const std::string& xml)
             {
-               //check( m_document.load_string( xml));
-               check( m_document.load( xml));
-               return source();
+               if( xml.empty())
+               {
+                  return operator()( local::empty::document());
+               }
+
+               local::check( m_document.load_buffer( xml.data(), xml.size()));
+               return m_document;
             }
 
-            const pugi::xml_document& Load::source() const
+            const pugi::xml_document& Load::operator() ( const char* const xml, const std::size_t size)
             {
+               if( ! size || ! xml)
+               {
+                  return operator()( local::empty::document());
+               }
+
+               local::check( m_document.load_buffer( xml, size));
+               return m_document;
+            }
+
+            const pugi::xml_document& Load::operator() ( const char* const xml)
+            {
+               if( ! xml || xml[ 0] == '\n')
+               {
+                  return operator()( local::empty::document());
+               }
+
+               //local::check( m_document.load_string( xml));
+               local::check( m_document.load( xml));
                return m_document;
             }
 
@@ -122,30 +157,7 @@ namespace casual
                {
                   m_stack.pop_back();
                }
-/*
-               namespace
-               {
-                  namespace local
-                  {
-                     //
-                     // This is a help to check some to avoid terminate (via assert)
-                     //
-                     template<typename C, typename F>
-                     auto read( const rapidjson::Value* const value, C&& checker, F&& fetcher) -> decltype( std::bind( fetcher, value)())
-                     {
-                        if( std::bind( checker, value)())
-                        {
-                           return std::bind( fetcher, value)();
-                        }
-                        else
-                        {
-                           throw exception::archive::invalid::Node{ "unexpected type"};
-                        }
-                     }
 
-                  } // local
-               } // <unnamed>
-*/
 
                namespace
                {
@@ -207,9 +219,14 @@ namespace casual
             Save::Save() = default;
             Save::~Save() = default;
 
-            void Save::serialize( std::ostream& stream) const
+            pugi::xml_document& Save::operator() () noexcept
             {
-               m_document.save( stream, " ");
+               return m_document;
+            }
+
+            void Save::operator() ( std::ostream& xml) const
+            {
+               m_document.save( xml, " ");
             }
 
 /*
@@ -227,7 +244,7 @@ namespace casual
             }
 */
 
-            void Save::serialize( std::string& xml) const
+            void Save::operator() ( std::string& xml) const
             {
                //
                // The pugi::xml_writer-interface actually seems to be slower
@@ -239,15 +256,9 @@ namespace casual
                //
 
                std::ostringstream stream;
-               serialize( stream);
+               m_document.save( stream, " ");
                xml.assign( stream.str());
             }
-
-            const pugi::xml_document& Save::target() const
-            {
-               return m_document;
-            }
-
 
             namespace writer
             {

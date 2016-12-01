@@ -22,6 +22,29 @@ from casual.make.output import Output
 _plumbing = casual.make.plumbing.plumbing(version = 1.0)
 _porcelain = casual.make.porcelain.porcelain(version = 1.0)
 
+
+# def _set_ld_library_path():
+#     
+#     build_home = os.getenv('CASUAL_BUILD_HOME', '$HOME/git/casual')
+#     
+#     if not build_home.endswith( 'middleware'):
+#         build_home = build_home + '/middleware'
+#     
+#     ld_library_path = build_home + '/common/bin:' +
+#         build_home + '/xatmi/bin:' +
+#         build_home + '/xatmi/bin:'   
+#     
+#     
+#     print "#"
+#     print "# Set LD_LIBRARY_PATH so that unittest has access to dependent libraries"
+#     print "#"
+#     print "space :=  "
+#     print "space +=  "
+#     print "formattet_library_path = $(subst -L,,$(subst $(space),:,$(LIBRARY_PATHS) $(DEFAULT_LIBRARY_PATHS)))"
+#     print "LOCAL_LD_LIBRARY_PATH=$(formattet_library_path):$(PLATFORMLIB_DIR)"
+#     print 
+#     
+
 #
 # New functions adding functionality
 #
@@ -68,8 +91,8 @@ def LinkServer( name, objectfiles, libraries, serverdefinition, resources=None, 
     else:
         directive += ' -s ' + ' '.join( serverdefinition)
  
-     
-    return _plumbing.link( _plumbing.platform().link_server, target, objectfiles, libraries, directive)    
+    _plumbing.set_ld_path()
+    return _plumbing.link( _plumbing.platform().link_server, target, objectfiles, libraries, directive, 'LD_LIBRARY_PATH=$(LOCAL_LD_LIBRARY_PATH) ')    
  
 def LinkClient( name, objectfiles, libraries, resources=None):
     """
@@ -86,8 +109,9 @@ def LinkClient( name, objectfiles, libraries, resources=None):
         directive = "";
     else:
         directive = " -r " + ' '.join( resources)
-         
-    _plumbing.link( _plumbing.platform().link_client, target, objectfiles, libraries, directive)
+        
+    _plumbing.set_ld_path()
+    _plumbing.link( _plumbing.platform().link_client, target, objectfiles, libraries, directive, 'LD_LIBRARY_PATH=$(LOCAL_LD_LIBRARY_PATH) ')
 
 
 

@@ -1,8 +1,5 @@
 //!
-//! test_service.cpp
-//!
-//! Created on: Mar 9, 2013
-//!     Author: Lazan
+//! casual
 //!
 
 #include <gtest/gtest.h>
@@ -37,7 +34,7 @@ namespace casual
 
             writer << CASUAL_MAKE_NVP( value);
 
-            sf::buffer::Binary buffer( sf::buffer::type::yaml(), 128);
+            sf::buffer::Binary buffer( sf::buffer::type::yaml(), emitter.size());
 
             buffer.str( emitter.c_str());
 
