@@ -14,12 +14,15 @@
 #include <iterator>
 #include <thread>         // std::this_thread::sleep_for
 #include <chrono>         // std::chrono::seconds
+#include <google/protobuf/message_lite.h>
 
+#include <common/internal/log.h>
 #include "xatmi.h"
 //#include "command.h"
 //#include "buffer/string.h"
 
 #include "client.h"
+#include <chat.pb.h>
 
 namespace simple_chat_protobuffer {
 
@@ -75,7 +78,30 @@ namespace simple_chat_protobuffer {
          return;
       }
       chat_room = tokens[1];
-      std::cout << "Chat room " << chat_room << " created\n";     
+      chat::CreateChatRoom ccr;
+      ccr.set_creator_nick(nick);
+      ccr.set_room_name(chat_room);
+      casual::common::log::internal::debug << "tpalloc ->\n";
+      auto buffer = tpalloc("X_OCTET", 0, ccr.ByteSize());
+      casual::common::log::internal::debug << "tpalloc <-\n";
+
+      if ( buffer == nullptr)
+      {
+         std::cout << "buffer == nullptr, tperrno=" << tperrnostring(tperrno) << std::endl;
+         exit(1);
+      }      
+      ccr.SerializeWithCachedSizesToArray((google::protobuf::uint8*)buffer);
+
+      int cd1 = tpacall("casual.simple-chat-protobuffer.create-chat-room", buffer, ccr.ByteSize(), 0);
+
+      long size = 0;
+      tpgetrply( &cd1, &buffer, &size, 0);
+         
+      chat::ChatRoom cr;
+      cr.ParseFromArray(buffer, size);
+      tpfree(buffer);
+      std::cout << "Chat room " << cr.room_name() << " created" << std::endl;
+      casual::common::log::internal::debug << "Chat room name=" << cr.room_name() << " with id=" << cr.room_id() << " created by nick=" << cr.creator_nick() << "\n";     
    }
    
    void simple_chat_protobuffer::Client::command_enter(std::vector<std::string> tokens)
@@ -98,7 +124,19 @@ namespace simple_chat_protobuffer {
 
    void simple_chat_protobuffer::Client::command_list(void)
    {
-      std::cout << "List chat rooms\n";      
+      int cd1 = tpacall("casual.simple-chat-protobuffer.list-chat-rooms", nullptr, 0, 0);
+
+      long size = 0;
+      auto buffer = tpalloc("X_OCTET", 0, 0);
+      tpgetrply( &cd1, &buffer, &size, 0);
+         
+      chat::ChatRooms chat_rooms;
+      chat_rooms.ParseFromArray(buffer, size);
+      tpfree(buffer);
+      for ( int i=0; i<chat_rooms.chat_room_size(); i++) {
+         chat::ChatRoom chat_room = chat_rooms.chat_room(i);
+         std::cout << "Chat room " << chat_room.room_name() << " with id " << chat_room.room_id() << " created by nick " << chat_room.creator_nick() << "\n";     
+      }
    }
    
    void simple_chat_protobuffer::Client::run(void) {

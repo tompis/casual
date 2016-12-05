@@ -8,7 +8,7 @@ server:
   services:
       
       # name of the service
-    - name: casual.simple-chat-protobuffer.create_chat_room
+    - name: casual.simple-chat-protobuffer.create-chat-room
       
       # name of the function the service should bind to
       function: create_chat_room
@@ -22,4 +22,7 @@ server:
       #
       transaction: none
       
+    - name: casual.simple-chat-protobuffer.list-chat-rooms
+      function: list_chat_rooms
+      transaction: none
 

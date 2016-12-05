@@ -3,6 +3,7 @@ from casual.middleware.make.dsl import *
 IncludePaths( ['server/include',
     'common/source',
     '../../xatmi/include',
+    '../../common/include',
     '$(CASUAL_OPTIONAL_INCLUDE_PATHS)',
     ])
     
@@ -29,6 +30,7 @@ target = LinkServer( 'server/bin/simple-chat-protobuffer-server',
     ],
     [ 
         'casual-xatmi', 
+        'casual-common', 
          'protobuf'
     ],
     'server/source/simple-chat-protobuffer.services.yaml')
@@ -42,6 +44,7 @@ target = LinkExecutable( 'client/bin/simple-chat-protobuffer-client',
     ],
     [ 
         'casual-xatmi', 
+        'casual-common', 
       'protobuf'
     ])
 
@@ -51,7 +54,7 @@ install_bin.append( target)
 #
 # Install
 #
-Install( install_bin,'$(CASUAL_HOME)/simple-chat-protobuffer/bin')
+Install( install_bin,'$(CASUAL_HOME)/bin')
 
 
 # domain examples
@@ -60,16 +63,9 @@ Install( install_bin,'$(CASUAL_HOME)/simple-chat-protobuffer/bin')
 
 # single domain minimal example
 #Install( [ 'domain/single/minimal/minimal.md', 'domain/single/minimal/domain.env'],'$(CASUAL_HOME)/example/domain/single/minimal')
-#Install( [ 'domain/single/minimal/configuration/domain.yaml'],'$(CASUAL_HOME)/example/domain/single/minimal/configuration')
+Install( [ 'configuration/domain.yaml'],'$(CASUAL_HOME)/simple-chat-protobuffer/configuration')
+Install( [ 'env/domain.env'],'$(CASUAL_HOME)/simple-chat-protobuffer')
 
-# multi domian minimal example
-#Install( [ 'domain/multiple/minimal/minimal.md'],'$(CASUAL_HOME)/example/domain/multiple/minimal')
-
-#Install( [ 'domain/multiple/minimal/domain1/domain.env'],'$(CASUAL_HOME)/example/domain/multiple/minimal/domain1')
-#Install( [ 'domain/multiple/minimal/domain1/configuration/domain.yaml'],'$(CASUAL_HOME)/example/domain/multiple/minimal/domain1/configuration')
-
-#Install( [ 'domain/multiple/minimal/domain2/domain.env'],'$(CASUAL_HOME)/example/domain/multiple/minimal/domain2')
-#Install( [ 'domain/multiple/minimal/domain2/configuration/domain.yaml'],'$(CASUAL_HOME)/example/domain/multiple/minimal/domain2/configuration')
 
 
 
