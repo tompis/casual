@@ -39,6 +39,6 @@ message ChatMessages {
 }
 
 message GetChatMessages {
-    int32 room_id = 1;
+    string chat_room = 1;
     int32 message_id = 2;
 }
