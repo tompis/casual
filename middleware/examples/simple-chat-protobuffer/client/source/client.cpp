@@ -265,7 +265,6 @@ namespace simple_chat_protobuffer {
    void simple_chat_protobuffer::Client::run(void) {
       while ( command != Command::Quit)
       {
-         std::cout << nick << "@" << (connected ? chat_room : "") << "> ";
          int p = std::cin.peek();
          if ( p == EOF ) {
             // No cammand being written
@@ -278,7 +277,8 @@ namespace simple_chat_protobuffer {
             }
          }
          else {
-            // User entered a character, lets get the command
+            // User entered a character, write prompt and get the command
+            std::cout << nick << "@" << (connected ? chat_room : "") << "> ";
             std::getline (std::cin, command_str);
             std::istringstream iss(command_str);
             std::vector<std::string> tokens{std::istream_iterator<std::string>{iss},
