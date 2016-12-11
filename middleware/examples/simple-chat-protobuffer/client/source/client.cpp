@@ -106,23 +106,13 @@ namespace simple_chat_protobuffer {
       int result = tpgetrply( &cd1, &receive_buffer, &size, 0);
       if ( result == -1 ) 
       {
-         if ( tperrno == TPESVCFAIL )
-         {
-            std::cout << "room name already exists" << std::endl;
-            return;
-         }
-         else 
-         {
-            casual::app::log::error << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-            std::cout << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-            exit(1);         
-         }
+         casual::app::log::error << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         std::cout << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         exit(1);         
       }
       if ( size == 0 )
       {
-         casual::app::log::error << "tpgetrply() failed, size==0"  << std::endl;
-         std::cout << "tpgetrply() failed, size==0" << std::endl;
-         //exit(1);      // bug
+         std::cout << "room name already exists" << std::endl;
          return;
       }
          
@@ -174,21 +164,14 @@ namespace simple_chat_protobuffer {
       tpgetrply( &cd1, &receive_buffer, &size, 0);
       if ( size == 0 )
       {
-         casual::app::log::error << "tpgetrply() returned 0" << std::endl;
-         std::cout << "tpgetrply() returned 0" << std::endl;
-         exit(1);         
+         std::cout << "No chat room named " << chat_room << std::endl;
+         return;
       }
       chat::ChatRoomEntered response;
       response.ParseFromArray(receive_buffer, size);
       tpfree(receive_buffer);
-      auto ri = response.room_id();
-      if ( ri == 0 )
-      {
-         std::cout << "No chat room named " << chat_room << std::endl;
-         return;
-      }
-      room_id = ri;
-      connected = room_id != 0;
+      room_id = response.room_id();
+      connected = true;
       message_id = response.message_id();
    }
 
@@ -233,8 +216,51 @@ namespace simple_chat_protobuffer {
          std::cout << "No message to send! \n";
          return;                  
       }
-      //std::cout << "Sending message " << message << "\n";      
+      chat::ChatMessage chat_message_req;
+      chat_message_req.set_message(message);
+      chat_message_req.set_nick(nick);
+      chat_message_req.set_chat_room(chat_room);
+      chat_message_req.set_message_id(message_id);
+   
+      auto send_buffer = tpalloc("X_OCTET", 0, chat_message_req.ByteSize());
+      casual::app::log::debug << "tpalloc <-" << std::endl;
+
+      if ( send_buffer == nullptr)
+      {
+         std::cout << "send_buffer == nullptr, tperrno=" << tperrnostring(tperrno) << std::endl;
+         exit(1);
+      }      
+      chat_message_req.SerializeWithCachedSizesToArray((google::protobuf::uint8*)send_buffer);
+
+      int cd1 = tpacall("casual.simple-chat-protobuffer.chat-message", send_buffer, chat_message_req.ByteSize(), 0);
+      tpfree(send_buffer);
+      if ( cd1 == -1 ) 
+      {
+         casual::app::log::error << "tpacall(casual.simple-chat-protobuffer.chat-message) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         std::cout << "tpacall(casual.simple-chat-protobuffer.chat-message) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         exit(1);
+      }
+      recive_messages_reply(cd1);
    }
+   
+   void simple_chat_protobuffer::Client::recive_messages_reply(int& cd)
+   {
+      long size = 0;
+      auto buffer = tpalloc("X_OCTET", 0, 0);
+      tpgetrply( &cd, &buffer, &size, 0);
+      if ( size == 0 )
+         return;
+      chat::ChatMessages chat_messages;
+      chat_messages.ParseFromArray(buffer, size);
+      tpfree(buffer);
+      for ( int i=0; i<chat_messages.chat_message_size(); i++) {
+         chat::ChatMessage chat_message = chat_messages.chat_message(i);
+         std::cout << chat_message.nick() << "@" << chat_message.chat_room() << ":" << chat_message.message() << std::endl;
+         message_id = chat_message.message_id();
+      }
+      
+   }
+   
    
    void simple_chat_protobuffer::Client::run(void) {
       while ( command != Command::Quit)

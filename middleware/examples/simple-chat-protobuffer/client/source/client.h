@@ -17,15 +17,16 @@ namespace simple_chat_protobuffer {
       int room_id = -1;
       int message_id = -1;
       bool connected = false;
-   public:
-      Client(std::vector< std::string> arguments);
-      void run(void);
       void command_help(void);
       void command_nick(std::vector<std::string> tokens);
       void command_create(std::vector<std::string> tokens);
       void command_enter(std::vector<std::string> tokens);
       void command_list(void);
       void command_message(void);
+      void recive_messages_reply(int& cd);
+   public:
+      Client(std::vector< std::string> arguments);
+      void run(void);
    };
 
 }

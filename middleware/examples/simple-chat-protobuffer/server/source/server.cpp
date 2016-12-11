@@ -20,10 +20,10 @@ namespace casual
 
          extern "C"
          {
-            static int _room_id = 1; // 0 is used to represent non existing room
+            static int _room_id = 0; 
             static std::map <std::string, chat::ChatRoom> _chat_room_map;
-            static std::vector<int> _message_ids = {-1};
-            static std::vector<std::vector<chat::ChatMessage>> _messages;
+            static std::vector<int> _message_ids = {};
+            static std::vector<std::vector<chat::ChatMessage>> _messages = {};
             static chat::ChatRoom _null_chat_room;
             
             void create_chat_room(TPSVCINFO *info)
@@ -43,10 +43,12 @@ namespace casual
                if ( _chat_room_map.count(room_name) == 1 ) 
                {
                   casual::app::log::debug << "room exists" << std::endl;
-                  tpreturn(TPFAIL, 0, 0, 0, 0); // room exists
+                  tpreturn(TPSUCCESS, 0, 0, 0, 0); // room exists
+                  return;
                }
                // new room
                _message_ids.push_back(0); // allocate the first message id for the room
+               _messages.push_back({}); // create empty messages vector
                chat::ChatRoom chat_room_resp;
                chat_room_resp.set_room_name(room_name);
                chat_room_resp.set_creator_nick(create_chat_room_req.creator_nick());
@@ -57,7 +59,8 @@ namespace casual
                if ( buffer == nullptr)
                {
                   casual::app::log::error << "tpalloc failed with error=" << tperrnostring(tperrno) << std::endl;
-                  tpreturn(TPSUCCESS, 0, 0, 0, 0); // TPEXIT
+                  tpreturn(TPFAIL, 0, 0, 0, 0); // TPEXIT
+                  return;
                }      
                chat_room_resp.SerializeWithCachedSizesToArray((google::protobuf::uint8*)buffer);
                tpreturn(TPSUCCESS, 0, buffer, chat_room_resp.ByteSize(), 0);
@@ -95,16 +98,31 @@ namespace casual
 
                // Find the room if it exists and return its id with the current message id
                auto room_name = enter_room_req.room_name();
+               casual::app::log::debug << "enter_chat_room.room_name()=" << room_name << std::endl;
                auto room_exists = _chat_room_map.count(room_name) == 1;
-               const chat::ChatRoom& chat_room = room_exists? _chat_room_map[room_name] : _null_chat_room;
+               casual::app::log::debug << "enter_chat_room room_exists=" << room_exists << std::endl;
+               if ( !room_exists ) 
+               {
+                  casual::app::log::debug << "!room_exists" << std::endl;
+                  tpreturn(TPFAIL, 0, 0, 0, 0); // room doesn't exist
+                  return;
+               }
+
+               const chat::ChatRoom chat_room = _chat_room_map[room_name];
+               
                auto room_id = chat_room.room_id();
-               auto message_id = room_exists ? _message_ids[room_id] : -1;
+               casual::app::log::debug << "enter_chat_room room_id=" << room_id << std::endl;
+               auto message_id = _message_ids[room_id];
+               casual::app::log::debug << "enter_chat_room message_id=" << message_id << std::endl;
                chat::ChatRoomEntered enter_room_resp;
                enter_room_resp.set_room_id(room_id);
-               enter_room_resp.set_message_id(message_id);
+               enter_room_resp.set_message_id(message_id-1);
+               enter_room_resp.set_room_name(room_name); // avoids 0 length message
                                
                // Send response message
-               char* buffer = tpalloc("X_OCTET", NULL, enter_room_resp.ByteSize());
+               auto message_size = enter_room_resp.ByteSize();
+               casual::app::log::debug << "enter_chat_room message_size=" << message_size << std::endl;
+               char* buffer = tpalloc("X_OCTET", NULL, message_size);
                if ( buffer == nullptr)
                {
                   casual::app::log::error << "tpalloc failed with error=" << tperrnostring(tperrno) << std::endl;
@@ -112,6 +130,7 @@ namespace casual
                   return;
                }      
                enter_room_resp.SerializeWithCachedSizesToArray((google::protobuf::uint8*)buffer);
+               casual::app::log::debug << "enter_chat_room returning" << std::endl;
                tpreturn( TPSUCCESS, 0, buffer, enter_room_resp.ByteSize(), 0);
             } // list_chat_rooms
 
@@ -123,26 +142,43 @@ namespace casual
                tpfree(info->data);
 
                // Give message an id and store it
-               auto room_id = chat_message_req.room_id();
+               auto room_name = chat_message_req.chat_room();
+               casual::app::log::debug << "chat_message.room_name()=" << room_name << std::endl;
+               auto room_exists = _chat_room_map.count(room_name) == 1;
+               if ( !room_exists )
+               {
+                  casual::app::log::error << "Client sent bad room name" << std::endl;
+                  tpreturn( TPFAIL, 0, 0, 0, 0); // should retur TPEXIT
+                  return;
+               } 
+               const chat::ChatRoom& chat_room = _chat_room_map[room_name];
+               auto room_id = chat_room.room_id();
                auto message_id = _message_ids[room_id];
                auto prev_message_id = chat_message_req.message_id();
+               casual::app::log::debug << "chat_message.message_id()=" << prev_message_id << std::endl;
+               casual::app::log::debug << "chat_message message_id=" << message_id << std::endl;
                chat_message_req.set_message_id(message_id);
-               _messages[room_id][message_id] = chat_message_req;
+               
+               _messages[room_id].push_back(chat_message_req);
                _message_ids[room_id] += 1;
                
                // Create response message
                chat::ChatMessages chat_messages_resp;
-               for ( int i=prev_message_id; i<=message_id; i++) 
+               for ( int i=prev_message_id+1; i<=message_id; i++) 
                   *chat_messages_resp.add_chat_message() = _messages[room_id][i];
                
                // Send response message
-               char* buffer = tpalloc("X_OCTET", NULL, chat_messages_resp.ByteSize());
+               auto message_size = chat_messages_resp.ByteSize();
+               casual::app::log::debug << "chat_message message_size=" << message_size << std::endl;
+               char* buffer = tpalloc("X_OCTET", NULL, message_size);
                if ( buffer == nullptr)
                {
                   casual::app::log::error << "tpalloc failed with error=" << tperrnostring(tperrno) << std::endl;
-                  exit(1);
+                  tpreturn( TPFAIL, 0, 0, 0, 0); // should retur TPEXIT
+                  return;
                }      
                chat_messages_resp.SerializeWithCachedSizesToArray((google::protobuf::uint8*)buffer);
+               casual::app::log::debug << "chat_message.return" << room_name << std::endl;
                tpreturn( TPSUCCESS, 0, buffer, chat_messages_resp.ByteSize(), 0);
             } // chat_message
             

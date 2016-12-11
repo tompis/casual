@@ -24,10 +24,11 @@ message EnterChatRoom {
 message ChatRoomEntered {
     int32 room_id = 1;
     int32 message_id = 2;
+    string room_name = 3;
 }
 
 message ChatMessage {
-    int32 room_id = 1;
+    string chat_room = 1;
     int32 message_id = 2;
     string message = 3;
     string nick = 4;
