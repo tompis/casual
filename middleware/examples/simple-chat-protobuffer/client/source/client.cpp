@@ -261,12 +261,12 @@ namespace simple_chat_protobuffer {
       }      
       chat_message_req.SerializeWithCachedSizesToArray((google::protobuf::uint8*)send_buffer);
 
-      int cd1 = tpacall("casual.simple-chat-protobuffer.chat-message", send_buffer, chat_message_req.ByteSize(), 0);
+      int cd1 = tpacall("casual.simple-chat-protobuffer.get-chat-messages", send_buffer, chat_message_req.ByteSize(), 0);
       tpfree(send_buffer);
       if ( cd1 == -1 ) 
       {
-         casual::app::log::error << "tpacall(casual.simple-chat-protobuffer.chat-message) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         std::cout << "tpacall(casual.simple-chat-protobuffer.chat-message) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         casual::app::log::error << "tpacall(casual.simple-chat-protobuffer.get-chat-messages) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         std::cout << "tpacall(casual.simple-chat-protobuffer.get-chat-messages) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
          exit(1);
       }
       auto number_messages = recive_messages_reply(cd1);
@@ -310,17 +310,17 @@ namespace simple_chat_protobuffer {
       while ( command != Command::Quit)
       {
          //get the number of character in the buffer available for reading(including spaces and new line)
-         //std::streamsize size=std::cin.rdbuf()->in_avail();
-         std::streamsize size=1;
-         if ( connected ) 
-            get_messages(); // Get messages from server
+         std::streamsize size=std::cin.rdbuf()->in_avail();
+         //std::streamsize size=1;
+         //if ( connected ) 
+         //   get_messages(); // Get messages from server
          
          if ( size == 0 ) {
             // No cammand being written
             if ( connected ) 
                get_messages(); // Get messages from server
             // Wait some in order to preserve CPU 
-            std::this_thread::sleep_for (std::chrono::seconds(3));
+            std::this_thread::sleep_for (std::chrono::seconds(1));
          }
          else 
          {
@@ -329,7 +329,7 @@ namespace simple_chat_protobuffer {
             std::istringstream iss(command_str);
             std::vector<std::string> tokens{std::istream_iterator<std::string>{iss},
                             std::istream_iterator<std::string>{}};
-            
+            casual::app::log::debug << "tokens.size()=" << tokens.size() << std::endl;
             if ( tokens.size() > 0 )
             {
                if ( command_map.count(tokens[0]) == 1 )

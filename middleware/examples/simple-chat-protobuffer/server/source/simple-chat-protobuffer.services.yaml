@@ -34,3 +34,6 @@ server:
       function: chat_message
       transaction: none
 
+    - name: casual.simple-chat-protobuffer.get-chat-messages
+      function: get_chat_messages
+      transaction: none

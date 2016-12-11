@@ -143,7 +143,7 @@ namespace casual
                
                // Send response message
                auto message_size = chat_messages_resp.ByteSize();
-               casual::app::log::debug << "chat_message message_size=" << message_size << std::endl;
+               casual::app::log::debug << "message_size=" << message_size << std::endl;
                char* buffer = tpalloc("X_OCTET", NULL, message_size);
                if ( buffer == nullptr)
                {
