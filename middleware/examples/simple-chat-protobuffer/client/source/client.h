@@ -23,7 +23,9 @@ namespace simple_chat_protobuffer {
       void command_enter(std::vector<std::string> tokens);
       void command_list(void);
       void command_message(void);
-      void recive_messages_reply(int& cd);
+      void get_messages(void);
+      void write_prompt(void);
+      int recive_messages_reply(int& cd);
    public:
       Client(std::vector< std::string> arguments);
       void run(void);

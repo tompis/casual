@@ -8,6 +8,8 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <ios>
+#include <streambuf>
 #include <map>
 #include <sstream>
 #include <algorithm>
@@ -243,42 +245,86 @@ namespace simple_chat_protobuffer {
       recive_messages_reply(cd1);
    }
    
-   void simple_chat_protobuffer::Client::recive_messages_reply(int& cd)
+   void simple_chat_protobuffer::Client::get_messages(void)
+   {
+      casual::app::log::debug << "get_messages called" << std::endl;
+      chat::GetChatMessages chat_message_req;
+      chat_message_req.set_chat_room(chat_room);
+      chat_message_req.set_message_id(message_id);
+   
+      auto send_buffer = tpalloc("X_OCTET", 0, chat_message_req.ByteSize());
+
+      if ( send_buffer == nullptr)
+      {
+         std::cout << "send_buffer == nullptr, tperrno=" << tperrnostring(tperrno) << std::endl;
+         exit(1);
+      }      
+      chat_message_req.SerializeWithCachedSizesToArray((google::protobuf::uint8*)send_buffer);
+
+      int cd1 = tpacall("casual.simple-chat-protobuffer.chat-message", send_buffer, chat_message_req.ByteSize(), 0);
+      tpfree(send_buffer);
+      if ( cd1 == -1 ) 
+      {
+         casual::app::log::error << "tpacall(casual.simple-chat-protobuffer.chat-message) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         std::cout << "tpacall(casual.simple-chat-protobuffer.chat-message) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         exit(1);
+      }
+      auto number_messages = recive_messages_reply(cd1);
+      if ( number_messages )
+         write_prompt();
+   }
+   
+   int simple_chat_protobuffer::Client::recive_messages_reply(int& cd)
    {
       long size = 0;
       auto buffer = tpalloc("X_OCTET", 0, 0);
       tpgetrply( &cd, &buffer, &size, 0);
       if ( size == 0 )
-         return;
+         return 0;
       chat::ChatMessages chat_messages;
       chat_messages.ParseFromArray(buffer, size);
       tpfree(buffer);
-      for ( int i=0; i<chat_messages.chat_message_size(); i++) {
+      auto number_messages = chat_messages.chat_message_size();
+      if ( number_messages == 0 )
+      {
+         casual::app::log::debug << "no messages" << std::endl;
+         return 0;         
+      }
+      std::cout << "\r"; // overwrites prompt
+      for ( int i=0; i<number_messages; i++) {
          chat::ChatMessage chat_message = chat_messages.chat_message(i);
          std::cout << chat_message.nick() << "@" << chat_message.chat_room() << ":" << chat_message.message() << std::endl;
          message_id = chat_message.message_id();
       }
-      
+      return number_messages;
+   }
+
+   void simple_chat_protobuffer::Client::write_prompt(void)
+   {
+      std::cout << nick << "@" << (connected ? chat_room : "") << "> " << std::flush;      
    }
    
    
    void simple_chat_protobuffer::Client::run(void) {
+      write_prompt();
       while ( command != Command::Quit)
       {
-         int p = std::cin.peek();
-         if ( p == EOF ) {
+         //get the number of character in the buffer available for reading(including spaces and new line)
+         //std::streamsize size=std::cin.rdbuf()->in_avail();
+         std::streamsize size=1;
+         if ( connected ) 
+            get_messages(); // Get messages from server
+         
+         if ( size == 0 ) {
             // No cammand being written
-            if ( connected ) {
-               // Get a message from server
-            }
-            else {
-               // Wait some in order to preserve CPU 
-               std::this_thread::sleep_for (std::chrono::seconds(1));
-            }
+            if ( connected ) 
+               get_messages(); // Get messages from server
+            // Wait some in order to preserve CPU 
+            std::this_thread::sleep_for (std::chrono::seconds(3));
          }
-         else {
-            // User entered a character, write prompt and get the command
-            std::cout << nick << "@" << (connected ? chat_room : "") << "> ";
+         else 
+         {
+            // User entered a character get the command
             std::getline (std::cin, command_str);
             std::istringstream iss(command_str);
             std::vector<std::string> tokens{std::istream_iterator<std::string>{iss},
@@ -319,6 +365,7 @@ namespace simple_chat_protobuffer {
                      break;
                }
             }
+            write_prompt();
          }
       }      
    }
