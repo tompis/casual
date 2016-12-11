@@ -172,13 +172,24 @@ namespace simple_chat_protobuffer {
       long size = 0;
       auto receive_buffer = tpalloc("X_OCTET", 0, 0);
       tpgetrply( &cd1, &receive_buffer, &size, 0);
-         
+      if ( size == 0 )
+      {
+         casual::app::log::error << "tpgetrply() returned 0" << std::endl;
+         std::cout << "tpgetrply() returned 0" << std::endl;
+         exit(1);         
+      }
       chat::ChatRoomEntered response;
       response.ParseFromArray(receive_buffer, size);
       tpfree(receive_buffer);
-      room_id = response.room_id();
-      message_id = response.message_id();
+      auto ri = response.room_id();
+      if ( ri == 0 )
+      {
+         std::cout << "No chat room named " << chat_room << std::endl;
+         return;
+      }
+      room_id = ri;
       connected = room_id != 0;
+      message_id = response.message_id();
    }
 
    void simple_chat_protobuffer::Client::command_list(void)
@@ -200,7 +211,7 @@ namespace simple_chat_protobuffer {
       tpfree(buffer);
       for ( int i=0; i<chat_rooms.chat_room_size(); i++) {
          chat::ChatRoom chat_room = chat_rooms.chat_room(i);
-         std::cout << "Chat room " << chat_room.room_name() << " with id " << chat_room.room_id() << " created by nick " << chat_room.creator_nick() << "\n";     
+         std::cout << "Chat room " << chat_room.room_name() << " with id " << chat_room.room_id() << " created by " << chat_room.creator_nick() << "\n";     
       }
    }
    

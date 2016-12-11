@@ -6,9 +6,9 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
-#include <common/internal/log.h>
 #include "xatmi.h"
 #include "chat.pb.h"
+#include <app_log.h>
 
 namespace casual
 {
@@ -108,7 +108,8 @@ namespace casual
                if ( buffer == nullptr)
                {
                   casual::app::log::error << "tpalloc failed with error=" << tperrnostring(tperrno) << std::endl;
-                  exit(1);
+                  tpreturn( TPFAIL, 0, 0, 0, 0); // should retur TPEXIT
+                  return;
                }      
                enter_room_resp.SerializeWithCachedSizesToArray((google::protobuf::uint8*)buffer);
                tpreturn( TPSUCCESS, 0, buffer, enter_room_resp.ByteSize(), 0);
