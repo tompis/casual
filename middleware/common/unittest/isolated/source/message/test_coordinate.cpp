@@ -22,14 +22,16 @@ namespace casual
             {
                struct Policy
                {
+                  using message_type = gateway::domain::discover::Reply;
+
                   template< typename M, typename R>
-                  void operator() ( M&& request, R&& reply)
+                  void accumulate( M&& request, R&& reply)
                   {
                      correlation = request.correlation;
                   }
 
                   template< typename M>
-                  void operator () ( platform::ipc::id::type queue, M&& message)
+                  void send( platform::ipc::id::type queue, M&& message)
                   {
                      sent = true;
                   }
@@ -38,7 +40,7 @@ namespace casual
                   bool sent = false;
                };
 
-               using Coordinate = message::Coordinate< gateway::domain::discover::Reply, Policy>;
+               using Coordinate = message::Coordinate< Policy>;
 
             } // <unnamed>
          } // local

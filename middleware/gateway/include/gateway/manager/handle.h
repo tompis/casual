@@ -77,14 +77,6 @@ namespace casual
             {
                namespace discover
                {
-                  struct Reply : Base
-                  {
-                     using Base::Base;
-                     using message_type = common::message::gateway::domain::discover::Reply;
-
-                     void operator () ( message_type& message);
-                  };
-
                   struct Request : Base
                   {
                      using Base::Base;
@@ -93,16 +85,13 @@ namespace casual
                      void operator () ( message_type& message);
                   };
 
-                  namespace automatic
+                  struct Reply : Base
                   {
-                     struct Request : Base
-                     {
-                        using Base::Base;
-                        using message_type = common::message::gateway::domain::discover::automatic::Request;
+                     using Base::Base;
+                     using message_type = common::message::gateway::domain::discover::Reply;
 
-                        void operator () ( message_type& message);
-                     };
-                  } // automatic
+                     void operator () ( message_type& message);
+                  };
 
                } // discovery
 
@@ -112,6 +101,18 @@ namespace casual
 
             namespace outbound
             {
+               namespace configuration
+               {
+                  struct Request : Base
+                  {
+                     using Base::Base;
+                     using message_type = message::outbound::configuration::Request;
+
+                     void operator () ( message_type& message);
+                  };
+
+               } // configuration
+
                struct Connect : Base
                {
                   using Base::Base;
@@ -163,7 +164,7 @@ namespace casual
 
          } // handle
 
-         common::message::dispatch::Handler handler( State& state);
+         common::communication::ipc::dispatch::Handler handler( State& state);
 
       } // manager
 

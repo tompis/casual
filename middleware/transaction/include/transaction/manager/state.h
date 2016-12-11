@@ -81,8 +81,6 @@ namespace casual
 
             struct Proxy
             {
-
-
                struct Instance
                {
                   enum class State
@@ -147,8 +145,6 @@ namespace casual
             };
 
 
-
-
             namespace update
             {
                template< Proxy::Instance::State state>
@@ -162,38 +158,29 @@ namespace casual
             } // update
 
 
-
-
-
-
-            struct Domain
+            namespace external
             {
-
-               Domain( const common::process::Handle& process, const common::Uuid& remote, id::type id);
-
-
-               common::process::Handle process;
-
-               //!
-               //! id of the remote domain
-               //!
-               common::Uuid remote;
-
-               //!
-               //! RM id
-               //!
-               id::type id;
-
-               friend bool operator == ( const Domain& lhs, const common::process::Handle& rhs);
-
-            };
+               struct Proxy
+               {
+                  Proxy( const common::process::Handle& process, id::type id);
 
 
-            namespace domain
-            {
-               id::type id( State& state, const common::process::Handle& process, const common::Uuid& remote);
+                  common::process::Handle process;
 
-            } // domain
+                  //!
+                  //! RM id
+                  //!
+                  id::type id;
+
+                  friend bool operator == ( const Proxy& lhs, const common::process::Handle& rhs);
+               };
+
+               namespace proxy
+               {
+                  id::type id( State& state, const common::process::Handle& process);
+               } // proxy
+
+            } // external
 
          } // resource
 
@@ -488,7 +475,7 @@ namespace casual
 
          std::vector< state::resource::Proxy> resources;
 
-         std::vector< state::resource::Domain> domains;
+         std::vector< state::resource::external::Proxy> externals;
 
 
          struct
@@ -501,7 +488,7 @@ namespace casual
             //!
             //! Resource request, that will be processed after an atomic
             //! write to the log. If corresponding resources is busy, for some
-            //! requests, these will be moved to pendingRequests
+            //! requests, these will be moved to pending.requests
             //!
             std::vector< state::pending::Request> requests;
 
@@ -563,7 +550,7 @@ namespace casual
          using instance_range = common::range::type_t< std::vector< state::resource::Proxy::Instance>>;
          instance_range idle_instance( state::resource::id::type rm);
 
-         const state::resource::Domain& get_domain( state::resource::id::type rm) const;
+         const state::resource::external::Proxy& get_external( state::resource::id::type rm) const;
 
 
 

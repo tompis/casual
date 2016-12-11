@@ -10,6 +10,7 @@
 #include "common/message/gateway.h"
 
 
+
 #include "common/flag.h"
 #include "common/trace.h"
 
@@ -46,6 +47,20 @@ namespace casual
                         reply.code = 42;
                      }
 
+                     /*
+                        #define TPEOS 7
+                        #define TPEPROTO 9
+                        #define TPESVCERR 10
+                        #define TPESVCFAIL 11
+                        #define TPESYSTEM 12
+                      */
+
+                     if( range::search( request.service.name, std::string{ "TPEOS"})) { reply.error = TPEOS;}
+                     if( range::search( request.service.name, std::string{ "TPEPROTO"})) { reply.error = TPEPROTO;}
+                     if( range::search( request.service.name, std::string{ "TPESVCERR"})) { reply.error = TPESVCERR;}
+                     if( range::search( request.service.name, std::string{ "TPESVCFAIL"})) { reply.error = TPESVCFAIL;}
+                     if( range::search( request.service.name, std::string{ "TPESYSTEM"})) { reply.error = TPESYSTEM;}
+
 
                      ipc::eventually::send( request.process.queue, reply);
                   }
@@ -61,30 +76,8 @@ namespace casual
             {
                namespace
                {
-                  void prepare_domain_manager( platform::ipc::id::type ipc)
-                  {
-                     common::environment::variable::set( environment::variable::name::ipc::domain::manager(), ipc);
-
-                     log << environment::variable::name::ipc::domain::manager() << " set to: "
-                           << common::environment::variable::get( environment::variable::name::ipc::domain::manager()) << '\n';
-
-                     std::ofstream file{ common::environment::domain::singleton::file()};
-
-                     if( file)
-                     {
-                        file << ipc;
-                        log << "ipc: " << ipc << " to: " << common::environment::domain::singleton::file() << '\n';
-                     }
-                     else
-                     {
-                        log::error << "faild to create mockup domain singleton file: " << common::environment::domain::singleton::file() << '\n';
-                     }
-                  }
-
-
                   namespace handle
                   {
-
                      namespace connect
                      {
                         struct Reply
@@ -103,24 +96,24 @@ namespace casual
                } // <unnamed>
             } // local
 
-            Manager::Manager() : Manager( default_handler())
+            Manager::Manager() : Manager( dispatch_type{})
             {
 
 
             }
 
-            Manager::Manager( message::dispatch::Handler&& handler)
-               : m_replier{ std::move( handler)}
+            Manager::Manager( dispatch_type&& handler, const common::domain::Identity& identity)
+               : m_replier{ default_handler() + std::move( handler)}, m_singlton{ common::domain::singleton::create( m_replier.process(), identity)}
             {
-               local::prepare_domain_manager( m_replier.input());
+
             }
 
             Manager::~Manager() = default;
 
-            message::dispatch::Handler Manager::default_handler()
+            dispatch_type Manager::default_handler()
             {
 
-               return message::dispatch::Handler{
+               return dispatch_type{
                   [&]( message::domain::process::connect::Request& r)
                   {
                      Trace trace{ "mockup domain::process::connect::Request"};
@@ -216,8 +209,27 @@ namespace casual
                   [&]( message::domain::process::termination::Registration& m)
                   {
                      Trace trace{ "mockup domain process::termination::Registration"};
+
+
+                     if( ! range::find( m_state.event_listeners, m.process))
+                     {
+                        m_state.event_listeners.push_back( m.process);
+                     }
+
                   },
+                  [&](  message::domain::process::termination::Event& m)
+                  {
+                     Trace trace{ "mockup domain process::termination::Event"};
+
+                     for( auto& listener : m_state.event_listeners)
+                     {
+                        ipc::eventually::send( listener.queue, m);
+                     }
+                  },
+
                };
+
+
             }
 
 
@@ -232,6 +244,7 @@ namespace casual
                      {
                         void domain( const mockup::ipc::Replier& replier)
                         {
+
                            message::domain::process::connect::Request request;
                            request.process = replier.process();
 
@@ -252,13 +265,15 @@ namespace casual
             } // local
 
 
-            Broker::Broker() : Broker( default_handler())
+            Broker::Broker() : Broker( dispatch_type{})
             {
             }
 
-            Broker::Broker( message::dispatch::Handler&& handler)
-               : m_replier{ std::move( handler)}
+            Broker::Broker( dispatch_type&& handler)
+               : m_replier{  default_handler() + std::move( handler)}
             {
+               Trace trace{ "mockup domain::Broker::Broker"};
+
                //
                // Connect to the domain
                //
@@ -268,18 +283,18 @@ namespace casual
                // Set environment variable to make it easier for other processes to
                // reach this broker (should work any way...)
                //
-               environment::variable::set( environment::variable::name::ipc::broker(), m_replier.input());
+               common::environment::variable::process::set(
+                     common::environment::variable::name::ipc::broker(),
+                     m_replier.process());
 
             }
 
             Broker::~Broker() = default;
 
 
-            message::dispatch::Handler Broker::default_handler()
+            dispatch_type Broker::default_handler()
             {
-
-
-               return message::dispatch::Handler{
+               return dispatch_type{
 
                   [&]( message::service::lookup::Request& r)
                   {
@@ -326,14 +341,14 @@ namespace casual
                         lookup.service.transaction = service.transaction;
                         lookup.process = m.process;
                      }
-
                      //log << "services: " << range::make( m_state.services) << '\n';
                   },
-                  [&]( message::gateway::domain::service::Advertise& m)
+                  [&]( message::gateway::domain::Advertise& m)
                   {
                      Trace trace{ "mockup gateway::domain::service::Advertise"};
 
                      log  << "message: " << m << '\n';
+
 
                      for( auto& service : m.services)
                      {
@@ -364,6 +379,7 @@ namespace casual
                      auto reply = message::reverse::type( m);
 
                      reply.domain = m.domain;
+                     reply.process = m_replier.process();
 
                      for( auto&& s : m.services)
                      {
@@ -397,10 +413,10 @@ namespace casual
 
             namespace transaction
             {
-               message::dispatch::Handler Manager::default_handler()
+               dispatch_type Manager::default_handler()
                {
 
-                  return message::dispatch::Handler{
+                  return dispatch_type{
                      [&]( common::message::transaction::commit::Request& message)
                      {
                         Trace trace{ "mockup::transaction::Commit"};
@@ -437,19 +453,100 @@ namespace casual
                   };
                }
 
-               Manager::Manager() : Manager( default_handler()) {}
+               Manager::Manager() : Manager( dispatch_type{}) {}
 
-               Manager::Manager( message::dispatch::Handler handler)
-                  : m_replier{ std::move( handler)}
+
+               Manager::Manager( dispatch_type&& handler)
+                  : m_replier{ default_handler() + std::move( handler)}
                {
 
                   //
                   // Connect to the domain
                   //
                   local::send::connect::domain( m_replier, process::instance::identity::transaction::manager());
+
+                  //
+                  // Set environment variable to make it easier for other processes to
+                  // reach TM (should work any way...)
+                  //
+                  common::environment::variable::process::set(
+                        common::environment::variable::name::ipc::transaction::manager(),
+                        m_replier.process());
                }
 
             } // transaction
+
+            namespace queue
+            {
+               Broker::Broker() : Broker( dispatch_type{})
+               {
+
+
+               }
+
+               Broker::Broker( dispatch_type&& handler)
+                  : m_replier{ default_handler() + std::move( handler)}
+               {
+                  //
+                  // Connect to the domain
+                  //
+                  local::send::connect::domain( m_replier, process::instance::identity::queue::broker());
+
+                  //
+                  // Set environment variable to make it easier for other processes to
+                  // reach this broker (should work any way...)
+                  //
+                  environment::variable::set( environment::variable::name::ipc::queue::broker(), m_replier.input());
+               }
+
+               dispatch_type Broker::default_handler()
+               {
+                  return {
+                     [&]( message::queue::lookup::Request& r)
+                     {
+                        Trace trace{ "mockup::queue::lookup::Request"};
+
+                        auto reply = message::reverse::type( r);
+                        reply.process = m_replier.process();
+                        reply.queue = 42;
+
+                        ipc::eventually::send( r.process.queue, reply);
+                     },
+                     [&]( message::queue::enqueue::Request& r)
+                     {
+                        Trace trace{ "mockup::queue::enqueue::Request"};
+
+                        auto reply = message::reverse::type( r);
+                        reply.id = uuid::make();
+
+                        Broker::Message message{ r.message};
+                        message.timestamp = platform::clock_type::now();
+                        message.id = reply.id;
+
+                        m_queues[ r.name].push( std::move( message));
+
+                        ipc::eventually::send( r.process.queue, reply);
+                     },
+                     [&]( message::queue::dequeue::Request& r)
+                     {
+                        Trace trace{ "mockup::queue::dequeue::Request"};
+
+                        auto reply = message::reverse::type( r);
+
+                        auto& queue = m_queues[ r.name];
+
+                        if( ! queue.empty())
+                        {
+                           reply.message.push_back( std::move( queue.front()));
+                           queue.pop();
+                        }
+
+                        ipc::eventually::send( r.process.queue, reply);
+                     }
+                  };
+               }
+
+            } // queue
 
             namespace local
             {
@@ -488,7 +585,7 @@ namespace casual
 
 
                Server::Server( std::vector< message::service::advertise::Service> services)
-                : m_replier{ message::dispatch::Handler{ service::Echo{}, local::handle::connect::Reply{ "echo server"},}}
+                : m_replier{ dispatch_type{ service::Echo{}, local::handle::connect::Reply{ "echo server"},}}
                {
                   //
                   // Connect to the domain
@@ -519,9 +616,10 @@ namespace casual
                {
                   Trace trace{ "mockup echo::Server::unadvertise"};
 
-                  message::service::Unadvertise unadvertise;
+                  message::service::Advertise unadvertise;
+                  unadvertise.directive = message::service::Advertise::Directive::remove;
                   unadvertise.process = m_replier.process();
-                  unadvertise.services = std::move( services);
+                  range::copy( services, std::back_inserter( unadvertise.services));
 
                   communication::ipc::blocking::send( communication::ipc::broker::device(), unadvertise);
                }

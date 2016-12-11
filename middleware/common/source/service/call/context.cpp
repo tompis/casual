@@ -138,7 +138,7 @@ namespace casual
                            if( ! flag< TPNOTRAN>( flags) && transaction)
                            {
                               message.trid = transaction.trid;
-                              transaction.associate( message.descriptor);
+                              transaction.associate( message.correlation);
 
                               //
                               // We use the transaction deadline if it's earlier
@@ -302,6 +302,16 @@ namespace casual
                //
                common::transaction::Context::instance().update( reply);
 
+
+               //
+               // Check any errors
+               //
+               if( reply.error != 0 && reply.error != TPESVCFAIL)
+               {
+                  exception::xatmi::propagate( reply.error);
+               }
+
+
                //
                // Check buffer types
                //
@@ -309,7 +319,7 @@ namespace casual
                {
                   auto output = buffer::pool::Holder::instance().get( *odata);
 
-                  if( output.payload.type != reply.buffer.type)
+                  if( output.payload().type != reply.buffer.type)
                   {
                      throw exception::xatmi::buffer::type::Output{};
                   }
@@ -344,6 +354,11 @@ namespace casual
                }
 
                log::internal::debug << "descriptor: " << reply.descriptor << " data: @" << static_cast< void*>( *odata) << " len: " << olen << " flags: " << flags << std::endl;
+
+               if( reply.error == TPESVCFAIL)
+               {
+                  throw exception::xatmi::service::Fail{};
+               }
 
             }
 

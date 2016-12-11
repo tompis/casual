@@ -111,6 +111,22 @@ namespace casual
 
          namespace instance
          {
+            namespace termination
+            {
+               void registration( const Handle& process)
+               {
+                  Trace trace{ "common::process::instance::termination::registration"};
+
+                  message::domain::process::termination::Registration message;
+                  message.process = common::process::handle();
+
+                  signal::thread::scope::Block block{ { signal::Type::child}};
+
+                  communication::ipc::blocking::send( communication::ipc::domain::manager::device(), message);
+               }
+
+            } // termination
+
             namespace identity
             {
                const Uuid& broker()
@@ -498,9 +514,6 @@ namespace casual
             }
 
 
-
-            auto c_environment = local::current::environment( environment);
-
             struct attribute_t
             {
                attribute_t()
@@ -509,6 +522,7 @@ namespace casual
                   check_error( posix_spawnattr_setflags( &attributes, POSIX_SPAWN_SETSIGMASK), "posix_spawnattr_setflags");
                   auto mask = signal::set::empty();
                   check_error( posix_spawnattr_setsigmask( &attributes, &mask.set), "posix_spawnattr_setsigmask");
+                  //check_error( posix_spawnattr_setflags( &attributes, POSIX_SPAWN_SETSIGDEF), "posix_spawnattr_setflags: POSIX_SPAWN_SETSIGDEF");
                }
                ~attribute_t()
                {
@@ -530,28 +544,44 @@ namespace casual
 
 
 
+
             platform::pid::type pid = 0;
 
             log::internal::debug << "process::spawn " << path << " " << range::make( arguments) << " - environment: " << range::make( environment) << std::endl;
 
-            auto status =  posix_spawnp(
-                  &pid,
-                  path.c_str(),
-                  nullptr,
-                  &spawn.attributes,
-                  const_cast< char* const*>( c_arguments.data()),
-                  const_cast< char* const*>( c_environment.data())
-                  );
-            switch( status)
             {
-               case 0:
-                  break;
-               default:
-                  throw exception::invalid::Argument( "spawn failed", CASUAL_NIP( path),
-                        exception::make_nip( "arguments", range::make( arguments)),
-                        exception::make_nip( "environment", range::make( environment)),
-                        CASUAL_NIP( error::string( status)));
+               //
+               // Since we're reading environment variables we need to lock
+               //
+               std::unique_lock< std::mutex> lock{ environment::variable::mutex()};
+
+               auto c_environment = local::current::environment( environment);
+
+               auto status =  posix_spawnp(
+                     &pid,
+                     path.c_str(),
+                     nullptr,
+                     &spawn.attributes,
+                     const_cast< char* const*>( c_arguments.data()),
+                     const_cast< char* const*>( c_environment.data())
+                     );
+               switch( status)
+               {
+                  case 0:
+                     break;
+                  default:
+                     throw exception::invalid::Argument( "spawn failed", CASUAL_NIP( path),
+                           exception::make_nip( "arguments", range::make( arguments)),
+                           exception::make_nip( "environment", range::make( environment)),
+                           CASUAL_NIP( error::string( status)));
+               }
             }
+
+            //
+            // We try to minimize the glitch where the spawned process does not
+            // get signals for a short period of time.
+            //
+            process::sleep( std::chrono::microseconds{ 200});
 
             log::internal::debug << "process::spawned pid: " << pid << '\n';
 
@@ -755,7 +785,7 @@ namespace casual
             {
                message::shutdown::Request request;
                request.process = handle();
-               communication::ipc::call( process.queue, request);
+               communication::ipc::blocking::send( process.queue, request);
             }
             else if( process.pid)
             {

@@ -28,6 +28,7 @@ namespace casual
             struct Settings
             {
                std::string address;
+               std::size_t order = 0;
             };
 
 
@@ -37,7 +38,6 @@ namespace casual
 
                using outbound_device_type = communication::tcp::outbound::Device;
                using inbound_device_type = communication::tcp::inbound::Device;
-
 
                struct configuration_type
                {
@@ -138,6 +138,7 @@ int main( int argc, char **argv)
       {
          casual::common::Arguments parser{{
             casual::common::argument::directive( { "-a", "--address"}, "address to the remote domain [(ip|domain):]port", settings.address),
+            casual::common::argument::directive( { "-o", "--order"}, "order of the outbound connector", settings.order),
          }};
          parser.parse( argc, argv);
       }

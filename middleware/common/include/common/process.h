@@ -1,8 +1,5 @@
 //!
-//! process.h
-//!
-//! Created on: May 12, 2013
-//!     Author: Lazan
+//! casual
 //!
 
 #ifndef CASUAL_COMMON_PROCESS_H_
@@ -115,6 +112,18 @@ namespace casual
 
          namespace instance
          {
+            namespace termination
+            {
+               //!
+               //! Register interest to get notified when a process
+               //! terminates
+               //!
+               //! @param process handle to send the notification to
+               //!
+               void registration( const Handle& process);
+
+            } // termination
+
             namespace identity
             {
                const Uuid& broker();

@@ -12,6 +12,10 @@
 #include "common/message/service.h"
 #include "common/message/server.h"
 #include "common/message/transaction.h"
+#include "common/message/queue.h"
+
+#include "common/file.h"
+#include "common/domain.h"
 
 
 #include <vector>
@@ -28,6 +32,8 @@ namespace casual
          namespace domain
          {
 
+            using dispatch_type = communication::ipc::dispatch::Handler;
+
             namespace service
             {
                struct Echo
@@ -40,10 +46,8 @@ namespace casual
             struct Manager
             {
                Manager();
-               Manager( message::dispatch::Handler&& handler);
+               Manager( dispatch_type&& handler, const common::domain::Identity& identity = common::domain::Identity{ "unittest-domain"});
 
-               template< typename... Args>
-               Manager( Args&& ...args) : Manager( default_handler( std::forward< Args>( args)...)) {}
 
                ~Manager();
 
@@ -56,20 +60,14 @@ namespace casual
                   std::map< common::Uuid, common::process::Handle> singeltons;
                   std::vector< common::message::domain::process::lookup::Request> pending;
                   std::vector< common::process::Handle> executables;
+                  std::vector< common::process::Handle> event_listeners;
                };
 
-               message::dispatch::Handler default_handler();
-
-               template< typename... Args>
-               message::dispatch::Handler default_handler( Args&& ...args)
-               {
-                  auto result = default_handler();
-                  result.insert( std::forward< Args>( args)...);
-                  return result;
-               }
+               dispatch_type default_handler();
 
                State m_state;
                ipc::Replier m_replier;
+               common::file::scoped::Path m_singlton;
             };
 
 
@@ -79,11 +77,7 @@ namespace casual
             struct Broker
             {
                Broker();
-
-               template< typename... Args>
-               Broker( Args&& ...args) : Broker( default_handler( std::forward< Args>( args)...)) {}
-
-               Broker( message::dispatch::Handler&& handler);
+               Broker( dispatch_type&& handler);
 
                ~Broker();
 
@@ -96,15 +90,7 @@ namespace casual
                };
 
 
-               message::dispatch::Handler default_handler();
-
-               template< typename... Args>
-               message::dispatch::Handler default_handler( Args&& ...args)
-               {
-                  auto result = default_handler();
-                  result.insert( std::forward< Args>( args)...);
-                  return result;
-               }
+               dispatch_type default_handler();
 
                State m_state;
                ipc::Replier m_replier;
@@ -112,33 +98,40 @@ namespace casual
 
             namespace transaction
             {
-
-
                struct Manager
                {
                   Manager();
-
-                  template< typename... Args>
-                  Manager( Args&& ...args) : Manager( default_handler( std::forward< Args>( args)...)) {}
+                  Manager( dispatch_type&& handler);
 
                private:
 
-                  message::dispatch::Handler default_handler();
-
-                  template< typename... Args>
-                  message::dispatch::Handler default_handler( Args&& ...args)
-                  {
-                     auto result = default_handler();
-                     result.insert( std::forward< Args>( args)...);
-                     return result;
-                  }
-
-                  Manager( message::dispatch::Handler handler);
+                  dispatch_type default_handler();
 
                   ipc::Replier m_replier;
                };
 
             } // transaction
+
+
+            namespace queue
+            {
+               struct Broker
+               {
+                  Broker();
+                  Broker( dispatch_type&& handler);
+
+               private:
+                  dispatch_type default_handler();
+
+                  using Message = message::queue::dequeue::Reply::Message;
+
+                  std::unordered_map< std::string, std::queue< Message>> m_queues;
+
+                  ipc::Replier m_replier;
+               };
+
+
+            } // queue
 
             namespace echo
             {
@@ -192,7 +185,6 @@ namespace casual
 
 
             } // minimal
-
 
 
          } // domain

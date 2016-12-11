@@ -423,7 +423,8 @@ namespace casual
                                  reply.process = found->second;
                                  manager::local::ipc::send( state(), message.process, reply);
                               }
-                              else if( message.directive == common::message::domain::process::lookup::Request::Directive::direct)
+                              else if( message.directive == common::message::domain::process::lookup::Request::Directive::direct
+                                    || state().runlevel() == State::Runlevel::shutdown)
                               {
                                  manager::local::ipc::send( state(), message.process, reply);
                               }
@@ -441,7 +442,8 @@ namespace casual
                                  reply.process = found->second;
                                  manager::local::ipc::send( state(), message.process, reply);
                               }
-                              else if( message.directive == common::message::domain::process::lookup::Request::Directive::direct)
+                              else if( message.directive == common::message::domain::process::lookup::Request::Directive::direct
+                                    || state().runlevel() == State::Runlevel::shutdown)
                               {
                                  manager::local::ipc::send( state(), message.process, reply);
                               }
@@ -481,21 +483,33 @@ namespace casual
                                  });
 
                            manager::local::ipc::send( state, process, message);
-                           environment::variable::set( environment::variable::name::ipc::broker(), process.queue);
+
+                           environment::variable::process::set( environment::variable::name::ipc::broker(), process);
                         }
 
                         void tm( State& state, const common::process::Handle& process)
                         {
                            Trace trace{ "domain::manager::handle::local::singleton::tm"};
 
-                           environment::variable::set( environment::variable::name::ipc::transaction::manager(), process.queue);
+                           environment::variable::process::set( environment::variable::name::ipc::transaction::manager(), process);
+                        }
+
+                        void queue( State& state, const common::process::Handle& process)
+                        {
+                           Trace trace{ "domain::manager::handle::local::singleton::queue"};
+
+                           environment::variable::process::set(
+                                 environment::variable::name::ipc::queue::broker(), process);
                         }
 
                         void connect( State& state, const common::message::domain::process::connect::Request& message)
                         {
+                           Trace trace{ "domain::manager::handle::local::singleton::connect"};
+
                            static const std::map< Uuid, std::function< void(State&, const common::process::Handle&)>> tasks{
                               { common::process::instance::identity::broker(), &broker},
-                              { common::process::instance::identity::transaction::manager(), &tm}
+                              { common::process::instance::identity::transaction::manager(), &tm},
+                              { common::process::instance::identity::queue::broker(), &queue}
                            };
 
                            auto found = range::find( tasks, message.identification);
@@ -607,7 +621,7 @@ namespace casual
 
                void Gateway::operator () ( const common::message::domain::configuration::gateway::Request& message)
                {
-                  Trace trace{ "domain::manager::handle::configuration:::Gateway"};
+                  Trace trace{ "domain::manager::handle::configuration::Gateway"};
 
                   auto reply = config::gateway::transform::gateway( state().configuration.gateway);
                   reply.correlation = message.correlation;
@@ -618,6 +632,17 @@ namespace casual
 
                }
 
+               void Queue::operator () ( const common::message::domain::configuration::queue::Request& message)
+               {
+                  Trace trace{ "domain::manager::handle::configuration::Queue"};
+
+                  auto reply = config::queue::transform::manager( state().configuration.queue);
+                  reply.correlation = message.correlation;
+
+                  log << "reply: " << reply << '\n';
+
+                  manager::local::ipc::send( state(), message.process, reply);
+               }
 
             } // configuration
 
@@ -648,7 +673,7 @@ namespace casual
 
          } // handle
 
-         common::message::dispatch::Handler handler( State& state)
+         handle::dispatch_type handler( State& state)
          {
             Trace trace{ "domain::manager::handler"};
 
@@ -662,6 +687,7 @@ namespace casual
                manager::handle::process::Lookup{ state},
                manager::handle::configuration::transaction::Resource{ state},
                manager::handle::configuration::Gateway{ state},
+               manager::handle::configuration::Queue{ state},
                handle::local::server::Handle{
                   manager::admin::services( state),
                   ipc::device().error_handler()}

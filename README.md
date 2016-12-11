@@ -35,7 +35,8 @@ The following packages need to be installed:
 *Note: casual will not build on a 32-bit system*
 
 #### Set up the environment
-Latest version is on *develop* branch (default)<br>
+Latest version is on *develop* branch (default)
+
 Use templatefile to setup environment
 
     git clone https://bitbucket.org/casualcore/casual.git
@@ -61,16 +62,19 @@ Edit file, set correct paths and source file
 
      casual-make test
 
-Tested on e.g. OS X and Ubuntu so far. More unix flavors needed<br>
+Tested on e.g. OS X and Ubuntu so far. More unix flavors needed
+
 Please report failed test cases (contact info below)    
 
 ### Use casual-middleware
-TODO: this documentation should be separated from this repo? At least conceptually
+TODO: user/operation documentation to come.
+
+Meanwhile there are some configuration examples that could shed some light under: middleware/example
+
 
 ### Status
 
 #### Whats left to do?
-* gateway
 * JCA implementation
 * COBOL bindings
 * some redesign of internal parts (for maintainability)
@@ -91,7 +95,7 @@ We've done some field tests
 
 ### Contact ###
 
-* Fredrik Eriksson (laz@laz.se)
+* casual@laz.se
 
 
 ### License

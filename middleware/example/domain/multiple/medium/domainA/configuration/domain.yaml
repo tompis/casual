@@ -1,0 +1,41 @@
+
+
+domain:
+
+  # name of this domain
+  name: md-medium-domainA
+      
+  servers: 
+         
+    - path: casual-queue-broker
+      instances: 1
+
+    # advertises casual.example.echo 
+    - path: ${CASUAL_HOME}/example/bin/casual-example-server
+      instances: 1 # how many instances should be started
+
+  #
+  # Queue configuration
+  #
+  queue:
+  
+    groups:
+      - name: domain-A
+        queuebase: queue/domainA.db
+        queues:
+          - name: queueA1
+        
+
+  #
+  # gateway configuration
+  #
+  gateway:
+    listeners:
+      # which address this domain should listen on
+      - address: 127.0.0.1:7771
+    
+    connections:
+      # We connect to domainB
+      - address: 127.0.0.1:7772
+
+

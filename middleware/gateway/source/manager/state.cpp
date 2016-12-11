@@ -98,26 +98,25 @@ namespace casual
 
             namespace coordinate
             {
-
-               void Policy::operator () ( common::message::gateway::domain::discover::automatic::Reply& message, common::message::gateway::domain::discover::Reply& reply)
+               namespace outbound
                {
-                  Trace trace{ "manager::state::coordinate::Policy accumulate"};
+                  void Policy::accumulate( message_type& message, common::message::gateway::domain::discover::Reply& reply)
+                  {
+                     Trace trace{ "manager::state::coordinate::outbound::Policy accumulate"};
 
-                  message.replies.push_back( std::move( reply));
-               }
+                     message.replies.push_back( std::move( reply));
+                  }
 
-               void Policy::operator () ( common::platform::ipc::id::type queue, common::message::gateway::domain::discover::automatic::Reply& message)
-               {
-                  Trace trace{ "manager::state::coordinate::Policy send"};
+                  void Policy::send( common::platform::ipc::id::type queue, message_type& message)
+                  {
+                     Trace trace{ "manager::state::coordinate::outbound::Policy send"};
 
-                  manager::ipc::device().blocking_send( queue, message);
+                     manager::ipc::device().blocking_send( queue, message);
 
-               }
-
+                  }
+               } // outbound
 
             } // coordinate
-
-
          } // state
 
 
@@ -144,6 +143,11 @@ namespace casual
             {
                throw exception::invalid::Argument{ "failed to correlate listener to event", CASUAL_NIP( event)};
             }
+         }
+
+         void State::Discover::remove( common::platform::pid::type pid)
+         {
+            outbound.remove( pid);
          }
 
          std::ostream& operator << ( std::ostream& out, const State::Runlevel& value)

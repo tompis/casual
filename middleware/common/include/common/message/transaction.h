@@ -1,8 +1,5 @@
 //!
-//! transaction.h
-//!
-//! Created on: Jun 14, 2014
-//!     Author: Lazan
+//! casual
 //!
 
 #ifndef TRANSACTION_H_
@@ -76,6 +73,7 @@ namespace casual
 
                   friend std::ostream& operator << ( std::ostream& out, const Request& message);
                };
+               static_assert( traits::is_movable< Request>::value, "not movable");
 
                using base_reply = basic_reply< Type::transaction_commit_reply>;
 
@@ -99,6 +97,7 @@ namespace casual
                   friend std::ostream& operator << ( std::ostream& out, const Stage& stage);
                   friend std::ostream& operator << ( std::ostream& out, const Reply& message);
                };
+               static_assert( traits::is_movable< Reply>::value, "not movable");
 
             } // commit
 
@@ -118,6 +117,8 @@ namespace casual
 
                   friend std::ostream& operator << ( std::ostream& out, const Request& message);
                };
+               static_assert( traits::is_movable< Request>::value, "not movable");
+
 
                using base_reply = basic_reply< Type::transaction_rollback_reply>;
 
@@ -137,6 +138,7 @@ namespace casual
                      archive & stage;
                   })
                };
+               static_assert( traits::is_movable< Reply>::value, "not movable");
             } // rollback
 
 
@@ -168,6 +170,7 @@ namespace casual
                   }
                };
 
+
                struct Involved : basic_transaction< Type::transaction_resource_involved>
                {
                   std::vector< platform::resource::id::type> resources;
@@ -179,8 +182,8 @@ namespace casual
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const Involved& value);
-
                };
+               static_assert( traits::is_movable< Involved>::value, "not movable");
 
                template< message::Type type>
                struct basic_request : basic_transaction< type>
@@ -205,7 +208,6 @@ namespace casual
                            << ", flags: " << message.flags
                            << '}';
                   }
-
                };
 
                namespace connect
@@ -229,62 +231,62 @@ namespace casual
 
                      friend std::ostream& operator << ( std::ostream& out, const Reply& message);
                   };
+                  static_assert( traits::is_movable< Reply>::value, "not movable");
                } // connect
 
                namespace prepare
                {
-                  typedef basic_request< Type::transaction_resource_prepare_request> Request;
-                  typedef basic_reply< Type::transaction_resource_prepare_reply> Reply;
+                  using Request = basic_request< Type::transaction_resource_prepare_request>;
+                  using Reply = basic_reply< Type::transaction_resource_prepare_reply>;
+
+                  static_assert( traits::is_movable< Request>::value, "not movable");
+                  static_assert( traits::is_movable< Reply>::value, "not movable");
 
                } // prepare
 
                namespace commit
                {
-                  typedef basic_request< Type::transaction_resource_commit_request> Request;
-                  typedef basic_reply< Type::transaction_resource_commit_reply> Reply;
+                  using Request = basic_request< Type::transaction_resource_commit_request>;
+                  using Reply = basic_reply< Type::transaction_resource_commit_reply>;
 
                } // commit
 
                namespace rollback
                {
-                  typedef basic_request< Type::transaction_resource_rollback_request> Request;
-                  typedef basic_reply< Type::transaction_resource_rollback_reply> Reply;
+                  using Request = basic_request< Type::transaction_resource_rollback_request>;
+                  using Reply = basic_reply< Type::transaction_resource_rollback_reply>;
 
                } // rollback
 
 
                //!
                //! These request and replies are used between TM and resources when
-               //! the context is of "inter-domain", that is, when TM is acting as
-               //! a resource to other domains.
+               //! the context is of "external proxies", that is, when some other part
+               //! act as a resource proxy. This semantic is used when:
+               //!  * a transaction cross to another domain
+               //!  * casual-queue groups enqueue and/or dequeue
+               //!
                //! The resource is doing exactly the same thing but the context is
                //! preserved, so that when the TM is invoked by the reply it knows
                //! the context, and can act accordingly
                //!
-               namespace domain
+               namespace external
                {
 
-                  struct Involved : basic_transaction< Type::transaction_domain_resource_involved>
+                  struct Involved : basic_transaction< Type::transaction_external_resource_involved>
                   {
-                     Uuid domain;
-
-                     CASUAL_CONST_CORRECT_MARSHAL(
-                     {
-                        base_type::marshal( archive);
-                        archive & domain;
-                     })
 
                      friend std::ostream& operator << ( std::ostream& out, const Involved& value);
                   };
+                  static_assert( traits::is_movable< Involved>::value, "not movable");
 
                   namespace involved
                   {
                      template< typename M>
-                     Involved create( const Uuid& domain, M&& message)
+                     Involved create( M&& message)
                      {
                         Involved involved;
 
-                        involved.domain = domain;
                         involved.correlation = message.correlation;
                         involved.execution = message.execution;
                         involved.process = common::process::handle();
@@ -293,15 +295,8 @@ namespace casual
                         return involved;
                      }
                   } // involved
-
-
                } // domain
-
-
-
             } // resource
-
-
          } // transaction
 
          namespace reverse
@@ -321,8 +316,6 @@ namespace casual
 
 
          } // reverse
-
-
       } // message
    } // common
 } // casual

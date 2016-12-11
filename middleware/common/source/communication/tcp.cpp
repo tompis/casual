@@ -49,11 +49,11 @@ namespace casual
 #if EAGAIN != EWOULDBLOCK
                               case EWOULDBLOCK:
 #endif
-                                 throw common::exception::communication::no::Message{ common::error::string()};
+                                 throw common::exception::communication::no::Message{ common::error::string( last_error)};
                               case EINVAL:
-                                 throw common::exception::invalid::Argument{ "invalid arguments"};
+                                 throw common::exception::invalid::Argument{ common::error::string( last_error)};
                               case ENOTSOCK:
-                                 throw common::exception::invalid::Argument{ "bad socket"};
+                                 throw common::exception::invalid::Argument{ common::error::string( last_error)};
                               case EINTR:
                               {
                                  common::signal::handle();
@@ -335,7 +335,8 @@ namespace casual
                if( *this)
                {
                   try
-                  {
+                  {  
+                     //local::socket::check::result( ::shutdown( m_descriptor, SHUT_RDWR));
                      local::socket::check::result( ::close( m_descriptor));
                      log << "Socket::close - descriptor: " << m_descriptor << '\n';
                   }
@@ -467,26 +468,34 @@ namespace casual
 
                      }
 
-                     ssize_t receive( const socket::descriptor_type descriptor, void* const data, const std::size_t size, common::Flags< Flag> flags)
+                     char* receive(
+                           const socket::descriptor_type descriptor,
+                           char* first,
+                           char* const last,
+                           common::Flags< Flag> flags)
                      {
-                       log << "descriptor: " << descriptor << ", data: " << static_cast< void*>( data) << ", size: " << size << ", flags: " << flags << '\n';
+                        log << "descriptor: " << descriptor << ", data: " << static_cast< void*>( first) << ", size: " << last - first << ", flags: " << flags << '\n';
 
-                        common::signal::handle();
 
-                        const auto bytes = tcp::local::socket::check::result(
-                              ::recv( descriptor, data, size, flags.underlaying()));
-
-                        if( bytes == 0)
+                        while( first != last)
                         {
-                           //
-                           // Fake an error-description
-                           //
-                           throw common::exception::communication::Unavailable( common::error::string( EPIPE));
+                           common::signal::handle();
+
+                           const auto bytes = tcp::local::socket::check::result(
+                                 ::recv( descriptor, first, last - first, flags.underlaying()));
+
+                           if( bytes == 0)
+                           {
+                              //
+                              // Fake an error-description
+                              //
+                              throw common::exception::communication::Unavailable( common::error::string( EPIPE));
+                           }
+
+                           first += bytes;
                         }
-                        return bytes;
+                        return first;
                      }
-
-
                   } // <unnamed>
                } // local
 
@@ -494,10 +503,8 @@ namespace casual
                {
                   Trace trace{ "tcp::native::send"};
 
-                  const auto size = message::Transport::header_size + message::Transport::message_type_size + transport.size();
-
                   auto first = &transport.message;
-                  const auto last = first + size;
+                  const auto last = first + transport.size();
 
                   try
                   {
@@ -525,42 +532,27 @@ namespace casual
                {
                   Trace trace{ "tcp::native::receive"};
 
-                  const auto first = reinterpret_cast< char*>( &transport.message);
-                  auto current = first;
-                  const auto header_end = first + message::Transport::header_size + message::Transport::message_type_size;
+                  auto current = reinterpret_cast< char*>( &transport.message);
 
                   try
                   {
+
                      //
-                     // First we make sure we got the header
+                     // First we get the header
                      //
-                     while( current != header_end)
                      {
-                        const auto bytes = local::receive( socket.descriptor(), current, std::distance( current, header_end), flags);
+                        const auto header_end = current + transport.header_size();
 
-                        if( bytes > std::distance( current, header_end))
-                        {
-                           throw exception::Casual( "somehow more bytes was received over the socket than requested");
-                        }
-
-                        current += bytes;
+                        current = local::receive( socket.descriptor(), current, header_end, flags);
                      }
 
-                     auto last = current + transport.message.header.count;
-
                      //
-                     // Keep going until we've read the whole message
+                     // Now we can get the payload
                      //
-                     while( current != last)
                      {
-                        const auto bytes = local::receive( socket.descriptor(), current, std::distance( current, last), flags);
+                        const auto payload_end = current + transport.pyaload_size();
 
-                        if( bytes > std::distance( current, last))
-                        {
-                           throw exception::Casual( "somehow more bytes was received over the socket than requested");
-                        }
-
-                        current += bytes;
+                        local::receive( socket.descriptor(), current, payload_end, flags);
                      }
 
                      log << "tcp receive <---- socket: " << socket << " , transport: " << transport << '\n';
@@ -577,24 +569,24 @@ namespace casual
 
             namespace policy
             {
-               bool basic_blocking::operator() ( const inbound::Connector& tcp, message::Transport& transport)
+               bool basic_blocking::receive( const inbound::Connector& tcp, message::Transport& transport)
                {
                   return native::receive( tcp.socket(), transport, {});
                }
 
-               bool basic_blocking::operator() ( const outbound::Connector& tcp, const message::Transport& transport)
+               bool basic_blocking::send( const outbound::Connector& tcp, const message::Transport& transport)
                {
                   return native::send( tcp.socket(), transport, {});
                }
 
                namespace non
                {
-                  bool basic_blocking::operator() ( const inbound::Connector& tcp, message::Transport& transport)
+                  bool basic_blocking::receive( const inbound::Connector& tcp, message::Transport& transport)
                   {
                      return native::receive( tcp.socket(), transport, native::Flag::non_blocking);
                   }
 
-                  bool basic_blocking::operator() ( const outbound::Connector& tcp, const message::Transport& transport)
+                  bool basic_blocking::send( const outbound::Connector& tcp, const message::Transport& transport)
                   {
                      return native::send( tcp.socket(), transport, native::Flag::non_blocking);
                   }

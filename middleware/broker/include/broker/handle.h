@@ -38,6 +38,7 @@ namespace casual
 
       namespace handle
       {
+         using dispatch_type = decltype( ipc::device().handler());
 
          void process_exit( const common::process::lifetime::Exit& exit);
 
@@ -91,9 +92,12 @@ namespace casual
 
 		   namespace service
          {
-	         //!
-	         //! Advertise 0..N services for a server.
-	         //!
+            //!
+            //! Handles local advertise
+            //!  - add  0..* services
+            //!  - remove 0..* services
+            //!  - replace == remove all services for instance and then add 0..* services
+            //!
 	         struct Advertise : Base
 	         {
 	            typedef common::message::service::Advertise message_type;
@@ -102,62 +106,6 @@ namespace casual
 
 	            void operator () ( message_type& message);
 	         };
-
-
-	         //!
-	         //! Unadvertise 0..N services for a server.
-	         //!
-	         struct Unadvertise : Base
-	         {
-	            typedef common::message::service::Unadvertise message_type;
-
-	            using Base::Base;
-
-	            void operator () ( message_type& message);
-	         };
-
-	         namespace gateway
-            {
-
-	            //!
-	            //! Advertise 0..N services for a server.
-	            //!
-	            struct Advertise : Base
-	            {
-	               using message_type = common::message::gateway::domain::service::Advertise;
-
-	               using Base::Base;
-
-	               void operator () ( message_type& message);
-	            };
-
-
-	            //!
-	            //! Unadvertise 0..N services for a server.
-	            //!
-	            struct Unadvertise : Base
-	            {
-	               using message_type = common::message::gateway::domain::service::Unadvertise;
-
-	               using Base::Base;
-
-	               void operator () ( message_type& message);
-	            };
-
-	            namespace discover
-               {
-	               struct Reply : Base
-	               {
-	                  using message_type = common::message::gateway::domain::discover::automatic::Reply;
-
-	                  using Base::Base;
-
-	                  void operator () ( message_type& message);
-	               };
-
-               } // discover
-
-            } // gateway
 
 
 	         //!
@@ -177,6 +125,21 @@ namespace casual
 
 		   namespace domain
          {
+		      //!
+            //! Handles remote advertise
+            //!  - add  0..* services
+            //!  - remove 0..* services
+            //!  - replace == remove all services for instance and then add 0..* services
+            //!
+            struct Advertise : Base
+            {
+               using message_type = common::message::gateway::domain::Advertise;
+
+               using Base::Base;
+
+               void operator () ( message_type& message);
+            };
+
 		      namespace discover
             {
 	            struct Request : Base
@@ -186,6 +149,16 @@ namespace casual
 
 	               void operator () ( message_type& message);
 	            };
+
+               struct Reply : Base
+               {
+                  using message_type = common::message::gateway::domain::discover::accumulated::Reply;
+
+                  using Base::Base;
+
+                  void operator () ( message_type& message);
+               };
+
 
             } // discover
 
@@ -252,7 +225,7 @@ namespace casual
 
 		} // handle
 
-      common::message::dispatch::Handler handler( State& state);
+      handle::dispatch_type handler( State& state);
 
 
 	} // broker

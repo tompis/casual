@@ -85,9 +85,9 @@ namespace casual
             //
             // Make sure we wait for the resources to get ready
             //
-            common::message::dispatch::Handler handler{
+            auto handler = ipc::device().handler(
                common::message::handle::Shutdown{},
-               handle::resource::reply::Connect{ m_state}};
+               handle::resource::reply::Connect{ m_state});
 
 
 
@@ -183,7 +183,7 @@ namespace casual
                // prepare message dispatch handlers...
                //
 
-               common::message::dispatch::Handler handler{
+               auto handler = ipc::device().handler(
                   common::message::handle::Shutdown{},
                   handle::process::Exit{ state},
                   handle::Commit{ state},
@@ -193,15 +193,15 @@ namespace casual
                   handle::resource::reply::Prepare{ state},
                   handle::resource::reply::Commit{ state},
                   handle::resource::reply::Rollback{ state},
-                  handle::domain::Involved{ state},
+                  handle::external::Involved{ state},
                   handle::domain::Prepare{ state},
                   handle::domain::Commit{ state},
                   handle::domain::Rollback{ state},
                   common::server::handle::basic_admin_call{
                      admin::services( state),
                      ipc::device().error_handler()},
-                  common::message::handle::ping(),
-               };
+                  common::message::handle::ping()
+               );
 
 
                common::log::internal::transaction << "start message pump\n";

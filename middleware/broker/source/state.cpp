@@ -32,15 +32,29 @@ namespace casual
          namespace
          {
             template< typename M, typename ID>
-            auto get( M& map, ID&& id) -> decltype( map.at( id))
+            auto get( M& map, ID&& id) ->
+             common::traits::enable_if_t< common::traits::container::is_associative< M>::value, decltype( map.at( id))>
             {
                auto found = common::range::find( map, id);
 
-               if( ! found)
+               if( found)
                {
-                  throw state::exception::Missing{ "missing", CASUAL_NIP( id)};
+                  return found->second;
                }
-               return found->second;
+               throw state::exception::Missing{ "missing", CASUAL_NIP( id)};
+            }
+
+            template< typename C, typename ID>
+            auto get( C& container, ID&& id) ->
+             common::traits::enable_if_t< common::traits::container::is_sequence< C>::value, decltype( *std::begin( container))>
+            {
+               auto found = common::range::find( container, id);
+
+               if( found)
+               {
+                  return *found;
+               }
+               throw state::exception::Missing{ "missing", CASUAL_NIP( id)};
             }
 
          } // <unnamed>
@@ -92,13 +106,65 @@ namespace casual
 
          namespace service
          {
+            namespace pending
+            {
+
+               void Metric::add( const common::platform::time_point::duration& duration)
+               {
+                  ++m_count;
+                  m_total += std::chrono::duration_cast< std::chrono::microseconds>( duration);
+               }
+
+               void Metric::reset()
+               {
+                  m_count = 0;
+                  m_total = std::chrono::microseconds::zero();
+               }
+
+            } // pending
+
+            void Metric::begin( const common::platform::time_point& time)
+            {
+               m_begin = time;
+            }
+            void Metric::end( const common::platform::time_point& time)
+            {
+               ++m_invoked;
+               m_total += std::chrono::duration_cast< std::chrono::microseconds>( time - m_begin);
+            }
+
+
+            void Metric::reset()
+            {
+               m_invoked = 0;
+               m_total = std::chrono::microseconds::zero();
+            }
+
+            Metric& Metric::operator += ( const Metric& rhs)
+            {
+               m_invoked += rhs.m_invoked;
+               m_total += rhs.m_total;
+
+               if( rhs.m_begin > m_begin)
+               {
+                  m_begin = rhs.m_begin;
+               }
+
+               return *this;
+            }
 
             namespace instance
             {
                void Local::lock( const common::platform::time_point& when)
                {
                   get().lock( when);
-                  ++invoked;
+                  metric.begin( when);
+               }
+
+               void Local::unlock( const common::platform::time_point& when)
+               {
+                  get().unlock( when);
+                  metric.end( when);
                }
 
                void Remote::lock( const common::platform::time_point& when)
@@ -124,6 +190,7 @@ namespace casual
 
                if( found)
                {
+                  metric += found->metric;
                   instances.local.erase( std::begin( found));
                }
 
@@ -138,6 +205,11 @@ namespace casual
                   partition_remote_instances();
                }
             }
+         }
+
+         service::instance::Local& Service::local( common::platform::pid::type instance)
+         {
+            return local::get( instances.local, instance);
          }
 
 
@@ -157,6 +229,13 @@ namespace casual
          void Service::partition_remote_instances()
          {
             range::stable_sort( instances.remote);
+         }
+
+         void Service::metric_reset()
+         {
+            metric.reset();
+            range::for_each( instances.local, []( service::instance::Local& i){ i.metric.reset();});
+            range::for_each( instances.remote, []( service::instance::Remote& i){ i.invoked = 0;});
          }
 
          service::instance::base_instance* Service::idle()
@@ -209,10 +288,6 @@ namespace casual
          return local::get( services, name);
       }
 
-      state::instance::Local& State::local_instance( common::platform::pid::type pid)
-      {
-         return local::get( instances.local, pid);
-      }
 
 
       namespace local
@@ -297,7 +372,7 @@ namespace casual
 
                for( auto& s : services)
                {
-                  auto service = state.find_service( s);
+                  auto service = state.find_service( s.name);
 
                   if( service)
                   {
@@ -323,55 +398,83 @@ namespace casual
       }
 
 
-      void State::add( common::message::service::Advertise& message)
+      void State::update( common::message::service::Advertise& message)
       {
-         Trace trace{ "broker::State::add local"};
+         Trace trace{ "broker::State::update local"};
 
-         //
-         // Local instance
-         //
-
-         auto& instance = local::find_or_add( instances.local, message.process);
-
-         for( auto& s : message.services)
+         switch( message.directive)
          {
-            auto& service = local::find_or_add_service( services, local::transform( std::move( s)));
-            service.add( instance);
+            case common::message::service::Advertise::Directive::add:
+            {
+
+               //
+               // Local instance
+               //
+
+               auto& instance = local::find_or_add( instances.local, message.process);
+
+               for( auto& s : message.services)
+               {
+                  auto& service = local::find_or_add_service( services, local::transform( std::move( s)));
+                  service.add( instance);
+               }
+
+               break;
+            }
+            case common::message::service::Advertise::Directive::remove:
+            {
+               local::remove_services( *this, instances.local, message.services, message.process);
+               break;
+            }
+            case common::message::service::Advertise::Directive::replace:
+            {
+
+               break;
+            }
+            default:
+            {
+               log::error << "failed to deduce gateway advertise directive - action: ignore - message: " << message << '\n';
+            }
          }
       }
 
-      void State::add( common::message::gateway::domain::service::Advertise& message)
+
+      void State::update( common::message::gateway::domain::Advertise& message)
       {
-         Trace trace{ "broker::State::add remote"};
+         Trace trace{ "broker::State::update remote"};
 
-         //
-         // Remote instance
-         //
-
-         auto& instance = local::find_or_add( instances.remote, message.process);
-         instance.order = message.order;
-
-         for( auto& s : message.services)
+         switch( message.directive)
          {
-            auto hops = s.hops;
-            auto& service = local::find_or_add_service( services, local::transform( std::move( s)));
-            service.add( instance, hops);
+            case common::message::gateway::domain::Advertise::Directive::add:
+            {
+
+               auto& instance = local::find_or_add( instances.remote, message.process);
+               instance.order = message.order;
+
+               for( auto& s : message.services)
+               {
+                  auto hops = s.hops;
+                  auto& service = local::find_or_add_service( services, local::transform( std::move( s)));
+                  service.add( instance, hops);
+               }
+
+               break;
+            }
+            case common::message::gateway::domain::Advertise::Directive::remove:
+            {
+               local::remove_services( *this, instances.remote, message.services, message.process);
+               break;
+            }
+            case common::message::gateway::domain::Advertise::Directive::replace:
+            {
+
+               break;
+            }
+            default:
+            {
+               log::error << "failed to deduce gateway advertise directive - action: ignore - message: " << message << '\n';
+            }
          }
-
-      }
-
-      void State::remove( const common::message::service::Unadvertise& message)
-      {
-         Trace trace{ "broker::State::remove local"};
-
-         local::remove_services( *this, instances.local, message.services, message.process);
-      }
-
-      void State::remove( const common::message::gateway::domain::service::Unadvertise& message)
-      {
-         Trace trace{ "broker::State::remove local"};
-
-         local::remove_services( *this, instances.remote, message.services, message.process);
 
       }
 
@@ -393,10 +496,11 @@ namespace casual
       {
          common::message::service::Advertise message;
 
+         message.directive = common::message::service::Advertise::Directive::add;
          message.services = std::move( services);
          message.process = process::handle();
 
-         add( message);
+         update( message);
       }
 
 

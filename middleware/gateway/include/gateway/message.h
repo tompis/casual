@@ -12,6 +12,7 @@
 #include "common/message/transaction.h"
 #include "common/message/service.h"
 #include "common/message/gateway.h"
+#include "common/message/queue.h"
 #include "common/domain.h"
 
 #include <thread>
@@ -93,15 +94,19 @@ namespace casual
          } // manager
 
 
+
+
          template< common::message::Type type>
          struct basic_connect : common::message::basic_message< type>
          {
             common::process::Handle process;
+            common::domain::Identity domain;
             std::vector< std::string> address;
 
             CASUAL_CONST_CORRECT_MARSHAL({
                common::message::basic_message< type>::marshal( archive);
                archive & process;
+               archive & domain;
                archive & address;
             })
 
@@ -109,12 +114,40 @@ namespace casual
             {
                return out << "{ process: " << value.process
                      << ", address: " << common::range::make( value.address)
+                     << ", domain: " << value.domain
                      << '}';
             }
          };
 
          namespace outbound
          {
+            namespace configuration
+            {
+
+               struct Request : common::message::server::basic_id< common::message::Type::gateway_outbound_configuration_request>
+               {
+
+                  friend std::ostream& operator << ( std::ostream& out, const Request& value);
+               };
+
+
+               using base_reply = common::message::server::basic_id< common::message::Type::gateway_outbound_configuration_reply>;
+               struct Reply : base_reply
+               {
+                  std::vector< std::string> services;
+                  std::vector< std::string> queues;
+
+                  CASUAL_CONST_CORRECT_MARSHAL({
+                     base_reply::marshal( archive);
+                     archive & services;
+                     archive & queues;
+                  })
+
+                  friend std::ostream& operator << ( std::ostream& out, const Reply& value);
+               };
+
+            } // configuration
+
             struct Connect : basic_connect< common::message::Type::gateway_outbound_connect>
             {
             };
@@ -219,35 +252,47 @@ namespace casual
                //!
                //!
                constexpr common::message::Type message_type( common::message::transaction::resource::prepare::Request&&)
-               { return common::message::Type::ineterdomain_transaction_resource_prepare_request;}
+               { return common::message::Type::interdomain_transaction_resource_prepare_request;}
 
                constexpr common::message::Type message_type( common::message::transaction::resource::prepare::Reply&&)
-               { return common::message::Type::ineterdomain_transaction_resource_prepare_reply;}
+               { return common::message::Type::interdomain_transaction_resource_prepare_reply;}
 
                constexpr common::message::Type message_type( common::message::transaction::resource::commit::Request&&)
-               { return common::message::Type::ineterdomain_transaction_resource_commit_request;}
+               { return common::message::Type::interdomain_transaction_resource_commit_request;}
 
                constexpr common::message::Type message_type( common::message::transaction::resource::commit::Reply&&)
-               { return common::message::Type::ineterdomain_transaction_resource_commit_reply;}
+               { return common::message::Type::interdomain_transaction_resource_commit_reply;}
 
                constexpr common::message::Type message_type( common::message::transaction::resource::rollback::Request&&)
-               { return common::message::Type::ineterdomain_transaction_resource_rollback_request;}
+               { return common::message::Type::interdomain_transaction_resource_rollback_request;}
 
                constexpr common::message::Type message_type( common::message::transaction::resource::rollback::Reply&&)
-               { return common::message::Type::ineterdomain_transaction_resource_rollback_reply;}
+               { return common::message::Type::interdomain_transaction_resource_rollback_reply;}
 
                constexpr common::message::Type message_type( common::message::service::call::callee::Request&&)
-               { return common::message::Type::ineterdomain_service_call;}
+               { return common::message::Type::interdomain_service_call;}
 
                constexpr common::message::Type message_type( common::message::service::call::Reply&&)
-               { return common::message::Type::ineterdomain_service_reply;}
+               { return common::message::Type::interdomain_service_reply;}
 
                constexpr common::message::Type message_type( common::message::gateway::domain::discover::Request&&)
-               { return common::message::Type::ineterdomain_domain_discover_request;}
+               { return common::message::Type::interdomain_domain_discover_request;}
 
                constexpr common::message::Type message_type( common::message::gateway::domain::discover::Reply&&)
-               { return common::message::Type::ineterdomain_domain_discover_reply;}
+               { return common::message::Type::interdomain_domain_discover_reply;}
 
+
+               constexpr common::message::Type message_type( common::message::queue::enqueue::Request&&)
+               { return common::message::Type::interdomain_queue_enqueue_request;}
+
+               constexpr common::message::Type message_type( common::message::queue::enqueue::Reply&&)
+               { return common::message::Type::interdomain_queue_enqueue_reply;}
+
+               constexpr common::message::Type message_type( common::message::queue::dequeue::Request&&)
+               { return common::message::Type::interdomain_queue_dequeue_request;}
+
+               constexpr common::message::Type message_type( common::message::queue::dequeue::Reply&&)
+               { return common::message::Type::interdomain_queue_dequeue_reply;}
 
 
                template< typename Message>
@@ -435,6 +480,96 @@ namespace casual
                } // call
             } // service
 
+            namespace queue
+            {
+               namespace enqueue
+               {
+                  template< typename Wrapper>
+                  struct basic_request : Wrapper
+                  {
+                     using Wrapper::Wrapper;
+
+                     CASUAL_CONST_CORRECT_MARSHAL({
+                        archive & this->get().execution;
+                        archive & this->get().name;
+                        archive & this->get().trid.xid;
+                        archive & this->get().message;
+                     })
+                  };
+
+                  template< typename Wrapper>
+                  struct basic_reply : Wrapper
+                  {
+                     using Wrapper::Wrapper;
+
+                     CASUAL_CONST_CORRECT_MARSHAL({
+                        archive & this->get().execution;
+                        archive & this->get().id;
+                     })
+                  };
+
+                  namespace send
+                  {
+                     using Request = basic_request< detail::external_send_wrapper< common::message::queue::enqueue::Request>>;
+                     using Reply = basic_reply< detail::external_send_wrapper< common::message::queue::enqueue::Reply>>;
+
+                  } // send
+
+                  namespace receive
+                  {
+                     using Request = basic_request< detail::external_receive_wrapper< common::message::queue::enqueue::Request>>;
+                     using Reply = basic_reply< detail::external_receive_wrapper< common::message::queue::enqueue::Reply>>;
+                  } // receive
+
+
+               } // enqueue
+
+               namespace dequeue
+               {
+
+                  template< typename Wrapper>
+                  struct basic_request : Wrapper
+                  {
+                     using Wrapper::Wrapper;
+
+                     CASUAL_CONST_CORRECT_MARSHAL({
+                        archive & this->get().execution;
+                        archive & this->get().name;
+                        archive & this->get().trid.xid;
+                        archive & this->get().selector;
+                        archive & this->get().block;
+                     })
+                  };
+
+                  template< typename Wrapper>
+                  struct basic_reply : Wrapper
+                  {
+                     using Wrapper::Wrapper;
+
+                     CASUAL_CONST_CORRECT_MARSHAL({
+                        archive & this->get().execution;
+                        archive & this->get().message;
+                     })
+                  };
+
+
+                  namespace send
+                  {
+                     using Request = basic_request< detail::external_send_wrapper< common::message::queue::dequeue::Request>>;
+                     using Reply = basic_reply< detail::external_send_wrapper< common::message::queue::dequeue::Reply>>;
+
+                  } // send
+
+                  namespace receive
+                  {
+                     using Request = basic_request< detail::external_receive_wrapper< common::message::queue::dequeue::Request>>;
+                     using Reply = basic_reply< detail::external_receive_wrapper< common::message::queue::dequeue::Reply>>;
+                  } // receive
+
+               } // dequeue
+
+            } // queue
+
 
             namespace domain
             {
@@ -449,6 +584,7 @@ namespace casual
                         archive & this->get().execution;
                         archive & this->get().domain;
                         archive & this->get().services;
+                        archive & this->get().queues;
                      })
                   };
 
@@ -461,6 +597,7 @@ namespace casual
                         archive & this->get().execution;
                         archive & this->get().domain;
                         archive & this->get().services;
+                        archive & this->get().queues;
                      })
                   };
 
@@ -519,6 +656,18 @@ namespace casual
                inline domain::discovery::send::Reply wrap( common::message::gateway::domain::discover::Reply& message)
                { return { message};}
 
+               inline queue::dequeue::send::Request wrap( common::message::queue::dequeue::Request& message)
+               { return { message};}
+
+               inline queue::dequeue::send::Reply wrap( common::message::queue::dequeue::Reply& message)
+               { return { message};}
+
+               inline queue::enqueue::send::Request wrap( common::message::queue::enqueue::Request& message)
+               { return { message};}
+
+               inline queue::enqueue::send::Reply wrap( common::message::queue::enqueue::Reply& message)
+               { return { message};}
+
             } // send
          } // interdomain
       } // message
@@ -537,6 +686,10 @@ namespace casual
             template<>
             struct type_traits< casual::gateway::message::interdomain::service::call::receive::Request>
             : detail::type< casual::gateway::message::interdomain::service::call::receive::Reply> {};
+
+
+            template<>
+            struct type_traits< casual::gateway::message::outbound::configuration::Request> : detail::type< casual::gateway::message::outbound::configuration::Reply> {};
 
 
          } // reverse

@@ -51,6 +51,8 @@ namespace casual
             domain_configuration_transaction_resource_reply,
             domain_configuration_gateway_request,
             domain_configuration_gateway_reply,
+            domain_configuration_queue_request,
+            domain_configuration_queue_reply,
 
             // Server
             SERVER_BASE = 2000,
@@ -63,7 +65,6 @@ namespace casual
             // Service
             SERVICE_BASE = 3000,
             service_advertise,
-            service_unadvertise,
             service_name_lookup_request,
             service_name_lookup_reply,
             service_call = SERVICE_BASE + 100,
@@ -103,7 +104,7 @@ namespace casual
 
 
             transaction_resource_involved = TRANSACTION_BASE + 400,
-            transaction_domain_resource_involved,
+            transaction_external_resource_involved,
 
             transaction_resource_id_request = TRANSACTION_BASE + 500,
             transaction_resource_id_reply,
@@ -118,19 +119,29 @@ namespace casual
             queue_dequeue_reply,
             queue_dequeue_forget_request,
             queue_dequeue_forget_reply,
-            queue_information = QUEUE_BASE + 300,
+
+            queue_peek_information_request =  QUEUE_BASE + 300,
+            queue_peek_information_reply,
+            queue_peek_messages_request,
+            queue_peek_messages_reply,
+
+            queue_information = QUEUE_BASE + 400,
             queue_queues_information_request,
             queue_queues_information_reply,
             queue_queue_information_request,
             queue_queue_information_reply,
-            queue_lookup_request = QUEUE_BASE + 400,
-            queue_lookup_reply,
-            queue_group_involved = QUEUE_BASE + 500,
 
+            queue_lookup_request = QUEUE_BASE + 500,
+            queue_lookup_reply,
+
+            queue_restore_request = QUEUE_BASE + 600,
+            queue_restore_reply,
 
             GATEWAY_BASE = 7000,
             gateway_manager_listener_event,
             gateway_manager_tcp_connect,
+            gateway_outbound_configuration_request,
+            gateway_outbound_configuration_reply,
             gateway_outbound_connect,
             gateway_inbound_connect,
             gateway_worker_connect,
@@ -139,24 +150,27 @@ namespace casual
             gateway_ipc_connect_reply,
             gateway_domain_discover_request,
             gateway_domain_discover_reply,
-            gateway_domain_automatic_discover_request,
-            gateway_domain_automatic_discover_reply,
-            gateway_service_advertise,
-            gateway_service_unadvertise,
+            gateway_domain_discover_accumulated_reply,
+            gateway_domain_discover_internal_coordination,
+            gateway_domain_advertise,
             gateway_domain_id,
 
             // Innterdomain messages, part of gateway
             INTERDOMAIN_BASE = 8000,
-            ineterdomain_domain_discover_request,
-            ineterdomain_domain_discover_reply,
-            ineterdomain_service_call,
-            ineterdomain_service_reply,
-            ineterdomain_transaction_resource_prepare_request,
-            ineterdomain_transaction_resource_prepare_reply,
-            ineterdomain_transaction_resource_commit_request,
-            ineterdomain_transaction_resource_commit_reply,
-            ineterdomain_transaction_resource_rollback_request,
-            ineterdomain_transaction_resource_rollback_reply,
+            interdomain_domain_discover_request,
+            interdomain_domain_discover_reply,
+            interdomain_service_call = INTERDOMAIN_BASE + 100,
+            interdomain_service_reply,
+            interdomain_transaction_resource_prepare_request = INTERDOMAIN_BASE + 300,
+            interdomain_transaction_resource_prepare_reply,
+            interdomain_transaction_resource_commit_request,
+            interdomain_transaction_resource_commit_reply,
+            interdomain_transaction_resource_rollback_request,
+            interdomain_transaction_resource_rollback_reply,
+            interdomain_queue_enqueue_request = INTERDOMAIN_BASE + 400,
+            interdomain_queue_enqueue_reply,
+            interdomain_queue_dequeue_request,
+            interdomain_queue_dequeue_reply,
 
 
 
@@ -267,36 +281,9 @@ namespace casual
                   archive & reply;
                })
             };
-
-            struct Reply : basic_message< Type::shutdown_reply>
-            {
-               template< typename ID>
-               struct holder_t
-               {
-                  std::vector< ID> online;
-                  std::vector< ID> offline;
-
-                  CASUAL_CONST_CORRECT_MARSHAL(
-                  {
-                     archive & online;
-                     archive & offline;
-                  })
-               };
-
-               holder_t< platform::pid::type> executables;
-               holder_t< common::process::Handle> servers;
-
-
-               CASUAL_CONST_CORRECT_MARSHAL(
-               {
-                  base_type::marshal( archive);
-                  archive & executables;
-                  archive & servers;
-               })
-            };
+            static_assert( traits::is_movable< Request>::value, "not movable");
 
          } // shutdown
-
 
 
          //
@@ -384,8 +371,8 @@ namespace casual
                      archive & arguments;
                      archive & environment;
                   })
-
                };
+               static_assert( traits::is_movable< Request>::value, "not movable");
 
             } // spawn
          } // process
@@ -412,9 +399,6 @@ namespace casual
                };
             } // detail
 
-            template<>
-            struct type_traits< shutdown::Request> : detail::type< shutdown::Reply> {};
-
 
 
             template< typename T>
@@ -427,8 +411,8 @@ namespace casual
 
                return result;
             }
-         } // reverse
 
+         } // reverse
       } // message
    } // common
 } // casual

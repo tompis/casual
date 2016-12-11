@@ -27,6 +27,8 @@ namespace casual
          namespace handle
          {
 
+            using dispatch_type = decltype( ipc::device().handler());
+
 
             namespace mandatory
             {
@@ -128,12 +130,19 @@ namespace casual
                   void operator () ( const common::message::domain::configuration::gateway::Request& message);
                };
 
+               struct Queue : public Base
+               {
+                  using Base::Base;
+
+                  void operator () ( const common::message::domain::configuration::queue::Request& message);
+               };
+
             } // configuration
 
          } // handle
 
 
-         common::message::dispatch::Handler handler( State& state);
+         handle::dispatch_type handler( State& state);
 
       } // manager
    } // domain
