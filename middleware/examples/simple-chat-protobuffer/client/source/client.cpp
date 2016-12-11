@@ -16,7 +16,7 @@
 #include <chrono>         // std::chrono::seconds
 #include <google/protobuf/message_lite.h>
 
-#include <common/internal/log.h>
+#include <app_log.h>
 #include "xatmi.h"
 //#include "command.h"
 //#include "buffer/string.h"
@@ -81,27 +81,56 @@ namespace simple_chat_protobuffer {
       chat::CreateChatRoom ccr;
       ccr.set_creator_nick(nick);
       ccr.set_room_name(chat_room);
-      casual::common::log::internal::debug << "tpalloc ->\n";
-      auto buffer = tpalloc("X_OCTET", 0, ccr.ByteSize());
-      casual::common::log::internal::debug << "tpalloc <-\n";
+      casual::app::log::debug << "tpalloc ->" << std::endl;
+      auto send_buffer = tpalloc("X_OCTET", 0, ccr.ByteSize());
+      casual::app::log::debug << "tpalloc <-" << std::endl;
 
-      if ( buffer == nullptr)
+      if ( send_buffer == nullptr)
       {
-         std::cout << "buffer == nullptr, tperrno=" << tperrnostring(tperrno) << std::endl;
+         std::cout << "send_buffer == nullptr, tperrno=" << tperrnostring(tperrno) << std::endl;
          exit(1);
       }      
-      ccr.SerializeWithCachedSizesToArray((google::protobuf::uint8*)buffer);
+      ccr.SerializeWithCachedSizesToArray((google::protobuf::uint8*)send_buffer);
 
-      int cd1 = tpacall("casual.simple-chat-protobuffer.create-chat-room", buffer, ccr.ByteSize(), 0);
+      int cd1 = tpacall("casual.simple-chat-protobuffer.create-chat-room", send_buffer, ccr.ByteSize(), 0);
+      tpfree(send_buffer);
+      if ( cd1 == -1 ) 
+      {
+         casual::app::log::error << "tpacall(casual.simple-chat-protobuffer.create-chat-room) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         std::cout << "tpacall(casual.simple-chat-protobuffer.create-chat-room) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         exit(1);
+      }
 
       long size = 0;
-      tpgetrply( &cd1, &buffer, &size, 0);
+      auto receive_buffer = tpalloc("X_OCTET", 0, 0);
+      int result = tpgetrply( &cd1, &receive_buffer, &size, 0);
+      if ( result == -1 ) 
+      {
+         if ( tperrno == TPESVCFAIL )
+         {
+            std::cout << "room name already exists" << std::endl;
+            return;
+         }
+         else 
+         {
+            casual::app::log::error << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+            std::cout << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+            exit(1);         
+         }
+      }
+      if ( size == 0 )
+      {
+         casual::app::log::error << "tpgetrply() failed, size==0"  << std::endl;
+         std::cout << "tpgetrply() failed, size==0" << std::endl;
+         //exit(1);      // bug
+         return;
+      }
          
       chat::ChatRoom cr;
-      cr.ParseFromArray(buffer, size);
-      tpfree(buffer);
-      std::cout << "Chat room " << cr.room_name() << " created" << std::endl;
-      casual::common::log::internal::debug << "Chat room name=" << cr.room_name() << " with id=" << cr.room_id() << " created by nick=" << cr.creator_nick() << "\n";     
+      cr.ParseFromArray(receive_buffer, size);
+      tpfree(receive_buffer);
+      std::cout << "Chat room name=" << cr.room_name() << " with id=" << cr.room_id() << " created by nick=" << cr.creator_nick() << "\n";     
+      casual::app::log::debug << "Chat room name=" << cr.room_name() << " with id=" << cr.room_id() << " created by nick=" << cr.creator_nick() << "\n";     
    }
    
    void simple_chat_protobuffer::Client::command_enter(std::vector<std::string> tokens)
@@ -118,13 +147,49 @@ namespace simple_chat_protobuffer {
       }
       if ( tokens.size() > 1 ) 
          chat_room = tokens[1];
-      std::cout << "Chat room " << chat_room << " entered\n";
-      connected = true;      
+      //std::cout << "Chat room " << chat_room << " entered\n";
+      chat::EnterChatRoom enter_room_req;
+      enter_room_req.set_nick(nick);
+      enter_room_req.set_room_name(chat_room);
+      auto send_buffer = tpalloc("X_OCTET", 0, enter_room_req.ByteSize());
+
+      if ( send_buffer == nullptr)
+      {
+         std::cout << "send_buffer == nullptr, tperrno=" << tperrnostring(tperrno) << std::endl;
+         exit(1);
+      }      
+      enter_room_req.SerializeWithCachedSizesToArray((google::protobuf::uint8*)send_buffer);
+      
+      int cd1 = tpacall("casual.simple-chat-protobuffer.enter-chat-room", send_buffer, enter_room_req.ByteSize(), 0);
+      if ( cd1 == -1 ) 
+      {
+         casual::app::log::error << "tpacall(casual.simple-chat-protobuffer.enter-chat-room) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         std::cout << "tpacall(casual.simple-chat-protobuffer.enter-chat-room) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         exit(1);
+      }
+      tpfree(send_buffer);
+
+      long size = 0;
+      auto receive_buffer = tpalloc("X_OCTET", 0, 0);
+      tpgetrply( &cd1, &receive_buffer, &size, 0);
+         
+      chat::ChatRoomEntered response;
+      response.ParseFromArray(receive_buffer, size);
+      tpfree(receive_buffer);
+      room_id = response.room_id();
+      message_id = response.message_id();
+      connected = room_id != 0;
    }
 
    void simple_chat_protobuffer::Client::command_list(void)
    {
       int cd1 = tpacall("casual.simple-chat-protobuffer.list-chat-rooms", nullptr, 0, 0);
+      if ( cd1 == -1 ) 
+      {
+         casual::app::log::error << "tpacall(casual.simple-chat-protobuffer.list-chat-rooms) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         std::cout << "tpacall(casual.simple-chat-protobuffer.list-chat-rooms) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         exit(1);
+      }
 
       long size = 0;
       auto buffer = tpalloc("X_OCTET", 0, 0);
@@ -137,6 +202,27 @@ namespace simple_chat_protobuffer {
          chat::ChatRoom chat_room = chat_rooms.chat_room(i);
          std::cout << "Chat room " << chat_room.room_name() << " with id " << chat_room.room_id() << " created by nick " << chat_room.creator_nick() << "\n";     
       }
+   }
+   
+   void simple_chat_protobuffer::Client::command_message(void) {
+      if ( nick.size() == 0 ) {
+         std::cout << "First you need to get a nick \n";
+         return;
+      }
+      if ( !connected ) {
+         std::cout << "Not connected to a chat room \n";
+         return;                  
+      }
+      std::istringstream message_stream(command_str);
+      std::string dummy;
+      std::string message;
+      std::getline(message_stream, dummy, ' ');
+      std::getline(message_stream, message);
+      if ( message.size() == 0 ) {
+         std::cout << "No message to send! \n";
+         return;                  
+      }
+      //std::cout << "Sending message " << message << "\n";      
    }
    
    void simple_chat_protobuffer::Client::run(void) {
@@ -186,27 +272,8 @@ namespace simple_chat_protobuffer {
                      command_list();
                      break;
                   case Command::Message:
-                  {
-                     if ( nick.size() == 0 ) {
-                        std::cout << "First you need to get a nick \n";
-                        break;
-                     }
-                     if ( !connected ) {
-                        std::cout << "Not connected to a chat room \n";
-                        break;                  
-                     }
-                     std::istringstream message_stream(command_str);
-                     std::string dummy;
-                     std::string message;
-                     std::getline(message_stream, dummy, ' ');
-                     std::getline(message_stream, message);
-                     if ( message.size() == 0 ) {
-                        std::cout << "No message to send! \n";
-                        break;                  
-                     }
-                     std::cout << "Sending message " << message << "\n";
+                     command_message();
                      break;
-                  }
                   case Command::Quit:
                      std::cout << "Quitting\n";
                      break;
@@ -238,31 +305,4 @@ int main( int argc, char** argv)
    client.run();
    
 
-/*
-	auto buffer = tpalloc( CASUAL_STRING, 0, 1024);
-
-	if ( buffer != nullptr)
-	{
-      const std::string& argument = arguments[ 1];
-
-      std::copy( argument.begin(), argument.end(), buffer);
-      buffer[ argument.size()] = '\0';
-
-      long size = 0;
-      int cd1 = tpacall( "casual_test1", buffer, 0, 0);
-      int cd2 = tpacall( "casual_test2", buffer, 0, 0);
-
-      tpgetrply( &cd1, &buffer, &size, 0);
-      std::cout << std::endl << "reply1: " << buffer << std::endl;
-
-      tpgetrply( &cd2, &buffer, &size, 0);
-      std::cout << std::endl << "reply2: " << buffer << std::endl;
-
-      tpfree( buffer);
-	}
-	else
-	{
-	   std::cout << tperrnostring(tperrno) << std::endl;
-	}
-    * */
 }

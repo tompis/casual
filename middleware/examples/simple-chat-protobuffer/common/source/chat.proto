@@ -16,8 +16,28 @@ message CreateChatRoom {
     string creator_nick = 2;
 }
 
+message EnterChatRoom {
+    string room_name = 1;
+    string nick = 2;
+}
+
+message ChatRoomEntered {
+    int32 room_id = 1;
+    int32 message_id = 2;
+}
+
 message ChatMessage {
     int32 room_id = 1;
-    string message = 2;
-    string nick = 3;
+    int32 message_id = 2;
+    string message = 3;
+    string nick = 4;
+}
+
+message ChatMessages {
+   repeated ChatMessage chat_message = 1;
+}
+
+message GetChatMessages {
+    int32 room_id = 1;
+    int32 message_id = 2;
 }

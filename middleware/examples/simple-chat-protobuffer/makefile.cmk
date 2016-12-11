@@ -26,6 +26,7 @@ install_bin = []
 target = LinkServer( 'server/bin/simple-chat-protobuffer-server',
     [ 
       Compile( 'server/source/server.cpp'),
+      Compile( 'common/source/app_log.cpp'),
       Compile( 'common/source/chat.pb.cpp')
     ],
     [ 
@@ -40,6 +41,7 @@ install_bin.append( target)
 target = LinkExecutable( 'client/bin/simple-chat-protobuffer-client',
     [ 
       Compile( 'client/source/client.cpp'),
+      Compile( 'common/source/app_log.cpp'),
       Compile( 'common/source/chat.pb.cpp')
     ],
     [ 

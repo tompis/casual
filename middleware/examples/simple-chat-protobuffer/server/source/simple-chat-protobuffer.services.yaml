@@ -26,3 +26,11 @@ server:
       function: list_chat_rooms
       transaction: none
 
+    - name: casual.simple-chat-protobuffer.enter-chat-room
+      function: enter_chat_room
+      transaction: none
+
+    - name: casual.simple-chat-protobuffer.chat-message
+      function: chat_message
+      transaction: none
+
