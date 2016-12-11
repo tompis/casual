@@ -16,6 +16,7 @@
 #include <iterator>
 #include <thread>         // std::this_thread::sleep_for
 #include <chrono>         // std::chrono::seconds
+#include <termios.h>
 #include <google/protobuf/message_lite.h>
 
 #include <app_log.h>
@@ -307,16 +308,21 @@ namespace simple_chat_protobuffer {
    
    
    void simple_chat_protobuffer::Client::run(void) {
+      // http://www.doctort.org/adam/nerd-notes/reading-single-keystroke-on-linux.html
+      // Black magic to prevent Linux from buffering keystrokes.
+      struct termios t;
+      tcgetattr(STDIN_FILENO, &t);
+      t.c_lflag &= ~ICANON;
+      tcsetattr(STDIN_FILENO, TCSANOW, &t);
       write_prompt();
       while ( command != Command::Quit)
       {
          int c = casual::peek(300);
+         //system("stty sane"); 
          if ( c == 0 ) {
             // No command being written
             if ( connected ) 
                get_messages(); // Get messages from server
-            // Wait some in order to preserve CPU 
-            //std::this_thread::sleep_for (std::chrono::seconds(1));
          }
          else 
          {
