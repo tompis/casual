@@ -25,6 +25,7 @@
 
 #include "client.h"
 #include <chat.pb.h>
+#include <peek.h>
 
 namespace simple_chat_protobuffer {
 
@@ -309,18 +310,13 @@ namespace simple_chat_protobuffer {
       write_prompt();
       while ( command != Command::Quit)
       {
-         //get the number of character in the buffer available for reading(including spaces and new line)
-         std::streamsize size=std::cin.rdbuf()->in_avail();
-         //std::streamsize size=1;
-         //if ( connected ) 
-         //   get_messages(); // Get messages from server
-         
-         if ( size == 0 ) {
-            // No cammand being written
+         int c = casual::peek(300);
+         if ( c == 0 ) {
+            // No command being written
             if ( connected ) 
                get_messages(); // Get messages from server
             // Wait some in order to preserve CPU 
-            std::this_thread::sleep_for (std::chrono::seconds(1));
+            //std::this_thread::sleep_for (std::chrono::seconds(1));
          }
          else 
          {

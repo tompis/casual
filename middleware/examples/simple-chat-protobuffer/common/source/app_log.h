@@ -1,5 +1,8 @@
 #include <common/internal/log.h>
 
+#ifndef CASUAL_APP_LOG_INCLUDED
+#define CASUAL_APP_LOG_INCLUDED
+
 namespace casual
 {
    namespace app
@@ -15,3 +18,5 @@ namespace casual
    }
 
 }
+
+#endif

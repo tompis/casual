@@ -42,6 +42,7 @@ target = LinkExecutable( 'client/bin/simple-chat-protobuffer-client',
     [ 
       Compile( 'client/source/client.cpp'),
       Compile( 'common/source/app_log.cpp'),
+      Compile( 'common/source/peek.cpp'),
       Compile( 'common/source/chat.pb.cpp')
     ],
     [ 
