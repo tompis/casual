@@ -108,18 +108,24 @@ namespace simple_chat_protobuffer {
       long size = 0;
       auto receive_buffer = tpalloc("X_OCTET", 0, 0);
       int result = tpgetrply( &cd1, &receive_buffer, &size, 0);
-      if ( result == -1 ) 
+      if ( result == -1 && tperrno == TPESVCFAIL )
+      {
+         std::cout << "room name already exists" << std::endl;
+         return;
+      }
+      else if ( result == -1 )
       {
          casual::app::log::error << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
          std::cout << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
          exit(1);         
       }
-      if ( size == 0 )
+      else if ( size == 0 )
       {
-         std::cout << "room name already exists" << std::endl;
-         return;
+         casual::app::log::error << "tpgetrply() failed, size==0" << std::endl;
+         std::cout << "tpgetrply() failed, size==0" << std::endl;
+         exit(1);         
       }
-         
+      
       chat::ChatRoom cr;
       cr.ParseFromArray(receive_buffer, size);
       tpfree(receive_buffer);
@@ -165,12 +171,25 @@ namespace simple_chat_protobuffer {
 
       long size = 0;
       auto receive_buffer = tpalloc("X_OCTET", 0, 0);
-      tpgetrply( &cd1, &receive_buffer, &size, 0);
-      if ( size == 0 )
+      auto result = tpgetrply( &cd1, &receive_buffer, &size, 0);
+      if ( result == -1 && tperrno == TPESVCFAIL )
       {
          std::cout << "No chat room named " << chat_room << std::endl;
          return;
       }
+      else if ( result == -1 )
+      {
+         casual::app::log::error << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         std::cout << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         exit(1);         
+      }
+      else if ( size == 0 )
+      {
+         casual::app::log::error << "tpgetrply() failed, size==0" << std::endl;
+         std::cout << "tpgetrply() failed, size==0" << std::endl;
+         exit(1);         
+      }
+
       chat::ChatRoomEntered response;
       response.ParseFromArray(receive_buffer, size);
       tpfree(receive_buffer);
@@ -191,8 +210,14 @@ namespace simple_chat_protobuffer {
 
       long size = 0;
       auto buffer = tpalloc("X_OCTET", 0, 0);
-      tpgetrply( &cd1, &buffer, &size, 0);
-         
+      auto result = tpgetrply( &cd1, &buffer, &size, 0);
+      if ( result == -1 && tperrno == TPESVCFAIL )
+      {
+         casual::app::log::error << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         std::cout << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         exit(1);         
+      }
+
       chat::ChatRooms chat_rooms;
       chat_rooms.ParseFromArray(buffer, size);
       tpfree(buffer);
@@ -280,9 +305,15 @@ namespace simple_chat_protobuffer {
    {
       long size = 0;
       auto buffer = tpalloc("X_OCTET", 0, 0);
-      tpgetrply( &cd, &buffer, &size, 0);
-      if ( size == 0 )
-         return 0;
+      auto result = tpgetrply( &cd, &buffer, &size, 0);
+      if ( result == -1 )
+      {
+         casual::app::log::error << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         std::cout << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
+         exit(1);         
+      }
+      //if ( size == 0 )
+      //   return 0;
       chat::ChatMessages chat_messages;
       chat_messages.ParseFromArray(buffer, size);
       tpfree(buffer);

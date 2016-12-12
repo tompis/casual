@@ -43,8 +43,7 @@ namespace casual
                if ( _chat_room_map.count(room_name) == 1 ) 
                {
                   casual::app::log::debug << "room exists" << std::endl;
-                  tpreturn(TPSUCCESS, 0, 0, 0, 0); // room exists
-                  return;
+                  tpreturn(TPFAIL, 0, 0, 0, 0); // room exists
                }
                // new room
                _message_ids.push_back(0); // allocate the first message id for the room
@@ -59,13 +58,11 @@ namespace casual
                if ( buffer == nullptr)
                {
                   casual::app::log::error << "tpalloc failed with error=" << tperrnostring(tperrno) << std::endl;
-                  tpreturn(TPFAIL, 0, 0, 0, 0); // TPEXIT
-                  return;
+                  tpreturn(TPSUCCESS, 0, 0, 0, 0); // Need to distinguish from TPFAIL, TPEXIT?
                }      
                chat_room_resp.SerializeWithCachedSizesToArray((google::protobuf::uint8*)buffer);
                tpreturn(TPSUCCESS, 0, buffer, chat_room_resp.ByteSize(), 0);
             } // create_chat_room
-            
             
             void list_chat_rooms(TPSVCINFO *info)
             {
@@ -82,12 +79,11 @@ namespace casual
                if ( buffer == nullptr)
                {
                   casual::app::log::error << "tpalloc failed with error=" << tperrnostring(tperrno) << std::endl;
-                  exit(1);
+                  tpreturn(TPFAIL, 0, 0, 0, 0); // room exists
                }      
                chat_rooms_resp.SerializeWithCachedSizesToArray((google::protobuf::uint8*)buffer);
                tpreturn( TPSUCCESS, 0, buffer, chat_rooms_resp.ByteSize(), 0);
             } // list_chat_rooms
-            
             
             void enter_chat_room(TPSVCINFO *info)
             {
@@ -105,7 +101,6 @@ namespace casual
                {
                   casual::app::log::debug << "!room_exists" << std::endl;
                   tpreturn(TPFAIL, 0, 0, 0, 0); // room doesn't exist
-                  return;
                }
 
                const chat::ChatRoom& chat_room = _chat_room_map[room_name];
@@ -126,8 +121,7 @@ namespace casual
                if ( buffer == nullptr)
                {
                   casual::app::log::error << "tpalloc failed with error=" << tperrnostring(tperrno) << std::endl;
-                  tpreturn( TPFAIL, 0, 0, 0, 0); // should retur TPEXIT
-                  return;
+                  tpreturn( TPSUCCESS, 0, 0, 0, 0); // should return TPEXIT
                }      
                enter_room_resp.SerializeWithCachedSizesToArray((google::protobuf::uint8*)buffer);
                casual::app::log::debug << "enter_chat_room returning" << std::endl;
@@ -149,7 +143,6 @@ namespace casual
                {
                   casual::app::log::error << "tpalloc failed with error=" << tperrnostring(tperrno) << std::endl;
                   tpreturn( TPFAIL, 0, 0, 0, 0); // should retur TPEXIT
-                  return;
                }      
                chat_messages_resp.SerializeWithCachedSizesToArray((google::protobuf::uint8*)buffer);
                //casual::app::log::debug << "chat_message.return" << std::endl;
@@ -170,8 +163,7 @@ namespace casual
                if ( !room_exists )
                {
                   casual::app::log::error << "Client sent bad room name" << std::endl;
-                  tpreturn( TPFAIL, 0, 0, 0, 0); // should retur TPEXIT
-                  return;
+                  tpreturn( TPFAIL, 0, 0, 0, 0); 
                } 
                const chat::ChatRoom& chat_room = _chat_room_map[room_name];
                auto room_id = chat_room.room_id();
