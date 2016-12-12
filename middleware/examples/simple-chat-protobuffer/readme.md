@@ -7,7 +7,11 @@ Several clients on the same computer can exchange messages in an old fasioned te
 
 ## Instructions
 
-First you will have to compile and install casual. Using the same environment you can build and install this application by 
+Download and compile protobuffers from [Google protobuf](https://github.com/google/protobuf/blob/master/src/README.md "Google protobuf README")
+
+Then you will have to compile and install casual. 
+
+Using the same environment you can build and install this application by 
  $ casual-make install
 
 If you have used the example environment cd to the installation directory
