@@ -49,7 +49,8 @@ namespace simple_chat_protobuffer {
       command_map["m"] = Command::Message;
    }
 
-   void simple_chat_protobuffer::Client::command_help(void) {
+   void simple_chat_protobuffer::Client::command_help(void) 
+   {
       //std::cout << "Commands:\n";
       std::cout << " h[elp]\n";
       std::cout << " n[ick] <nickname>\n";
@@ -60,8 +61,10 @@ namespace simple_chat_protobuffer {
       std::cout << " q[uit]\n";
    }
 
-   void simple_chat_protobuffer::Client::command_nick(std::vector<std::string> tokens) {
-      if ( tokens.size() < 2 ) {
+   void simple_chat_protobuffer::Client::command_nick(std::vector<std::string> tokens) 
+   {
+      if ( tokens.size() < 2 ) 
+      {
          std::cout << "Nick command needs a name \n";
          return;
       }
@@ -221,18 +224,22 @@ namespace simple_chat_protobuffer {
       chat::ChatRooms chat_rooms;
       chat_rooms.ParseFromArray(buffer, size);
       tpfree(buffer);
-      for ( int i=0; i<chat_rooms.chat_room_size(); i++) {
+      for ( int i=0; i<chat_rooms.chat_room_size(); i++) 
+      {
          chat::ChatRoom chat_room = chat_rooms.chat_room(i);
          std::cout << "Chat room " << chat_room.room_name() << " with id " << chat_room.room_id() << " created by " << chat_room.creator_nick() << "\n";     
       }
    }
    
-   void simple_chat_protobuffer::Client::command_message(void) {
-      if ( nick.size() == 0 ) {
+   void simple_chat_protobuffer::Client::command_message(void) 
+   {
+      if ( nick.size() == 0 ) 
+      {
          std::cout << "First you need to get a nick \n";
          return;
       }
-      if ( !connected ) {
+      if ( !connected ) 
+      {
          std::cout << "Not connected to a chat room \n";
          return;                  
       }
@@ -241,7 +248,8 @@ namespace simple_chat_protobuffer {
       std::string message;
       std::getline(message_stream, dummy, ' ');
       std::getline(message_stream, message);
-      if ( message.size() == 0 ) {
+      if ( message.size() == 0 ) 
+      {
          std::cout << "No message to send! \n";
          return;                  
       }
@@ -324,7 +332,8 @@ namespace simple_chat_protobuffer {
          return 0;         
       }
       std::cout << "\r"; // overwrites prompt
-      for ( int i=0; i<number_messages; i++) {
+      for ( int i=0; i<number_messages; i++) 
+      {
          chat::ChatMessage chat_message = chat_messages.chat_message(i);
          std::cout << chat_message.nick() << "@" << chat_message.chat_room() << ":" << chat_message.message() << std::endl;
          message_id = chat_message.message_id();
@@ -338,7 +347,8 @@ namespace simple_chat_protobuffer {
    }
    
    
-   void simple_chat_protobuffer::Client::run(void) {
+   void simple_chat_protobuffer::Client::run(void) 
+   {
       // http://www.doctort.org/adam/nerd-notes/reading-single-keystroke-on-linux.html
       // Black magic to prevent Linux from buffering keystrokes.
       struct termios t;
@@ -350,7 +360,8 @@ namespace simple_chat_protobuffer {
       {
          int c = casual::peek(300);
          //system("stty sane"); 
-         if ( c == 0 ) {
+         if ( c == 0 ) 
+         {
             // No command being written
             if ( connected ) 
                get_messages(); // Get messages from server
@@ -405,14 +416,14 @@ namespace simple_chat_protobuffer {
 
 }
 
-int main( int argc, char** argv)
+int main(int argc, char** argv)
 {
    std::vector< std::string> arguments;
    std::copy(
       argv,
       argv + argc,
       std::back_inserter( arguments));
-   if( arguments.size() < 1)
+   if ( arguments.size() < 1)
    {
       std::cerr << "need at least 0 argument" << std::endl;
       return 1;
@@ -420,6 +431,4 @@ int main( int argc, char** argv)
    
    simple_chat_protobuffer::Client client(arguments);
    client.run();
-   
-
 }

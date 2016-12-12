@@ -68,6 +68,7 @@ Install( install_bin,'$(CASUAL_HOME)/bin')
 #Install( [ 'domain/single/minimal/minimal.md', 'domain/single/minimal/domain.env'],'$(CASUAL_HOME)/example/domain/single/minimal')
 Install( [ 'configuration/domain.yaml'],'$(CASUAL_HOME)/simple-chat-protobuffer/configuration')
 Install( [ 'env/domain.env'],'$(CASUAL_HOME)/simple-chat-protobuffer')
+Install( [ '../../example/env/casual.env'],'$(CASUAL_HOME)/simple-chat-protobuffer/env')
 
 
 

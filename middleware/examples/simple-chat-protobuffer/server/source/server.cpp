@@ -12,12 +12,10 @@
 
 namespace casual
 {
-
    namespace simple_chat_protobuffer
    {
       namespace server
       {
-
          extern "C"
          {
             static int _room_id = 0; 
@@ -192,7 +190,6 @@ namespace casual
                {
                   casual::app::log::error << "Client sent bad room name" << std::endl;
                   tpreturn( TPFAIL, 0, 0, 0, 0); // should retur TPEXIT
-                  return;
                } 
                const chat::ChatRoom& chat_room = _chat_room_map[room_name];
                auto room_id = chat_room.room_id();
