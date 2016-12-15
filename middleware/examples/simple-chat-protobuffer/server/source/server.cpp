@@ -112,7 +112,6 @@ namespace casual
                chat::ChatRoomEntered enter_room_resp;
                enter_room_resp.set_room_id(room_id);
                enter_room_resp.set_message_id(message_id-1);
-               enter_room_resp.set_room_name(room_name); // avoids 0 length message
                                
                // Send response message
                auto message_size = enter_room_resp.ByteSize();

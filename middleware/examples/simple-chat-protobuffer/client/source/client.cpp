@@ -21,8 +21,6 @@
 
 #include <app_log.h>
 #include "xatmi.h"
-//#include "command.h"
-//#include "buffer/string.h"
 
 #include "client.h"
 #include <chat.pb.h>
@@ -132,7 +130,6 @@ namespace simple_chat_protobuffer {
       }
       return cd1;
    }
-
 
    void simple_chat_protobuffer::Client::command_create(std::vector<std::string> tokens)
    {
