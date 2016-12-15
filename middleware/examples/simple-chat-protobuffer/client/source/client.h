@@ -26,6 +26,9 @@ namespace simple_chat_protobuffer {
       void get_messages(void);
       void write_prompt(void);
       int recive_messages_reply(int& cd);
+      void check_error_codes(std::string message);
+      char* safe_alloc(long size);
+      int safe_call(const char* service, char* send_buffer, long size);
    public:
       Client(std::vector< std::string> arguments);
       void run(void);

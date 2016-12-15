@@ -27,6 +27,7 @@
 #include "client.h"
 #include <chat.pb.h>
 #include <peek.h>
+#include <errors.h>
 
 namespace simple_chat_protobuffer {
 
@@ -71,6 +72,67 @@ namespace simple_chat_protobuffer {
       nick = tokens[1];
       std::cout << "Nick is " << nick << "\n";
    }
+   
+   void simple_chat_protobuffer::Client::check_error_codes(std::string message)
+   {
+      if ( tperrno == TPESVCFAIL )
+      {
+         if ( tpurcode == PERFUME )
+         {
+            std::cout << message << std::endl;
+            return;
+         }
+         else if ( tpurcode == SATAN )
+         {
+            casual::app::log::error << "Server ran out of memory" << std::endl;
+            std::cout << "Server ran out of memory" << std::endl;
+         }
+         else 
+         {
+            casual::app::log::error << "WTF!" << std::endl;
+            std::cout << "WTF!" << std::endl;            
+         }
+      }
+      else 
+      {
+         std::string error_message = "tpgetrply() failed, tperrno=" + std::string(tperrnostring(tperrno));
+         casual::app::log::error << error_message << std::endl;
+         std::cout << error_message << std::endl;
+      }
+      exit(1);               
+   }
+
+   char* simple_chat_protobuffer::Client::safe_alloc(long size)
+   {
+      casual::app::log::debug << "tpalloc ->" << std::endl;
+      auto send_buffer = tpalloc("X_OCTET", 0, size);
+      casual::app::log::debug << "tpalloc <-" << std::endl;
+
+      if ( send_buffer == nullptr)
+      {
+         std::string error_message = "send_buffer == nullptr, tperrno=" + std::string(tperrnostring(tperrno));
+         casual::app::log::error << error_message << std::endl;
+         std::cout << error_message << std::endl;
+         exit(1);
+      }     
+      return send_buffer;
+   }
+
+   int simple_chat_protobuffer::Client::safe_call(const char* service, char* send_buffer, long size)  
+   { 
+      int cd1 = tpacall(service, send_buffer, size, 0);
+      if ( send_buffer != nullptr)
+         tpfree(send_buffer);
+      if ( cd1 == -1 ) 
+      {
+         std::string error_message = "tpacall(" + std::string(service) + ") failed, tperrno=" + tperrnostring(tperrno);
+         casual::app::log::error << error_message << std::endl;
+         std::cout << error_message << tperrnostring(tperrno) << std::endl;
+         exit(1);
+      }
+      return cd1;
+   }
+
 
    void simple_chat_protobuffer::Client::command_create(std::vector<std::string> tokens)
    {
@@ -88,45 +150,18 @@ namespace simple_chat_protobuffer {
       chat::CreateChatRoom ccr;
       ccr.set_creator_nick(nick);
       ccr.set_room_name(chat_room);
-      casual::app::log::debug << "tpalloc ->" << std::endl;
-      auto send_buffer = tpalloc("X_OCTET", 0, ccr.ByteSize());
-      casual::app::log::debug << "tpalloc <-" << std::endl;
-
-      if ( send_buffer == nullptr)
-      {
-         std::cout << "send_buffer == nullptr, tperrno=" << tperrnostring(tperrno) << std::endl;
-         exit(1);
-      }      
+      
+      auto send_buffer = safe_alloc(ccr.ByteSize());
       ccr.SerializeWithCachedSizesToArray((google::protobuf::uint8*)send_buffer);
 
-      int cd1 = tpacall("casual.simple-chat-protobuffer.create-chat-room", send_buffer, ccr.ByteSize(), 0);
-      tpfree(send_buffer);
-      if ( cd1 == -1 ) 
-      {
-         casual::app::log::error << "tpacall(casual.simple-chat-protobuffer.create-chat-room) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         std::cout << "tpacall(casual.simple-chat-protobuffer.create-chat-room) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         exit(1);
-      }
-
+      int cd1 = safe_call("casual.simple-chat-protobuffer.create-chat-room", send_buffer, ccr.ByteSize());
       long size = 0;
-      auto receive_buffer = tpalloc("X_OCTET", 0, 0);
+      auto receive_buffer = safe_alloc(0);
       int result = tpgetrply( &cd1, &receive_buffer, &size, 0);
-      if ( result == -1 && tperrno == TPESVCFAIL )
+      if ( result == -1)
       {
-         std::cout << "room name already exists" << std::endl;
+         check_error_codes("room name already exists");
          return;
-      }
-      else if ( result == -1 )
-      {
-         casual::app::log::error << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         std::cout << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         exit(1);         
-      }
-      else if ( size == 0 )
-      {
-         casual::app::log::error << "tpgetrply() failed, size==0" << std::endl;
-         std::cout << "tpgetrply() failed, size==0" << std::endl;
-         exit(1);         
       }
       
       chat::ChatRoom cr;
@@ -154,43 +189,18 @@ namespace simple_chat_protobuffer {
       chat::EnterChatRoom enter_room_req;
       enter_room_req.set_nick(nick);
       enter_room_req.set_room_name(chat_room);
-      auto send_buffer = tpalloc("X_OCTET", 0, enter_room_req.ByteSize());
-
-      if ( send_buffer == nullptr)
-      {
-         std::cout << "send_buffer == nullptr, tperrno=" << tperrnostring(tperrno) << std::endl;
-         exit(1);
-      }      
+      auto send_buffer = safe_alloc(enter_room_req.ByteSize());
       enter_room_req.SerializeWithCachedSizesToArray((google::protobuf::uint8*)send_buffer);
       
-      int cd1 = tpacall("casual.simple-chat-protobuffer.enter-chat-room", send_buffer, enter_room_req.ByteSize(), 0);
-      if ( cd1 == -1 ) 
-      {
-         casual::app::log::error << "tpacall(casual.simple-chat-protobuffer.enter-chat-room) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         std::cout << "tpacall(casual.simple-chat-protobuffer.enter-chat-room) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         exit(1);
-      }
-      tpfree(send_buffer);
+      int cd1 = safe_call("casual.simple-chat-protobuffer.enter-chat-room", send_buffer, enter_room_req.ByteSize());
 
       long size = 0;
-      auto receive_buffer = tpalloc("X_OCTET", 0, 0);
+      auto receive_buffer = safe_alloc(0);
       auto result = tpgetrply( &cd1, &receive_buffer, &size, 0);
-      if ( result == -1 && tperrno == TPESVCFAIL )
+      if ( result == -1 )
       {
-         std::cout << "No chat room named " << chat_room << std::endl;
+         check_error_codes("No chat room named " + chat_room);
          return;
-      }
-      else if ( result == -1 )
-      {
-         casual::app::log::error << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         std::cout << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         exit(1);         
-      }
-      else if ( size == 0 )
-      {
-         casual::app::log::error << "tpgetrply() failed, size==0" << std::endl;
-         std::cout << "tpgetrply() failed, size==0" << std::endl;
-         exit(1);         
       }
 
       chat::ChatRoomEntered response;
@@ -203,22 +213,15 @@ namespace simple_chat_protobuffer {
 
    void simple_chat_protobuffer::Client::command_list(void)
    {
-      int cd1 = tpacall("casual.simple-chat-protobuffer.list-chat-rooms", nullptr, 0, 0);
-      if ( cd1 == -1 ) 
-      {
-         casual::app::log::error << "tpacall(casual.simple-chat-protobuffer.list-chat-rooms) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         std::cout << "tpacall(casual.simple-chat-protobuffer.list-chat-rooms) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         exit(1);
-      }
+      int cd1 = safe_call("casual.simple-chat-protobuffer.list-chat-rooms", nullptr, 0);
 
       long size = 0;
-      auto buffer = tpalloc("X_OCTET", 0, 0);
+      auto buffer = safe_alloc(0);
       auto result = tpgetrply( &cd1, &buffer, &size, 0);
-      if ( result == -1 && tperrno == TPESVCFAIL )
+      if ( result == -1 )
       {
-         casual::app::log::error << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         std::cout << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         exit(1);         
+         check_error_codes("Very strange");
+         return;
       }
 
       chat::ChatRooms chat_rooms;
@@ -259,24 +262,11 @@ namespace simple_chat_protobuffer {
       chat_message_req.set_chat_room(chat_room);
       chat_message_req.set_message_id(message_id);
    
-      auto send_buffer = tpalloc("X_OCTET", 0, chat_message_req.ByteSize());
-      casual::app::log::debug << "tpalloc <-" << std::endl;
-
-      if ( send_buffer == nullptr)
-      {
-         std::cout << "send_buffer == nullptr, tperrno=" << tperrnostring(tperrno) << std::endl;
-         exit(1);
-      }      
+      auto send_buffer = safe_alloc(chat_message_req.ByteSize());
       chat_message_req.SerializeWithCachedSizesToArray((google::protobuf::uint8*)send_buffer);
 
-      int cd1 = tpacall("casual.simple-chat-protobuffer.chat-message", send_buffer, chat_message_req.ByteSize(), 0);
-      tpfree(send_buffer);
-      if ( cd1 == -1 ) 
-      {
-         casual::app::log::error << "tpacall(casual.simple-chat-protobuffer.chat-message) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         std::cout << "tpacall(casual.simple-chat-protobuffer.chat-message) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         exit(1);
-      }
+      int cd1 = safe_call("casual.simple-chat-protobuffer.chat-message", send_buffer, chat_message_req.ByteSize());
+
       recive_messages_reply(cd1);
    }
    
@@ -287,23 +277,10 @@ namespace simple_chat_protobuffer {
       chat_message_req.set_chat_room(chat_room);
       chat_message_req.set_message_id(message_id);
    
-      auto send_buffer = tpalloc("X_OCTET", 0, chat_message_req.ByteSize());
-
-      if ( send_buffer == nullptr)
-      {
-         std::cout << "send_buffer == nullptr, tperrno=" << tperrnostring(tperrno) << std::endl;
-         exit(1);
-      }      
+      auto send_buffer = safe_alloc(chat_message_req.ByteSize());
       chat_message_req.SerializeWithCachedSizesToArray((google::protobuf::uint8*)send_buffer);
 
-      int cd1 = tpacall("casual.simple-chat-protobuffer.get-chat-messages", send_buffer, chat_message_req.ByteSize(), 0);
-      tpfree(send_buffer);
-      if ( cd1 == -1 ) 
-      {
-         casual::app::log::error << "tpacall(casual.simple-chat-protobuffer.get-chat-messages) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         std::cout << "tpacall(casual.simple-chat-protobuffer.get-chat-messages) failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         exit(1);
-      }
+      int cd1 = safe_call("casual.simple-chat-protobuffer.get-chat-messages", send_buffer, chat_message_req.ByteSize());
       auto number_messages = recive_messages_reply(cd1);
       if ( number_messages )
          write_prompt();
@@ -312,13 +289,13 @@ namespace simple_chat_protobuffer {
    int simple_chat_protobuffer::Client::recive_messages_reply(int& cd)
    {
       long size = 0;
-      auto buffer = tpalloc("X_OCTET", 0, 0);
+      auto buffer = safe_alloc(0);
       auto result = tpgetrply( &cd, &buffer, &size, 0);
       if ( result == -1 )
       {
-         casual::app::log::error << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         std::cout << "tpgetrply() failed, tperrno=" << tperrnostring(tperrno) << std::endl;
-         exit(1);         
+         tpfree(buffer);
+         check_error_codes("Very strange");
+         return 0;
       }
       //if ( size == 0 )
       //   return 0;
