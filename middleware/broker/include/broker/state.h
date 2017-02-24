@@ -13,6 +13,9 @@
 #include "common/message/service.h"
 #include "common/message/pending.h"
 
+#include "common/server/service.h"
+
+
 #include "common/communication/ipc.h"
 
 #include "common/exception.h"
@@ -155,7 +158,7 @@ namespace casual
             private:
 
                std::size_t m_invoked = 0;
-               common::platform::time_point m_begin;
+               common::platform::time_point m_begin = common::platform::time_point::min();
 
                std::chrono::microseconds m_total = std::chrono::microseconds::zero();
             };
@@ -336,6 +339,7 @@ namespace casual
 
          common::process::Handle forward;
 
+         std::chrono::microseconds default_timeout = std::chrono::microseconds::zero();
 
 
          state::Service& service( const std::string& name);
@@ -355,7 +359,7 @@ namespace casual
          //!
          state::Service* find_service( const std::string& name);
 
-         void connect_broker( std::vector< common::message::service::advertise::Service> services);
+         void connect_broker( std::vector< common::server::Service> services);
       };
 
 

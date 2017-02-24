@@ -6,6 +6,8 @@
 
 #include "common/service/lookup.h"
 
+#include "common/message/domain.h"
+
 namespace casual
 {
    namespace common
@@ -19,15 +21,74 @@ namespace casual
             {
                void advertise( std::vector< message::service::advertise::Service> services)
                {
+                  trace::internal::Scope trace{ "common::server::local::advertise"};
+
                   if( ! services.empty())
                   {
                      message::service::Advertise advertise;
                      advertise.process = process::handle();
                      advertise.services = std::move( services);
 
+                     log::internal::debug << "advertise: " << advertise << '\n';
+
                      communication::ipc::blocking::send( communication::ipc::broker::device(), advertise);
                   }
                }
+
+               namespace configure
+               {
+                  void services(
+                        const std::vector< server::Service>& services,
+                        const message::domain::configuration::server::Reply& configuration)
+                  {
+                     trace::internal::Scope trace{ "common::server::local::configure::services"};
+
+                     std::vector< message::service::advertise::Service> advertise;
+
+
+                     for( auto& service : services)
+                     {
+
+                        auto physical = server::Context::instance().physical( service.origin);
+
+
+                        if( physical && ( configuration.restrictions.empty() || range::find( configuration.restrictions, service.origin)))
+                        {
+                           auto found = range::find_if( configuration.routes, [&service]( const message::domain::configuration::server::Reply::Service& s){
+                              return s.name == service.origin;
+                           });
+
+                           if( found)
+                           {
+                              range::for_each( found->routes, [physical,&advertise,&service]( const std::string& name){
+
+                                 advertise.emplace_back( name, service.category, service.transaction);
+
+                                 server::Context::instance().state().services.emplace( name, *physical);
+
+                              });
+
+                           }
+                           else
+                           {
+                              advertise.emplace_back( service.origin, service.category, service.transaction);
+                           }
+                        }
+                     }
+
+                     local::advertise( std::move( advertise));
+                  }
+
+               } // configure
+
+               message::domain::configuration::server::Reply configuration()
+               {
+                  message::domain::configuration::server::Request request;
+                  request.process = process::handle();
+
+                  return communication::ipc::call( communication::ipc::domain::manager::device(), request);
+               }
+
             } // <unnamed>
          } // local
 
@@ -36,24 +97,28 @@ namespace casual
 
             namespace policy
             {
-               void Default::connect( std::vector< message::service::advertise::Service> services, const std::vector< transaction::Resource>& resources)
+               void Default::configure( server::Arguments& arguments)
                {
-                  trace::internal::Scope trace{ "server::handle::policy::Default::connect"};
+                  trace::internal::Scope trace{ "server::handle::policy::Default::configure"};
 
                   //
                   // Connection to the domain has been done before...
                   //
 
+                  //
+                  // Ask domain-manager for our configuration
+                  //
+                  auto configuration = local::configuration();
 
                   //
                   // Let the broker know about our services...
                   //
-                  local::advertise( std::move( services));
+                  local::configure::services( arguments.services, configuration);
 
                   //
                   // configure resources, if any.
                   //
-                  transaction::Context::instance().set( resources);
+                  transaction::Context::instance().configure( arguments.resources, std::move( configuration.resources));
 
                }
 
@@ -208,22 +273,20 @@ namespace casual
                {}
 
 
-               void Admin::connect( std::vector< message::service::advertise::Service> services, const std::vector< transaction::Resource>& resources)
+               void Admin::configure( server::Arguments& arguments)
                {
                   //
                   // Connection to the domain has been done before...
                   //
 
 
-                  if( ! resources.empty())
+                  if( ! arguments.resources.empty())
                   {
                      throw common::exception::invalid::Semantic{ "can't build and link an administration server with resources"};
                   }
 
-                  //
-                  // Let the broker know about our services...
-                  //
-                  local::advertise( std::move( services));
+                  local::configure::services( arguments.services, {});
+
                }
 
                void Admin::reply( platform::ipc::id::type id, message::service::call::Reply& message)

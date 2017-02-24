@@ -23,6 +23,21 @@ namespace casual
    {
       namespace service
       {
+
+         namespace reply
+         {
+            std::ostream& operator << ( std::ostream& out, const State& state)
+            {
+               return out << "{ value: " << state.value
+                     << ", code: " << state.code
+                     << ", data: " << static_cast< void*>( state.data)
+                     << ", size: " << state.size
+                     << ", flags: " << state.flags
+                     << '}';
+            }
+         } // reply
+
+
          Interface::~Interface()
          {
 
@@ -44,7 +59,7 @@ namespace casual
 
          void Interface::handle_exception()
          {
-            do_andle_exception();
+            do_handle_exception();
          }
 
          Interface::Output& Interface::output()
@@ -90,10 +105,10 @@ namespace casual
          {
             if( common::log::parameter)
             {
-               return common::make::unique< protocol::parameter::Log< T>>( service_info);
+               return std::make_unique< protocol::parameter::Log< T>>( service_info);
             }
 
-            return common::make::unique< T>( service_info);
+            return std::make_unique< T>( service_info);
          }
 
 
@@ -115,7 +130,7 @@ namespace casual
                   //
                   // service-describe protocol
                   //
-                  return common::make::unique< protocol::Describe>( service_info, found->create( service_info));
+                  return std::make_unique< protocol::Describe>( service_info, found->create( service_info));
                }
 
                return found->create( service_info);

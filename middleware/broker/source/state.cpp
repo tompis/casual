@@ -258,7 +258,7 @@ namespace casual
          std::ostream& operator << ( std::ostream& out, const Service& service)
          {
             return out << "{ name: " << service.information.name
-                  << ", type: " << service.information.type
+                  << ", type: " << service.information.category
                   << ", transaction: " << service.information.transaction
                   << ", timeout: " << service.information.timeout.count()
                   << "}";
@@ -338,26 +338,50 @@ namespace casual
             {
                Trace trace{ "broker::local::find_or_add service"};
 
+               log << "service: " << service << '\n';
+
                auto found = range::find( services, service.name);
 
                if( found)
                {
+                  if( found->second.information.category != service.category)
+                     found->second.information.category = service.category;
+
+                  if( found->second.information.transaction != service.transaction)
+                     found->second.information.transaction = service.transaction;
+
+                  log << "found: " << found->second << '\n';
+
                   return found->second;
                }
 
-               return services.emplace( service.name, std::move( service)).first->second;
+               return services.emplace( service.name, service).first->second;
             }
 
 
+
             template< typename Service>
-            common::message::service::call::Service transform( Service&& service)
+            common::message::service::call::Service transform( const Service& service, std::chrono::microseconds timeout)
             {
                common::message::service::call::Service result;
 
-               result.name = std::move( service.name);
+               result.name = service.name;
+               result.timeout = timeout;
+               result.transaction = service.transaction;
+               result.category = service.category;
+
+               return result;
+            }
+
+            template< typename Service>
+            common::message::service::call::Service transform( const Service& service)
+            {
+               common::message::service::call::Service result;
+
+               result.name = service.name;
                result.timeout = service.timeout;
                result.transaction = service.transaction;
-               result.type = service.type;
+               result.category = service.category;
 
                return result;
             }
@@ -415,7 +439,7 @@ namespace casual
 
                for( auto& s : message.services)
                {
-                  auto& service = local::find_or_add_service( services, local::transform( std::move( s)));
+                  auto& service = local::find_or_add_service( services, local::transform( s, default_timeout));
                   service.add( instance);
                }
 
@@ -434,6 +458,7 @@ namespace casual
             default:
             {
                log::error << "failed to deduce gateway advertise directive - action: ignore - message: " << message << '\n';
+               break;
             }
          }
       }
@@ -454,7 +479,7 @@ namespace casual
                for( auto& s : message.services)
                {
                   auto hops = s.hops;
-                  auto& service = local::find_or_add_service( services, local::transform( std::move( s)));
+                  auto& service = local::find_or_add_service( services, local::transform( s));
                   service.add( instance, hops);
                }
 
@@ -492,12 +517,22 @@ namespace casual
 
 
 
-      void State::connect_broker( std::vector< common::message::service::advertise::Service> services)
+      void State::connect_broker( std::vector< common::server::Service> services)
       {
          common::message::service::Advertise message;
 
          message.directive = common::message::service::Advertise::Directive::add;
-         message.services = std::move( services);
+
+         range::transform( services, message.services, []( common::server::Service& s){
+            common::message::service::advertise::Service result;
+
+            result.category = s.category;
+            result.name = s.origin;
+            result.transaction = s.transaction;
+
+            return result;
+         });
+
          message.process = process::handle();
 
          update( message);

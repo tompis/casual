@@ -370,39 +370,49 @@ namespace casual
 
          namespace pattern
          {
+            namespace local
+            {
+               namespace
+               {
+                  std::size_t check_infinity( std::size_t quantity)
+                  {
+                     return quantity ==  0 ? std::numeric_limits< std::size_t>::max() : quantity;
+                  }
+               } // <unnamed>
+            } // local
+
+
             Sleep::Pattern::Pattern( std::chrono::microseconds time, std::size_t quantity)
-               : time{ time}, quantity{ quantity}
+               : m_time{ time}, m_quantity{ local::check_infinity( quantity)}
             {}
 
-            Sleep::Pattern::Pattern() = default;
-
-
-            Sleep::Sleep( std::vector< Pattern> pattern) : m_pattern( std::move( pattern)) {}
-
-            Sleep::Sleep( std::initializer_list< Pattern> pattern) : m_pattern{ std::move( pattern)} {}
-
-            void Sleep::operator () ()
+            bool Sleep::Pattern::done()
             {
-               if( m_offset < m_pattern.size())
-               {
-                  if( m_offset + 1 == m_pattern.size())
-                  {
-                     //
-                     // We're at the last pattern, we keep sleeping
-                     //
-                     sleep( m_pattern[ m_offset].time);
-                  }
-                  else
-                  {
-                     auto& pattern = m_pattern[ m_offset];
-                     sleep( pattern.time);
+               sleep( m_time);
 
-                     if( pattern.quantity == 0 || --pattern.quantity == 0)
-                     {
-                        ++m_offset;
-                     }
-                  }
+               if( m_quantity == std::numeric_limits< std::size_t>::max())
+               {
+                  return false;
                }
+               return --m_quantity == 0;
+            }
+
+
+            Sleep::Sleep( std::vector< Pattern> pattern) : m_pattern( std::move( pattern)), m_range{ range::make( m_pattern)} {}
+
+            Sleep::Sleep( std::initializer_list< Pattern> pattern) : m_pattern{ std::move( pattern)}, m_range{ range::make( m_pattern)} {}
+
+            bool Sleep::operator () ()
+            {
+               if( m_range)
+               {
+                  if( m_range->done())
+                  {
+                     ++m_range;
+                  }
+                  return true;
+               }
+               return false;
             }
          } // pattern
 
@@ -431,9 +441,10 @@ namespace casual
                      }
                   } // internal
 
-                  // we need to force lvalue parameter
-                  std::vector< const char*> environment( const std::vector< std::string>& environment)
+
+                  std::vector< const char*> environment( std::vector< std::string>& environment)
                   {
+
                      auto result = internal::environment();
 
                      std::transform(
@@ -448,6 +459,60 @@ namespace casual
 
                } // current
 
+               std::vector< const char*> arguments( const std::string& path, std::vector< std::string>& arguments)
+               {
+                  std::vector< const char*> c_arguments;
+
+                  //
+                  // think we must add application-name as first argument...
+                  //
+                  c_arguments.push_back( path.c_str());
+
+
+                  range::transform( arguments, c_arguments, std::mem_fn( &std::string::data));
+
+                  //
+                  // Null end
+                  //
+                  c_arguments.push_back( nullptr);
+
+                  return c_arguments;
+               }
+
+               namespace spawn
+               {
+                  struct Attributes : traits::uncopyable
+                  {
+                     Attributes()
+                     {
+                        check_error( posix_spawnattr_init( &m_attributes), "posix_spawnattr_init");
+
+                        //
+                        // We try to eliminate signals to propagate to children by it self...
+                        // we don't need to set groupid with posix_spawnattr_setpgroup since the default is 0.
+                        //
+                        check_error( posix_spawnattr_setflags( &m_attributes, POSIX_SPAWN_SETPGROUP), "posix_spawnattr_setflags");
+                     }
+
+                     ~Attributes()
+                     {
+                        posix_spawnattr_destroy( &m_attributes);
+                     }
+
+                     posix_spawnattr_t* get() { return &m_attributes;}
+
+                  private:
+
+                     void check_error( int code, const char* message)
+                     {
+                        if( code != 0)
+                           throw exception::invalid::Argument{ message, CASUAL_NIP( error::string( code))};
+                     };
+
+                     posix_spawnattr_t m_attributes;
+                  };
+               } // spawn
+
             } // <unnamed>
          } // local
 
@@ -458,9 +523,6 @@ namespace casual
             std::vector< std::string> environment)
          {
             trace::Scope trace{ "process::spawn", log::internal::trace};
-
-            signal::thread::scope::Block block;
-
 
             path = environment::string( path);
 
@@ -477,71 +539,18 @@ namespace casual
             }
 
             //
-            // prepare arguments
-            //
-            std::vector< const char*> c_arguments;
-
-            //
-            // think we must add application-name as first argument...
+            // We need to expand environment and arguments
             //
             {
-               c_arguments.push_back( path.data());
-
-               //
-               // We need to expand environment
-               //
                for( auto& argument : arguments)
                {
                   argument = environment::string( argument);
                }
-
-
-               std::transform(
-                     std::begin( arguments),
-                     std::end( arguments),
-                     std::back_inserter( c_arguments),
-                     std::mem_fn( &std::string::data));
-
-               c_arguments.push_back( nullptr);
+               for( auto& variable : environment)
+               {
+                  variable = environment::string( variable);
+               }
             }
-
-            //
-            // We need to expand environment
-            //
-            for( auto& variable : environment)
-            {
-               variable = environment::string( variable);
-            }
-
-
-            struct attribute_t
-            {
-               attribute_t()
-               {
-                  check_error( posix_spawnattr_init( &attributes), "posix_spawnattr_init");
-                  check_error( posix_spawnattr_setflags( &attributes, POSIX_SPAWN_SETSIGMASK), "posix_spawnattr_setflags");
-                  auto mask = signal::set::empty();
-                  check_error( posix_spawnattr_setsigmask( &attributes, &mask.set), "posix_spawnattr_setsigmask");
-                  //check_error( posix_spawnattr_setflags( &attributes, POSIX_SPAWN_SETSIGDEF), "posix_spawnattr_setflags: POSIX_SPAWN_SETSIGDEF");
-               }
-               ~attribute_t()
-               {
-                  check_error( posix_spawnattr_destroy( &attributes), "posix_spawnattr_destroy");
-               }
-
-               posix_spawnattr_t attributes;
-
-            private:
-               void check_error( int code, const char* message)
-               {
-                  if( code != 0)
-                  {
-                     log::error << "failed to " << message << " - " << error::string( code) << '\n';
-                  }
-               }
-            } spawn;
-
-
 
 
 
@@ -550,18 +559,25 @@ namespace casual
             log::internal::debug << "process::spawn " << path << " " << range::make( arguments) << " - environment: " << range::make( environment) << std::endl;
 
             {
+               local::spawn::Attributes attributes;
+
                //
                // Since we're reading environment variables we need to lock
                //
                std::unique_lock< std::mutex> lock{ environment::variable::mutex()};
 
+
+               //
+               // prepare c-style arguments and environment
+               //
+               auto c_arguments = local::arguments( path, arguments);
                auto c_environment = local::current::environment( environment);
 
                auto status =  posix_spawnp(
                      &pid,
                      path.c_str(),
                      nullptr,
-                     &spawn.attributes,
+                     attributes.get(),
                      const_cast< char* const*>( c_arguments.data()),
                      const_cast< char* const*>( c_environment.data())
                      );
@@ -579,8 +595,11 @@ namespace casual
 
             //
             // We try to minimize the glitch where the spawned process does not
-            // get signals for a short period of time.
+            // get signals for a short period of time. We need to block so we don't
+            // get child-terminate signals (or other signals for that matter...)
             //
+            signal::thread::scope::Block block;
+
             process::sleep( std::chrono::microseconds{ 200});
 
             log::internal::debug << "process::spawned pid: " << pid << '\n';
@@ -605,7 +624,6 @@ namespace casual
             }
             */
             // TODO: try something else to detect if the process started correct or not.
-
 
             return pid;
          }

@@ -35,11 +35,12 @@ manager_archive = LinkArchive( 'bin/casual-domain-manager',
     Compile( 'source/manager/state.cpp'),
     Compile( 'source/manager/task.cpp'),
     Compile( 'source/manager/configuration.cpp'),
+    Compile( 'source/manager/persistent.cpp'),
     Compile( 'source/common.cpp'),
     Compile( 'source/transform.cpp'),
 ])
 
-target = LinkExecutable( 'bin/casual-domain-manager',
+target_domain_manager = LinkExecutable( 'bin/casual-domain-manager',
     [
       Compile( 'source/manager/main.cpp'),
     ],
@@ -52,7 +53,7 @@ target = LinkExecutable( 'bin/casual-domain-manager',
     ] 
 )
 
-install_bins.append( target)
+install_bins.append( target_domain_manager)
 
 
 target = LinkExecutable( 'bin/casual-domain-admin',
@@ -72,7 +73,7 @@ Install( target,'$(CASUAL_HOME)/internal/bin')
 
 
 
-LinkUnittest( 'bin/test-casual-domain', 
+target_test_domain = LinkUnittest( 'bin/test-casual-domain', 
     [ 
         Compile( 'unittest/isolated/source/manager/test_state.cpp'),
         Compile( 'unittest/isolated/source/manager/test_manager.cpp'),        
@@ -86,8 +87,13 @@ LinkUnittest( 'bin/test-casual-domain',
      'casual-sf',
      'casual-xatmi',
      'casual-unittest',
+     'casual-configuration-example',
     ]) 
 
+#
+# We use domain-manager from the unittests
+#
+Dependencies( target_test_domain, [ target_domain_manager ]);
 
 
 message_lib = LinkLibrary( 'bin/casual-delay-message', 

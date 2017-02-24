@@ -153,6 +153,10 @@ namespace casual
             template< typename T, std::size_t size>
             struct traits< std::array< T, size>> : detail::traits< std::array< T, size>, container::category::array>{};
 
+            template< typename T, std::size_t size>
+            struct traits< T[ size]> : detail::traits< std::array< T, size>, container::category::array>{};
+
+
 
 
             template< typename T>
@@ -161,9 +165,6 @@ namespace casual
             struct traits< std::deque< T>> : detail::traits< std::deque< T>, container::category::sequence>{};
             template< typename T>
             struct traits< std::list< T>> : detail::traits< std::list< T>, container::category::sequence>{};
-
-            //template< typename T>
-            //struct traits< std::forward_list< T>> : detail::traits< std::forward_list< T>, container::category::sequence>{};
 
 
             template< typename T>
@@ -294,7 +295,8 @@ namespace casual
 
 
 
-#if __GNUC__ > 5 || __clang_major__ > 4
+
+#if __cplusplus > 201402L // vector will have nothrow move in c++17
          template< typename T>
          struct is_movable : std::integral_constant< bool,
             std::is_nothrow_move_constructible< T>::value && std::is_nothrow_move_assignable< T>::value> {};
@@ -330,6 +332,20 @@ namespace casual
          template< bool Predicate, typename V = void>
          using enable_if_t = typename std::enable_if< Predicate, V>::type;
 
+
+         struct unmovable
+         {
+            unmovable() = default;
+            unmovable( unmovable&&) = delete;
+            unmovable& operator = ( unmovable&&) = delete;
+         };
+
+         struct uncopyable
+         {
+            uncopyable() = default;
+            uncopyable( const uncopyable&) = delete;
+            uncopyable& operator = ( const uncopyable&) = delete;
+         };
 
       } // traits
    } // common

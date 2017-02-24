@@ -293,7 +293,7 @@ namespace casual
                      // We don't allow other domains to access or know about our
                      // admin services.
                      //
-                     if( service && service->information.type != common::service::Type::casual_admin)
+                     if( service && service->information.category != common::service::category::admin)
                      {
                         if( ! service->instances.local.empty())
                         {
@@ -302,14 +302,14 @@ namespace casual
                            //
                            reply.services.emplace_back(
                                  service->information.name,
-                                 service->information.type,
+                                 service->information.category,
                                  service->information.transaction);
                         }
                         else if( ! service->instances.remote.empty())
                         {
                            reply.services.emplace_back(
                                  service->information.name,
-                                 service->information.type,
+                                 service->information.category,
                                  service->information.transaction,
                                  service->instances.remote.front().hops());
 
@@ -429,9 +429,9 @@ namespace casual
          }
 
 
-         void Policy::connect( std::vector< common::message::service::advertise::Service> services, const std::vector< common::transaction::Resource>& resources)
+         void Policy::configure( common::server::Arguments& arguments)
          {
-            m_state.connect_broker( std::move( services));
+            m_state.connect_broker( arguments.services);
          }
 
 
