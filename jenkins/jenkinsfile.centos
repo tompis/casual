@@ -87,7 +87,7 @@ node {
              sh """
                 umask 000
                 cd webapp
-                bower update --allow-root
+                bower update
                 touch bower_components/app-route/app-location.html
                 polymer build
                 cd ..
