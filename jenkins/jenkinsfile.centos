@@ -82,7 +82,7 @@ node {
 
       stage('Build frontend')
       {
-          docker.image('frontendtrial').inside
+          docker.image('frontendtrial').withRun('-u root').inside
           {
              sh """
                 umask 000
