@@ -5,7 +5,7 @@
 //
 def backend_builder = '''#! /bin/sh
 CASUAL_VERSION="0.42"
-CASUAL_RELEASE="1"
+CASUAL_RELEASE=${BUILD_NUMBER}
 
 source scl_source enable devtoolset-4
 
@@ -51,43 +51,6 @@ chmod a+w -R .
 '''
 
 //
-// Dockerfile for creating testcontainer
-//
-def dockerfile = '''FROM centos:latest
-MAINTAINER flurig <flurig@localhost>
-
-RUN yum  -y install wget cmake make python rsync libuuid-devel sqlite-devel gcc-c++ zlib-devel unzip rpm-build
-RUN wget http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-9.noarch.rpm
-RUN rpm -Uvh epel-release*rpm
-RUN yum -y install pugixml yaml-cpp03
-
-COPY casual-middleware-0.42-1.x86_64.rpm /tmp/casual-middleware-0.42-1.x86_64.rpm
-RUN rpm -i -p /tmp/casual-middleware-0.42-1.x86_64.rpm
-COPY start.sh /opt/casual/start.sh
-RUN chmod 755 /opt/casual/start.sh
-
-RUN useradd -ms /bin/bash casual
-
-ENV CASUAL_HOME /opt/casual
-ENV PATH $CASUAL_HOME/bin:$PATH
-ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:$CASUAL_HOME/lib
-ENV CASUAL_DOMAIN_HOME /test/casual
-ENV CASUAL_LOG ".*"
-
-RUN mkdir -p $CASUAL_DOMAIN_HOME
-RUN cp -r /opt/casual/example/domain/single/minimal/* $CASUAL_DOMAIN_HOME/.
-RUN cp $CASUAL_HOME/configuration/example/resources.yaml $CASUAL_HOME/configuration/.
-RUN chown -R casual $CASUAL_DOMAIN_HOME
-RUN chown -R casual $CASUAL_HOME/nginx
-
-EXPOSE 8080 7771
-USER casual
-WORKDIR $CASUAL_DOMAIN_HOME
-
-ENTRYPOINT ["/opt/casual/start.sh"]
-'''
-
-//
 // Startscript for dockercontainer
 //
 def dockerstart = '''#! /bin/bash
@@ -108,16 +71,10 @@ def build( name, image, content)
 
 node {
 
-     slackSend color: "good", message: "Build started: ${env.JOB_NAME} - ${env.BUILD_NUMBER} (<${env.JOB_URL}|Open>)"
+   slackSend color: "good", message: "Build started: ${env.JOB_NAME} - ${env.BUILD_NUMBER} (<${env.JOB_URL}|Open>)"
 
-//   bitbucketStatusNotify(
-//      buildState: 'INPROGRESS',
-//      buildKey: 'build',
-//      buildName: 'Build'
-//   )
-
-  try
-  {
+   try
+   {
       stage('Checkout')
       {
          checkout scm
@@ -125,9 +82,19 @@ node {
 
       stage('Build frontend')
       {
-
-          build( 'casualfrontend', 'casual/frontend', frontend_builder)
-
+          docker.image('casual/frontend').inside
+          {
+             sh """
+                umask 000
+                cd /git/casual/webapp
+                bower update --allow-root
+                touch bower_components/app-route/app-location.html
+                polymer build
+                cd ..
+                zip -r casual-webapp.zip webapp
+                chmod a+w -R .
+             """ 
+          }
           archive includes: '**/casual-webapp.zip'
       }
 
@@ -172,27 +139,14 @@ node {
             ./restart.sh
             """
          }
-
+         currentBuild.result = 'SUCCESS'
       }
      slackSend color: "good", message: "Build finished: ${env.JOB_NAME} - ${env.BUILD_NUMBER} (<${env.JOB_URL}|Open>)"
-///
-//      bitbucketStatusNotify(
-//         buildState: 'SUCCESSFUL',
-//         buildKey: 'build',
-//         buildName: 'Build'
-//      )
-//
    }
    catch (Exception e)
    {
-       slackSend color: "danger", message: "Build failed: ${env.JOB_NAME} - ${env.BUILD_NUMBER} (<${env.JOB_URL}|Open>)"
-
-//      bitbucketStatusNotify(
-//          buildState: 'FAILED',
-//          buildKey: 'build',
-//          buildName: 'Build',
-//          buildDescription: 'Something went wrong with build!'
-//      )
+      currentBuild.result = 'FAILURE'
+      slackSend color: "danger", message: "Build failed: ${env.JOB_NAME} - ${env.BUILD_NUMBER} (<${env.JOB_URL}|Open>)"
    }
 
 }
