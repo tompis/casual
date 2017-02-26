@@ -1,56 +1,6 @@
 #!groovy
 
 //
-// Script for the backend builder
-//
-def backend_builder = '''#! /bin/sh
-CASUAL_VERSION="0.42"
-CASUAL_RELEASE=${BUILD_NUMBER}
-
-source scl_source enable devtoolset-4
-
-umask 000
-cd /git/casual
-find . -name "*.gcda"| xargs rm
-rm -rf middleware/.casual/unittest/.singleton/.domain-singleton
-casual-make -d -a --use-valgrind make && \
-   casual-make clean && \
-   casual-make -d -a --use-valgrind compile && \
-   casual-make -d -a --use-valgrind link && \
-   ISOLATED_UNITTEST_DIRECTIVES="--gtest_output='xml:report.xml'" casual-make test && \
-   casual-make make && \
-   casual-make clean && \
-   casual-make compile && \
-   casual-make link && \
-   casual-make install && \
-   cd /opt/casual && \
-   tar cvf /git/casual/casual-middleware.tar . && \
-   cd /git/casual && python thirdparty/setup/install_nginx.py && \
-   cd /opt/casual && \
-   unzip /git/casual/casual-webapp.zip && \
-   cd .. && \
-   tar cvf casual-middleware.tar casual && \
-   cp casual-middleware.tar /git/casual/. && \
-   cp /git/casual/package/casual-middleware.spec /root/rpmbuild/SPECS/. && \
-   rpmbuild -bb  --define "casual_version $CASUAL_VERSION" --define "casual_release $CASUAL_RELEASE" /root/rpmbuild/SPECS/casual-middleware.spec  &&
-   cp /root/rpmbuild/RPMS/x86_64/casual-middleware*.rpm /git/casual/.
-'''
-
-//
-// Script for the frontend builder
-//
-def frontend_builder = '''#! /bin/sh
-umask 000
-cd /git/casual/webapp
-bower update --allow-root
-touch bower_components/app-route/app-location.html
-polymer build
-cd ..
-zip -r casual-webapp.zip webapp
-chmod a+w -R .
-'''
-
-//
 // Startscript for dockercontainer
 //
 def dockerstart = '''#! /bin/bash
@@ -100,7 +50,41 @@ node {
 
       stage('Build backend - Unittest/CodeCoverage')
       {
-          build( 'centoscompile', 'casual/centos', backend_builder)
+          docker.image('casual/centos').withRun('-u root')
+          {
+             sh """
+                CASUAL_VERSION="0.42"
+                CASUAL_RELEASE=${BUILD_NUMBER}
+
+                source scl_source enable devtoolset-4
+
+                workdir=$( pwd)
+                umask 000
+                find . -name "*.gcda"| xargs rm
+                rm -rf middleware/.casual/unittest/.singleton/.domain-singleton
+                casual-make -d -a --use-valgrind make && \
+                casual-make clean && \
+                casual-make -d -a --use-valgrind compile && \
+                casual-make -d -a --use-valgrind link && \
+                ISOLATED_UNITTEST_DIRECTIVES="--gtest_output='xml:report.xml'" casual-make test && \
+                casual-make make && \
+                casual-make clean && \
+                casual-make compile && \
+                casual-make link && \
+                casual-make install && \
+                cd /opt/casual && \
+                tar cvf ${workdir}/casual-middleware.tar . && \
+                cd ${workdir} && python thirdparty/setup/install_nginx.py && \
+                cd /opt/casual && \
+                unzip ${workdir}/casual-webapp.zip && \
+                cd .. && \
+                tar cvf casual-middleware.tar casual && \
+                cp casual-middleware.tar ${workdir}/. && \
+                cp ${workdir}/package/casual-middleware.spec /root/rpmbuild/SPECS/. && \
+                rpmbuild -bb  --define "casual_version $CASUAL_VERSION" --define "casual_release $CASUAL_RELEASE" /root/rpmbuild/SPECS/casual-middleware.spec  &&
+                cp /root/rpmbuild/RPMS/x86_64/casual-middleware*.rpm ${workdir}/.
+             """
+          }
 
           step([$class: 'XUnitBuilder',
              thresholds: [[$class: 'FailedThreshold', failureThreshold: '1']],
