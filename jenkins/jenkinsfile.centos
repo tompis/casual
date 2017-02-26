@@ -50,7 +50,7 @@ node {
 
       stage('Build backend - Unittest/CodeCoverage')
       {
-          docker.image('casual/centos').withRun('-u root')
+          docker.image('backendtrial').withRun('-u root')
           {
              sh '''
                 CASUAL_VERSION="0.42"
