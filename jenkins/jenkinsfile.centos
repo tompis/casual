@@ -54,7 +54,7 @@ node {
           {
              sh """
                 CASUAL_VERSION="0.42"
-                CASUAL_RELEASE=${env.BUILD_NUMBER}
+                CASUAL_RELEASE=\${env.BUILD_NUMBER}
 
                 source scl_source enable devtoolset-4
 
