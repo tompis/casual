@@ -1,15 +1,14 @@
-from casual.middleware.make.dsl import *
+from casual.make.dsl import *
 
 IncludePaths([
 	'include', 
-	'../common/include', 
-	'$(CASUAL_OPTIONAL_INCLUDE_PATHS)',
+	'../common/include',
+	unittest_include_path
 	])
 
 LibraryPaths([
 	'bin',
     '../common/bin',
-    '$(CASUAL_OPTIONAL_LIBRARY_PATHS)',
     ])
 
 
@@ -54,8 +53,8 @@ LinkUnittest( 'bin/test-casual-xatmi',
 #
 # Install
 #    
-Install( install_lib, '$(CASUAL_HOME)/lib')
-Install( install_include, '$(CASUAL_HOME)/include')
+Install( install_lib, '${CASUAL_HOME}/lib')
+Install( install_include, '${CASUAL_HOME}/include')
 
 
 

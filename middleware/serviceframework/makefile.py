@@ -1,4 +1,4 @@
-from casual.middleware.make.dsl import *
+from casual.make.dsl import *
 
 
 IncludePaths([
@@ -6,14 +6,15 @@ IncludePaths([
     '../common/include',
     '../xatmi/include',
     '../../thirdparty/rapidjson/include',
-    '$(CASUAL_OPTIONAL_INCLUDE_PATHS)',
+    '/usr/local/include',
+    unittest_include_path
     ])
 	
 LibraryPaths([
     'bin',
     '../common/bin',
     '../xatmi/bin',
-    '$(CASUAL_OPTIONAL_LIBRARY_PATHS)',
+    '/usr/local/lib'   
     ])
 
 
@@ -73,5 +74,5 @@ LinkUnittest( 'bin/test-casual-sf',
 #
 # Install
 #
-Install( install_lib, '$(CASUAL_HOME)/lib')
+Install( install_lib, '${CASUAL_HOME}/lib')
 

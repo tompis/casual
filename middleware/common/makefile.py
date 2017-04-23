@@ -1,6 +1,6 @@
 import sys
 import os
-from casual.middleware.make.dsl import *
+from casual.make.dsl import *
 
 
 platform_specific_lib_paths = []
@@ -11,7 +11,7 @@ if sys.platform.startswith('darwin'):
     #(sysname, nodename, release, version, machine) = os.uname()
     
     release = os.uname()[ 2]
-    print( '# release: ' + str( release))
+    #print( '# release: ' + str( release))
     
     platform_specific_libs = [ 'c', 'iconv', 'resolv']
     
@@ -30,11 +30,11 @@ IncludePaths( [
     '../transaction/include',
     '../serviceframework/include',
     '../buffers/include',
-    '$(CASUAL_OPTIONAL_INCLUDE_PATHS)'
+    unittest_include_path
     ]
     + platform_specific_include_paths)
 
-LibraryPaths( [ 'bin'] + platform_specific_lib_paths + [ '$(CASUAL_OPTIONAL_LIBRARY_PATHS)'])
+LibraryPaths( [ 'bin'] + platform_specific_lib_paths + [unittest_library_path])
 
 
 install_libs = []
@@ -259,7 +259,7 @@ Dependencies( target_test_common, [ target_simple_process ]);
 #
 # Install 
 #
-Install( install_libs, '$(CASUAL_HOME)/lib')
+Install( install_libs, '${CASUAL_HOME}/lib')
 
 
 

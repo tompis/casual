@@ -1,11 +1,11 @@
-from casual.middleware.make.dsl import *
+from casual.make.dsl import *
 
 IncludePaths([
    'include',
    '../common/include',
    '../xatmi/include',
    '../serviceframework/include',
-   '$(CASUAL_OPTIONAL_INCLUDE_PATHS)',
+   unittest_include_path,
    ])
 
 
@@ -14,7 +14,6 @@ LibraryPaths([
     '../common/bin',
     '../xatmi/bin',
     '../serviceframework/bin',
-    '$(CASUAL_OPTIONAL_LIBRARY_PATHS)',
     ])
 
 intall_libs = []
@@ -74,7 +73,7 @@ LinkUnittest( 'bin/test-casual-configuration',
        'casual-sf', 
        'casual-common', 
        'casual-mockup', 
-       'casual-unittest',
+       'casual-unittest'
    ])  
 
 
@@ -92,7 +91,7 @@ LinkExecutable( 'bin/casual-configuration-example-maker',
 #
 # Install
 #
-Install( intall_libs, '$(CASUAL_HOME)/lib')
-Install( 'resources.yaml', '$(CASUAL_HOME)/configuration/example')
+Install( intall_libs, '${CASUAL_HOME}/lib')
+Install( 'resources.yaml', '${CASUAL_HOME}/configuration/example')
 
 

@@ -1,11 +1,11 @@
-from casual.middleware.make.dsl import *
+from casual.make.dsl import *
 
 IncludePaths( [
    'include',
    '../serviceframework/include',
    '../common/include',
    '../xatmi/include',
-   '$(CASUAL_OPTIONAL_INCLUDE_PATHS)',
+   unittest_include_path,
    ])
 
 
@@ -14,7 +14,6 @@ LibraryPaths([
     '../serviceframework/bin',
     '../common/bin',
     '../xatmi/bin',
-    '$(CASUAL_OPTIONAL_LIBRARY_PATHS)',
     ])
 
 
@@ -93,8 +92,8 @@ lib_casual_buffer_sample = LinkLibrary( 'bin/casual_buffer_sample',
 #
 # Install
 #
-Install( install_lib, '$(CASUAL_HOME)/lib')
-Install( install_include, '$(CASUAL_HOME)/include/buffer')
+Install( install_lib, '${CASUAL_HOME}/lib')
+Install( install_include, '${CASUAL_HOME}/include/buffer')
 
 
 

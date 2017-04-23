@@ -1,4 +1,4 @@
-from casual.middleware.make.dsl import *
+from casual.make.dsl import *
 
 
 IncludePaths( ['include',
@@ -6,7 +6,7 @@ IncludePaths( ['include',
     '../xatmi/include',
     '../configuration/include',
     '../serviceframework/include',
-    '$(CASUAL_OPTIONAL_INCLUDE_PATHS)',
+    unittest_include_path,
     ])
 
 LibraryPaths( ['bin',
@@ -14,8 +14,7 @@ LibraryPaths( ['bin',
     '../common/bin',
     '../xatmi/bin',
     '../configuration/bin',
-    '../serviceframework/bin',
-    '$(CASUAL_OPTIONAL_LIBRARY_PATHS)',
+    '../serviceframework/bin'
     ])
 
 
@@ -84,7 +83,7 @@ install_bin.append( 'log/color.py')
 # install_bin.append( target)
 
 
-Install( install_bin, '$(CASUAL_HOME)/bin')
+Install( install_bin, '${CASUAL_HOME}/bin')
 
 
 
