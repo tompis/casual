@@ -1,8 +1,32 @@
 import os
+from ninja_syntax import Writer
+
+#
+# Select info from correct os
+#
+platform = os.uname()[0].lower()
+if platform == 'darwin':
+    from casual.make.ninja.darwin import *
+else:
+    from casual.make.ninja.linux import *
+
+#
+# Some initial defines
+#
+handlerstore={}
+dependencies={}
+phonys=[]
+tests=[]
+compiletargets=[]
+linktargets=[]
+defaults=[]
 
 unittest_include_path='../../thirdparty/unittest/gtest/include'
 unittest_library_path='../../thirdparty/unittest/gtest/bin'
 default_filename='build.ninja'
+
+include_paths=['include']
+library_paths=['bin']
 
 def uniq( aList):
     '''
@@ -37,4 +61,63 @@ def make_library_path_directive( directory_name, library_paths):
             library_path_directive += ' -L ' + os.path.abspath(directory_name + '/' + p)
     return library_path_directive
 
+class NinjaHandler():
+    
+    def __init__(self, filname):       
+        #
+        # Is this the main element
+        #
+        if handlerstore:
+            self.main = False
+            self.ninjafilename = filname
+        else:
+            self.main = True
+            self.ninjafilename = default_filename
+            
+        self.ninja = Writer(open(self.ninjafilename,'w+'))
+
+        if self.main:
+            self.ninja.include(platform_ninja)
+            self.ninja.newline()
+            self.ninja.include(rules)
+            self.ninja.newline()
+
+    def __del__(self):
+        
+        self.ninja.newline()
+        if self.main:
+            for lib in uniq(phonys):
+                if lib not in dependencies:
+                    self.ninja.build( lib, 'phony', lib)
+            self.ninja.newline()
+            self.ninja.build('test', 'test', tests)
+            self.ninja.newline()
+            self.ninja.build('compile', 'phony', compiletargets)
+            self.ninja.newline()
+            self.ninja.build('link', 'phony', linktargets)
+            self.ninja.newline()
+            self.ninja.build('all', 'phony', ['compile', 'link'])
+            self.ninja.newline()
+            self.ninja.default('all')
+            self.ninja.output.close()
+    
+    def build(self, outputs, rule, inputs=None, implicit=None, order_only=None,
+              variables=None, implicit_outputs=None):
+
+        self.ninja.build( outputs, rule, inputs, implicit, order_only,
+              variables, implicit_outputs)
+        
+    def subninja(self,filename):
+        self.ninja.subninja(subninja(filename))
+            
+    def ninjafile(self):
+        return self.ninjafilename
+ 
+def filehandle( filename):
+             
+    if filename in handlerstore:
+        return handlerstore[filename]
+    else:
+        handlerstore[filename] = NinjaHandler( subninja(filename))
+        return handlerstore[filename]
 

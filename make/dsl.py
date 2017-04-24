@@ -1,33 +1,9 @@
-from ninja_syntax import Writer
 import os
 import inspect
-
-#
-# Select info from correct os
-#
-platform = os.uname()[0].lower()
-if platform == 'darwin':
-    from casual.make.ninja.darwin import *
-else:
-    from casual.make.ninja.linux import *
-
 #
 # Some general info
 #    
 from casual.make.ninja.common import *
-
-#
-# Some initial defines
-#
-defaults=list()
-phonys=list()
-tests=list()
-compiletargets=list()
-linktargets=list()
-handlerstore={}
-dependencies={}
-include_paths=['include']
-library_paths=['bin']
 
 #
 # Standard way to handle py2 and py3 differences in strings
@@ -37,53 +13,6 @@ try:
 except NameError:
   basestring = str
 
-class NinjaHandler():
-    def __init__(self, filname):       
-        #
-        # Is this the main element
-        #
-        if handlerstore:
-            self.main = False
-            self.ninjafilename = filname
-        else:
-            self.main = True
-            self.ninjafilename = default_filename
-            
-        self.ninja = Writer(open(self.ninjafilename,'w+'))
-
-        if self.main:
-            self.ninja.include(platform_ninja)
-            self.ninja.newline()
-            self.ninja.include(rules)
-            self.ninja.newline()
-            #self.ninja.build('link', 'phony', )
-
-        
-    def __del__(self):
-        
-        self.ninja.newline()
-        if self.main:
-            for lib in uniq(phonys):
-                if lib not in dependencies:
-                    self.ninja.build( lib, 'phony', lib)
-            self.ninja.newline()
-            self.ninja.build('compile', 'phony', compiletargets)
-            self.ninja.newline()
-            self.ninja.build('link', 'phony', linktargets)
-            self.ninja.build('all', 'phony', ['compile', 'link'])
-            self.ninja.default('all')
-            self.ninja.output.close()
-            
-    def ninjafile(self):
-        return self.ninjafilename
- 
-def filehandle( filename):
-             
-    if filename in handlerstore:
-        return handlerstore[filename]
-    else:
-        handlerstore[filename] = NinjaHandler( subninja(filename))
-        return handlerstore[filename]
         
 def Compile( sourcefile, objectfile = None, directive = ''):
     """
@@ -111,7 +40,7 @@ def Compile( sourcefile, objectfile = None, directive = ''):
 
     include_path_directive=make_include_path_directive(directory_name,include_paths)
         
-    handler.ninja.build( absobjectfile, 'compile', abssourcefile, variables={'INCLUDE_PATHS_DIRECTIVE': include_path_directive})
+    handler.build( absobjectfile,'compile', abssourcefile, variables={'INCLUDE_PATHS_DIRECTIVE': include_path_directive})
 
     global compiletargets
     compiletargets.append(absobjectfile)
@@ -139,7 +68,7 @@ def LinkExecutable( name, objectfiles, libraries = []):
 
     library_path_directive=make_library_path_directive(directory_name,library_paths)
 
-    handler.ninja.build( absname, 'linkexecutable', objectfiles,
+    handler.build( absname,'linkexecutable', objectfiles,  
                      implicit=libraries, 
                      variables={'libs': " ".join([ '-l ' + p for p in libraries if p]),
                                 'LIBRARY_PATHS_DIRECTIVE': library_path_directive})
@@ -190,11 +119,11 @@ def LinkLibrary( name, objectfiles, libraries = []):
     
     library_path_directive=make_library_path_directive(directory_name,library_paths)
 
-    handler.ninja.build( absname, 'linklibrary', objectfiles,
+    handler.build( absname,'linklibrary', objectfiles,  
                      implicit=libraries, 
                      variables={'libs': " ".join([ '-l ' + p for p in libraries if p]),
                                 'LIBRARY_PATHS_DIRECTIVE':library_path_directive})
-    handler.ninja.build( basename, 'phony', absname)
+    handler.build( basename, 'phony', absname)
     
     dependencies[basename] = absname
 
@@ -225,9 +154,9 @@ def LinkArchive(name,objectfiles):
 
     absname = directory_name + '/' + dirname + '/lib' + basename + '.a'
 
-    handler.ninja.build( absname, 'archive', objectfiles)
+    handler.build( absname, 'archive', objectfiles)
                      
-    handler.ninja.build( basename, 'phony', absname)
+    handler.build( basename, 'phony', absname)
     dependencies[basename] = absname
 
     defaults.append(absname)
@@ -281,9 +210,9 @@ def LinkServer( name, objectfiles, libraries, serverdefinition, resources=None, 
     include_path_directive=make_include_path_directive(directory_name,include_paths)
     library_path_directive=make_library_path_directive(directory_name,library_paths)
  
-    handler.ninja.build( absname, 'linkserver', objectfiles,
-                     implicit=libraries, 
-                     variables={'libs': " ".join([ '-l ' + p for p in libraries if p]),
+    handler.build( absname,'linkserver', objectfiles, 
+                    implicit=libraries, 
+                    variables={'libs': " ".join([ '-l ' + p for p in libraries if p]),
                                 'LIBRARY_PATHS_DIRECTIVE': library_path_directive,
                                 'INCLUDE_PATHS_DIRECTIVE': include_path_directive,
                                 'directives': directive})
@@ -320,9 +249,9 @@ def LinkUnittest( name, objectfiles, libraries = []):
 
     library_path_directive=make_library_path_directive(directory_name,library_paths)
 
-    handler.ninja.build( absname, 'linkexecutable', objectfiles,
-                     implicit=libraries, 
-                     variables={'libs': " ".join([ '-l ' + p for p in libraries if p]),
+    handler.build( absname,'linkexecutable', objectfiles,
+                    implicit=libraries, 
+                    variables={'libs': " ".join([ '-l ' + p for p in libraries if p]),
                                 'LIBRARY_PATHS_DIRECTIVE': library_path_directive})
     defaults.append( absname)
     tests.append( absname)
@@ -379,7 +308,7 @@ def Install( files, destination):
             install( target[ 0], destination + '/' + target[ 1])
             
         elif isinstance( target, basestring):
-            handler.ninja.build( 'install', 'install', target, variables={'destination':destination})
+            handler.build( 'install', 'install', target, variables={'destination':destination})
         else:
             raise SystemError('Not supported install target')
             
@@ -395,7 +324,7 @@ def Build(casualMakefile):
     caller = inspect.currentframe().f_back
     filename = inspect.getframeinfo(caller).filename
     handler = filehandle(filename)
-    handler.ninja.subninja(subninja(casualMakefile))
+    handler.subninja(casualMakefile)
     
     #
     # Change context
