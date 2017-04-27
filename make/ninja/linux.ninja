@@ -72,12 +72,6 @@ PRE_UNITTEST_DIRECTIVE=valgrind --xml=yes --xml-file=valgrind.xml
 
 
 #
-# Format the include-/library- paths
-# 
-LIBRARY_PATH_OPTION=-Wl,-rpath-link=
-
-
-#
 # Header dependency stuff
 #
 HEADER_DEPENDENCY_COMMAND = -g++ -MP -MM ${STD_DIRECTIVE}

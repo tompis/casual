@@ -11,6 +11,11 @@
 #
 import os
 
+try:
+  basestring
+except NameError:
+  basestring = str
+
 import casual.make.plumbing
 import casual.make.porcelain
 from casual.make.output import Output
@@ -139,16 +144,16 @@ def LinkResourceProxy( name, resource, libraries = [], directive = ''):
     _plumbing.set_ld_path()
     
     print
-    print "link: " + target.name
+    print( "link: " + target.name)
     print 
-    print target.name + ': ' + target.file
+    print( target.name + ': ' + target.file)
     print
-    print '   #'
-    print '   # possible dependencies to other targets (in this makefile)'
-    print '   depenency_' + target.name + ' = ' + _plumbing.multiline( dependent_targets)
+    print( '   #')
+    print( '   # possible dependencies to other targets (in this makefile)')
+    print( '   depenency_' + target.name + ' = ' + _plumbing.multiline( dependent_targets))
     print
-    print target.file + ': $(depenency_' + target.name + ')' + " $(USER_CASUAL_MAKE_FILE) | " + destination_path
-    print '\t@LD_LIBRARY_PATH=$(LOCAL_LD_LIBRARY_PATH) ' + build_resource_proxy + ' --output ' + target.file + ' --resource-key ' + resource + ' ' + directive
+    print( target.file + ': $(depenency_' + target.name + ')' + " $(USER_CASUAL_MAKE_FILE) | " + destination_path)
+    print( '\t@LD_LIBRARY_PATH=$(LOCAL_LD_LIBRARY_PATH) ' + build_resource_proxy + ' --output ' + target.file + ' --resource-key ' + resource + ' ' + directive)
     
     _plumbing.register_file_for_clean( target.file)
     _plumbing.register_path_for_create( destination_path)
