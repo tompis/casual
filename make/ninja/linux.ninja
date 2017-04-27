@@ -6,10 +6,7 @@
 ######################################################################
 
 
-ifndef CXX
 CXX = g++
-endif
-
 
 COMPILER = ${CXX}
 
@@ -30,11 +27,9 @@ ARCHIVE_LINKER = ar rcs
 SHELL = bash
 
 
-#ifndef EXECUTABLE_LINKER
 EXECUTABLE_LINKER = g++
-#endif
 
-export EXECUTABLE_LINKER
+#export EXECUTABLE_LINKER
 
 
 #

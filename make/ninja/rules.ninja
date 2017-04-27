@@ -1,13 +1,13 @@
 rule linkexecutable
-    command = ${EXECUTABLE_LINKER} -o $out $in ${LIBRARY_PATHS_DIRECTIVE} ${DEFAULT_LIBRARY_PATHS_DIRECTIVE} ${libs} ${DEFAULT_LIBS} ${LINK_DIRECTIVES_EXE} 
+    command = LIBRARY_PATH_OPTION=-Wl,-rpath-link= LD_LIBRARY_PATH= ${EXECUTABLE_LINKER} -o $out $in ${LIBRARY_PATHS_DIRECTIVE} ${DEFAULT_LIBRARY_PATHS_DIRECTIVE} ${libs} ${DEFAULT_LIBS} ${LINK_DIRECTIVES_EXE} 
     description = Linking $out
 
 rule linklibrary
-    command = ${LIBRARY_LINKER} -o $out $in ${LIBRARY_PATHS_DIRECTIVE} ${DEFAULT_LIBRARY_PATHS_DIRECTIVE} ${libs} ${DEFAULT_LIBS} ${LINK_DIRECTIVES_LIB} 
+    command = LIBRARY_PATH_OPTION=-Wl,-rpath-link= LD_LIBRARY_PATH= ${LIBRARY_LINKER} -o $out $in ${LIBRARY_PATHS_DIRECTIVE} ${DEFAULT_LIBRARY_PATHS_DIRECTIVE} ${libs} ${DEFAULT_LIBS} ${LINK_DIRECTIVES_LIB} 
     description = Linking $out
 
 rule linkserver
-    command = LD_LIBRARY_PATH=${LOCAL_LD_LIBRARY_PATH} ${BUILDSERVER} -o $out ${directives} -f "$in" -f "${libs}" -f "${LIBRARY_PATHS_DIRECTIVE} ${LINK_DIRECTIVES_EXE} ${INCLUDE_PATHS_DIRECTIVE}" 
+    command = PATH= LD_LIBRARY_PATH=${LOCAL_LD_LIBRARY_PATH} ${BUILDSERVER} -o $out ${directives} -f "$in" -f "${libs}" -f "${LIBRARY_PATHS_DIRECTIVE} ${LINK_DIRECTIVES_EXE} ${INCLUDE_PATHS_DIRECTIVE}" 
     description = Linkserver $out
     
 rule archive

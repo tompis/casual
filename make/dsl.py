@@ -211,10 +211,11 @@ def LinkServer( name, objectfiles, libraries, serverdefinition, resources=None, 
     library_path_directive=make_library_path_directive(directory_name,library_paths)
  
     handler.build( absname,'linkserver', objectfiles, 
-                    implicit=libraries, 
-                    variables={'libs': " ".join([ '-l ' + p for p in libraries if p]),
+                   implicit=libraries, 
+                   variables={'libs': " ".join([ '-l ' + p for p in libraries if p]),
                                 'LIBRARY_PATHS_DIRECTIVE': library_path_directive,
                                 'INCLUDE_PATHS_DIRECTIVE': include_path_directive,
+                                'LOCAL_LD_LIBRARY_PATH': unittest_ld_library_path,
                                 'directives': directive})
 
     global linktargets
@@ -250,9 +251,11 @@ def LinkUnittest( name, objectfiles, libraries = []):
     library_path_directive=make_library_path_directive(directory_name,library_paths)
 
     handler.build( absname,'linkexecutable', objectfiles,
-                    implicit=libraries, 
-                    variables={'libs': " ".join([ '-l ' + p for p in libraries if p]),
-                                'LIBRARY_PATHS_DIRECTIVE': library_path_directive})
+                   implicit=libraries, 
+                   variables={'libs': " ".join([ '-l ' + p for p in libraries if p]),
+                               'LIBRARY_PATHS_DIRECTIVE': library_path_directive}
+                  )
+
     defaults.append( absname)
     tests.append( absname)
     

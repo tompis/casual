@@ -24,6 +24,7 @@ defaults=[]
 unittest_include_path='../../thirdparty/unittest/gtest/include'
 unittest_library_path='../../thirdparty/unittest/gtest/bin'
 default_filename='build.ninja'
+unittest_ld_library_path='common/bin:xatmi/bin:configuration/bin:serviceframework/bin'
 
 include_paths=['include']
 library_paths=['bin']
