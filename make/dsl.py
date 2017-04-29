@@ -3,6 +3,7 @@ import inspect
 #
 # Some general info
 #    
+import casual.make.ninja.common as common
 from casual.make.ninja.common import *
 
 #
@@ -30,20 +31,19 @@ def Compile( sourcefile, objectfile = None, directive = ''):
     caller = inspect.currentframe().f_back
     filename = inspect.getframeinfo(caller).filename
     directory_name=os.path.dirname(filename)
-    handler = filehandle(filename)
+    handler = common.filehandle(filename)
     
     if not objectfile:
-        objectfile = makeObjectfile(sourcefile)
+        objectfile = common.makeObjectfile(sourcefile)
     
     absobjectfile = directory_name + '/' + objectfile
     abssourcefile = directory_name + '/' + sourcefile
 
-    include_path_directive=make_include_path_directive(directory_name,include_paths)
+    include_path_directive=common.make_include_path_directive(directory_name,include_paths)
         
     handler.build( absobjectfile,'compile', abssourcefile, variables={'INCLUDE_PATHS_DIRECTIVE': include_path_directive})
 
-    global compiletargets
-    compiletargets.append(absobjectfile)
+    common.compiletargets.append(absobjectfile)
         
     return absobjectfile
     
@@ -62,38 +62,34 @@ def LinkExecutable( name, objectfiles, libraries = []):
     caller = inspect.currentframe().f_back
     filename = inspect.getframeinfo(caller).filename
     directory_name=os.path.dirname(filename)
-    handler = filehandle(filename)
+    handler = common.filehandle(filename)
     
     absname = directory_name + '/' + name
 
-    library_path_directive=make_library_path_directive(directory_name,library_paths)
+    library_path_directive=common.make_library_path_directive(directory_name,library_paths)
 
     handler.build( absname,'linkexecutable', objectfiles,  
                      implicit=libraries, 
                      variables={'libs': " ".join([ '-l ' + p for p in libraries if p]),
                                 'LIBRARY_PATHS_DIRECTIVE': library_path_directive})
-    defaults.append(absname)
+    common.defaults.append(absname)
     
-    global phonys
-    phonys += libraries
+    common.phonys += libraries
     
-    global linktargets
-    linktargets.append(absname)
+    common.linktargets.append(absname)
 
     return name
 
 def IncludePaths( paths):
     
-    global include_paths
     if isinstance( paths, list):
-        include_paths += paths
+        common.include_paths += paths
     else:
-        include_paths.append( paths)
+        common.include_paths.append( paths)
      
 def LibraryPaths( paths):
     
-    global library_paths
-    library_paths += paths
+    common.library_paths += paths
 
 def LinkLibrary( name, objectfiles, libraries = []): 
     """
@@ -108,16 +104,16 @@ def LinkLibrary( name, objectfiles, libraries = []):
     :return: target name
     """
     
-    dirname, basename = partition_path(name)
+    dirname, basename = common.partition_path(name)
     
     caller = inspect.currentframe().f_back
     filename = inspect.getframeinfo(caller).filename
     directory_name=os.path.dirname(filename)
-    handler = filehandle(filename)
+    handler = common.filehandle(filename)
 
     absname = directory_name + '/' + dirname + '/lib' + basename + '.so'
     
-    library_path_directive=make_library_path_directive(directory_name,library_paths)
+    library_path_directive=common.make_library_path_directive(directory_name,library_paths)
 
     handler.build( absname,'linklibrary', objectfiles,  
                      implicit=libraries, 
@@ -125,15 +121,13 @@ def LinkLibrary( name, objectfiles, libraries = []):
                                 'LIBRARY_PATHS_DIRECTIVE':library_path_directive})
     handler.build( basename, 'phony', absname)
     
-    dependencies[basename] = absname
+    common.dependencies[basename] = absname
 
-    defaults.append(absname)
+    common.defaults.append(absname)
     
-    global phonys
-    phonys += libraries
+    common.phonys += libraries
 
-    global linktargets
-    linktargets.append(absname)
+    common.linktargets.append(absname)
     
     return basename
     
@@ -145,24 +139,23 @@ def LinkArchive(name,objectfiles):
     :param: objectfiles    object files that is linked
     :return: target name
     """
-    dirname, basename = partition_path(name)
+    dirname, basename = common.partition_path(name)
     
     caller = inspect.currentframe().f_back
     filename = inspect.getframeinfo(caller).filename
     directory_name=os.path.dirname(filename)
-    handler = filehandle(filename)
+    handler = common.filehandle(filename)
 
     absname = directory_name + '/' + dirname + '/lib' + basename + '.a'
 
     handler.build( absname, 'archive', objectfiles)
                      
     handler.build( basename, 'phony', absname)
-    dependencies[basename] = absname
+    common.dependencies[basename] = absname
 
-    defaults.append(absname)
+    common.defaults.append(absname)
 
-    global linktargets
-    linktargets.append(absname)
+    common.linktargets.append(absname)
     
     return basename
 
@@ -189,7 +182,7 @@ def LinkServer( name, objectfiles, libraries, serverdefinition, resources=None, 
     caller = inspect.currentframe().f_back
     filename = inspect.getframeinfo(caller).filename
     directory_name=os.path.dirname(filename)
-    handler = filehandle(filename)
+    handler = common.filehandle(filename)
     
     directive=""
     if resources:
@@ -204,22 +197,21 @@ def LinkServer( name, objectfiles, libraries, serverdefinition, resources=None, 
     else:
         directive += ' -s ' + ' '.join( serverdefinition)
         
-    dirname, basename = partition_path(name)
+    dirname, basename = common.partition_path(name)
     absname = directory_name + '/' + dirname + '/' + basename
 
-    include_path_directive=make_include_path_directive(directory_name,include_paths)
-    library_path_directive=make_library_path_directive(directory_name,library_paths)
+    include_path_directive=common.make_include_path_directive(directory_name,include_paths)
+    library_path_directive=common.make_library_path_directive(directory_name,library_paths)
  
     handler.build( absname,'linkserver', objectfiles, 
-                   implicit=libraries, 
+                   implicit=libraries + ['casual-build-server'], 
                    variables={'libs': " ".join([ '-l ' + p for p in libraries if p]),
                                 'LIBRARY_PATHS_DIRECTIVE': library_path_directive,
                                 'INCLUDE_PATHS_DIRECTIVE': include_path_directive,
                                 'LOCAL_LD_LIBRARY_PATH': unittest_ld_library_path,
                                 'directives': directive})
 
-    global linktargets
-    linktargets.append(absname)
+    common.linktargets.append(absname)
     
     return basename
     
@@ -237,33 +229,28 @@ def LinkUnittest( name, objectfiles, libraries = []):
     """
     libraries.append('gtest')
     libraries.append('gtest_main')
-    global unittest_library_path
-    library_paths.append( unittest_library_path)
+    common.library_paths.append( common.unittest_library_path)
 
     caller = inspect.currentframe().f_back
     filename = inspect.getframeinfo(caller).filename
     directory_name=os.path.dirname(filename)
-    handler = filehandle(filename)
+    handler = common.filehandle(filename)
 
-    dirname, basename = partition_path(name)
+    dirname, basename = common.partition_path(name)
     absname = directory_name + '/' + dirname + '/' + basename
 
-    library_path_directive=make_library_path_directive(directory_name,library_paths)
+    library_path_directive=common.make_library_path_directive(directory_name,library_paths)
 
     handler.build( absname,'linkexecutable', objectfiles,
-                   implicit=libraries, 
-                   variables={'libs': " ".join([ '-l ' + p for p in libraries if p]),
-                               'LIBRARY_PATHS_DIRECTIVE': library_path_directive}
-                  )
-
-    defaults.append( absname)
-    tests.append( absname)
+                    implicit=libraries, 
+                    variables={'libs': " ".join([ '-l ' + p for p in libraries if p]),
+                                'LIBRARY_PATHS_DIRECTIVE': library_path_directive})
+    common.defaults.append( absname)
+    common.tests.append( absname)
     
-    global phonys
-    phonys += libraries
+    common.phonys += libraries
     
-    global linktargets
-    linktargets.append(absname)
+    common.linktargets.append(absname)
 
 
 def Dependencies( arg1, arg2): 
@@ -301,7 +288,7 @@ def Install( files, destination):
         caller = inspect.currentframe().f_back
         filename = inspect.getframeinfo(caller).filename
         directory_name=os.path.dirname(filename)
-        handler = filehandle(filename)
+        handler = common.filehandle(filename)
     
         if isinstance( target, list):
             for t in target:
@@ -326,11 +313,12 @@ def Build(casualMakefile):
     
     caller = inspect.currentframe().f_back
     filename = inspect.getframeinfo(caller).filename
-    handler = filehandle(filename)
+    handler = common.filehandle(filename)
     handler.subninja(casualMakefile)
     
     #
     # Change context
     #
     import importlib
-    importlib.import_module( module(casualMakefile))
+    importlib.import_module( common.module(casualMakefile))
+

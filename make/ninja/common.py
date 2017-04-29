@@ -39,7 +39,8 @@ def subninja(filename):
     return filename + '.ninja'
 
 def module(filename):
-    return 'casual.middleware.' + filename.replace('.py','').replace('/','.')
+    prefix = 'casual.middleware.'
+    return prefix + filename.replace('.py','').replace('/','.')
 
 def partition_path( name):
     return os.path.dirname( name), os.path.basename( name)
@@ -52,15 +53,6 @@ def make_include_path_directive( directory_name, include_paths):
         else:
             include_path_directive += ' -I ' + os.path.abspath(directory_name + '/' + p)
     return include_path_directive
-
-def make_library_path_directive( directory_name, library_paths):
-    library_path_directive=""
-    for p in uniq(library_paths):
-        if os.path.isabs(p):
-            library_path_directive += ' -L ' + p
-        else:
-            library_path_directive += ' -L ' + os.path.abspath(directory_name + '/' + p)
-    return library_path_directive
 
 class NinjaHandler():
     
@@ -91,7 +83,7 @@ class NinjaHandler():
                 if lib not in dependencies:
                     self.ninja.build( lib, 'phony', lib)
             self.ninja.newline()
-            self.ninja.build('test', 'test', tests)
+            self.ninja.build('test', 'test', tests, variables={'LOCAL_LD_LIBRARY_PATH': unittest_ld_library_path})
             self.ninja.newline()
             self.ninja.build('compile', 'phony', compiletargets)
             self.ninja.newline()
