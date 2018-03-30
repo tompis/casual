@@ -135,6 +135,8 @@ reformat.filters = [
      lambda match: color.blue( 'buildserver: ' ) + color.white( match.group(2)) + '\n' ],
     [ re.compile(r'^[\S\s]*rsync --checksum -i[\s]+(\S+) (.*)'),  
      lambda match: color.blue( 'prepare install: ') + color.white( match.group(1)) +  ' --> ' +  match.group(2) + '\n' ],
+    [ re.compile(r'^[\S\s]*cp[\s]+(\S+) (.*)'),  
+     lambda match: color.blue( 'prepare install: ') + color.white( match.group(1)) +  ' --> ' +  match.group(2) + '\n' ],
     [ re.compile(r'^(>[a-zA-Z+.]+)[\s]+(.*)'),  
      lambda match: color.green( 'updated: ') + match.group(2) + ' ' + color.blue( match.group(1)) + '\n' ],
     [ re.compile(r'^generates makefile.*from[ ](.*)'),  

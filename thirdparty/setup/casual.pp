@@ -22,6 +22,10 @@ case $operatingsystem
 	     name => 'sqlite3-devel',
 	     ensure => installed
       }
+      package { 'rsync':
+	     name => 'rsync',
+	     ensure => installed
+      }      
       warning('Install yaml-cpp-release-0.3.0 manually with sudo python $CASUAL_BUILD_HOME/thirdparty/setup/install_yaml.py')
    }
    /^(Debian|Ubuntu)$/:
@@ -46,6 +50,10 @@ case $operatingsystem
 	     name => 'libsqlite3-dev',
 	     ensure => installed
       }
+      package { 'rsync':
+	     name => 'rsync',
+	     ensure => installed
+      }      
    }
    'Darwin' :
    {

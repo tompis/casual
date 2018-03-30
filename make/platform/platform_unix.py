@@ -3,6 +3,22 @@ import os
 from casual.make.platform.platform import Platform
 from casual.make.output import Output
 
+from distutils.spawn import find_executable
+
+def copy_command():
+   if find_executable('rsync'):
+      return "rsync --checksum -i"
+   else:
+      return "cp"
+
+def copy_link_command():
+   if find_executable('rsync'):
+      return copy_command() + ' --links'
+   else:
+      #
+      # Fallback is standard copy (won't copy link as links, but will work good enough)
+      #
+      return "cp"
 
 class CommonUNIX( Platform):
     
@@ -106,10 +122,10 @@ class CommonUNIX( Platform):
         return 'rm -f ' + filename
     
     def install(self, source, destination):
-        return 'rsync --checksum -i ' + source + ' ' +  destination
+        return copy_command() + ' ' + source + ' ' +  destination
     
     def install_link(self, source, destination):
-        return 'rsync --checksum -i --links ' + source + ' ' +  destination
+        return copy_link_command() + ' ' + source + ' ' +  destination
      
     def symlink(self, filename, linkname):
         return 'ln -s ' + filename + ' ' +  linkname
