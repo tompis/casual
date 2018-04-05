@@ -20,7 +20,7 @@
 			last-response="{{response}}">
 		</iron-ajax>
 
-		<casual-list listname="Services" listdata="{{response.serviceReturn.services}}" listattribute="servicedata" sortable>
+		<casual-list listname="Services" listdata="{{response.result.services}}" listattribute="servicedata" sortable>
 			<casual-service></casual-service>
 		</casual-list>
 
@@ -42,7 +42,7 @@
 
 		doRequest: function() {
 			if(!this._url) {
-				this._url = global_configuration[global_path].url + global_service["url"] + global_service["broker"]["state"];
+				this._url = global_configuration[global_path].url + global_service["url"] + global_service["service"]["state"];
 			}
 
 			var ironAjax = (this.$.ironAjaxCall);
