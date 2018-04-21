@@ -53,7 +53,7 @@ namespace casual
       {
          auto start = common::platform::time::clock::type::now();
 
-         log << "transaction manager start\n";
+         common::log::line( log, "transaction manager start");
 
 
          //
@@ -106,11 +106,10 @@ namespace casual
          auto end = common::platform::time::clock::type::now();
 
 
-         common::log::category::information << "transaction manager is on-line - "
-               << m_state.resources.size() << " resources - "
-               << instances << " instances - boot time: "
-               << std::chrono::duration_cast< std::chrono::milliseconds>( end - start).count() << " ms" << std::endl;
-
+         common::log::line( common::log::category::information, "transaction manager is on-line - "
+              , m_state.resources.size(), " resources - "
+              , instances, " instances - boot time: "
+              , std::chrono::duration_cast< std::chrono::milliseconds>( end - start).count(), " ms");
       }
 
       Manager::~Manager()
@@ -148,7 +147,7 @@ namespace casual
                {
                   try
                   {
-                     log << "prepare message dispatch handlers\n";
+                     common::log::line( log, "prepare message dispatch handlers");
 
                      //
                      // prepare message dispatch handlers...
@@ -156,7 +155,7 @@ namespace casual
 
                      auto handler = handle::handlers( state);
 
-                     log << "start message pump\n";
+                     common::log::line( log, "start message pump");
 
 
                      //
@@ -215,7 +214,7 @@ namespace casual
                            //
                            {
 
-                              log << "manager persistent replies: " << state.persistent.replies.size() << "\n";
+                              common::log::line( log, "manager persistent replies: ", state.persistent.replies.size());
 
                               auto not_done = common::algorithm::partition(
                                     state.persistent.replies,
@@ -223,14 +222,14 @@ namespace casual
 
                               common::algorithm::trim( state.persistent.replies, std::get< 0>( not_done));
 
-                              log << "manager persistent replies: " << state.persistent.replies.size() << "\n";
+                              common::log::line( log, "manager persistent replies: ", state.persistent.replies.size());
                            }
 
                            //
                            // Send persistent resource requests
                            //
                            {
-                              log << "manager persistent request: " << state.persistent.requests.size() << "\n";
+                              common::log::line( log, "manager persistent request: ", state.persistent.requests.size());
 
                               auto not_done = common::algorithm::partition(
                                     state.persistent.requests,
@@ -245,7 +244,7 @@ namespace casual
 
                            }
                         }
-                        log << "manager transactions: " << state.transactions.size() << "\n";
+                        common::log::line( log, "manager transactions: ", state.transactions.size());
                      }
                   }
                   catch( const exception::casual::Shutdown&)

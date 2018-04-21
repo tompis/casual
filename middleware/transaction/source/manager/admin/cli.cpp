@@ -358,9 +358,11 @@ namespace casual
                   formatter.print( std::cout, algorithm::sort( instances));
                }
 
-
-               void update_instances( const std::vector< std::tuple< common::strong::resource::id::value_type, int>>& values)
+               using update_instances_value = std::tuple< common::strong::resource::id::value_type, int>;
+               void update_instances( update_instances_value value, std::vector< update_instances_value> values)
                {
+                  values.insert( std::begin( values), std::move( value));
+                  
                   auto resources = call::update::instances( common::algorithm::transform( values, []( auto& value){
                      vo::update::Instances instance;
                      instance.id = common::strong::resource::id{ std::get< 0>( value)};
@@ -372,6 +374,7 @@ namespace casual
 
                   formatter.print( std::cout, algorithm::sort( resources));
                }
+               
 
                void state( const common::optional< std::string>& format)
                {
@@ -391,13 +394,20 @@ namespace casual
                      return std::vector< std::string>{ "json", "yaml", "xml", "ini"};
                   };
 
+                  auto complete_update_instances = []( auto values, bool help){
+                     if( help)
+                        return std::vector< std::string>{ "rm-id", "# instances"};
+                     
+                     return std::vector< std::string>{ common::argument::reserved::name::suggestions::value()}; 
+                  };
+
                   return common::argument::Group{ [](){}, { "transaction"}, "transaction related administration",
                      common::argument::Option( &dispatch::list_transactions, { "-lt", "--list-transactions" }, "list current transactions"),
                      common::argument::Option( &dispatch::list_resources, { "-lr", "--list-resources" }, "list all resources"),
                      common::argument::Option( &dispatch::list_instances, { "-li", "--list-instances" }, "list resource instances"),
-                     common::argument::Option( &dispatch::update_instances, { "-ui", "--update-instances" }, "update instances - -ui [<rm-id> <# instances>]+"),
+                     common::argument::Option( &dispatch::update_instances, complete_update_instances, { "-ui", "--update-instances" }, "update resource instances"),
                      common::argument::Option( &dispatch::list_pending, { "-lp", "--list-pending" }, "list pending tasks"),
-                     common::argument::Option( &dispatch::state, complete_state, { "--state" }, "view current state in optional format")
+                     common::argument::Option( &dispatch::state, complete_state, { "--state" }, "view current state in optional format\n\nif no format a cli-format will be used")
                   };
                }
             };

@@ -22,7 +22,7 @@
 
 int casual_start_reource_proxy( struct casual_resource_proxy_service_argument* serverArguments)
 {
-   casual::sf::log::error << "deprecated entry point 'casual_start_reource_proxy', please regenerate the resource proxy\n";
+   casual::common::log::line( casual::sf::log::error, "deprecated entry point 'casual_start_reource_proxy', please regenerate the resource proxy");
    return casual_start_resource_proxy( serverArguments);
 }
 

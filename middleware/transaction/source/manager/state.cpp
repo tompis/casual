@@ -235,7 +235,7 @@ namespace casual
                auto validate = [&state]( const common::message::domain::configuration::transaction::Resource& r) {
                   if( ! common::algorithm::find( state.resource_properties, r.key))
                   {
-                     common::log::category::error << "failed to correlate resource key '" << r.key << "' - action: skip resource\n";
+                     common::log::line( common::log::category::error, "failed to correlate resource key '", r.key, "' - action: skip resource");
 
                      common::event::error::send( "failed to correlate resource key '" + r.key + "'");
                      return false;
@@ -424,7 +424,7 @@ namespace casual
             {
                if( found->state() != state::resource::Proxy::Instance::State::shutdown)
                {
-                  common::log::category::error << "resource proxy instance died - " << *found << std::endl;
+                  common::log::line( common::log::category::error, "resource proxy instance died - ", *found);
                }
 
                resource.statistics += found->statistics;
@@ -435,7 +435,7 @@ namespace casual
             }
          }
 
-         common::log::category::warning << "failed to find and remove dead instance: " << death << std::endl;
+         common::log::line( common::log::category::warning, "failed to find and remove dead instance: ", death);
       }
 
       state::resource::Proxy& State::get_resource( state::resource::id::type rm)

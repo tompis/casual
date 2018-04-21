@@ -58,7 +58,7 @@ namespace casual
             {
                Trace trace( "resource::Instances::operator()");
 
-               log << "update instances for resource: " << proxy << std::endl;
+               common::log::line( log, "update instances for resource: ", proxy);
 
                auto count = static_cast< long>( proxy.concurency - proxy.instances.size());
 
@@ -106,7 +106,7 @@ namespace casual
                         case state::resource::Proxy::Instance::State::started:
                         {
 
-                           log << "Instance has not register yet. We, kill it...: " << instance << std::endl;
+                           common::log::line( log, "Instance has not register yet. We, kill it...: ", instance);
 
                            process::lifetime::terminate( { instance.process.pid});
                            instance.state( state::resource::Proxy::Instance::State::shutdown);
@@ -114,12 +114,12 @@ namespace casual
                         }
                         case state::resource::Proxy::Instance::State::shutdown:
                         {
-                           log << "instance already in shutdown state - " << instance << std::endl;
+                           common::log::line( log, "instance already in shutdown state - ", instance );
                            break;
                         }
                         default:
                         {
-                           log << "shutdown instance: " << instance << std::endl;
+                           common::log::line( log, "shutdown instance: ", instance);
 
 
                            instance.state( state::resource::Proxy::Instance::State::shutdown);
@@ -130,7 +130,7 @@ namespace casual
                               // We couldn't send shutdown for some reason, we put the message in 'persistent-replies' and
                               // hope to send it later...
                               //
-                              log::category::warning << "failed to send shutdown to instance: " << instance << " - action: try send it later" << std::endl;
+                              common::log::line( log::category::warning, "failed to send shutdown to instance: ", instance, " - action: try send it later");
 
                               m_state.persistent.replies.emplace_back( instance.process.queue, message::shutdown::Request{});
                            }
@@ -213,13 +213,13 @@ namespace casual
 
                      if( ! local::instance::request( message.message, *found))
                      {
-                        log << "failed to send resource request - type: " << message.message.type << " to: " << found->process << "\n";
+                        common::log::line( log, "failed to send resource request - type: ", message.message.type, " to: ", found->process);
                         return false;
                      }
                   }
                   else
                   {
-                     log << "failed to find idle resource - action: wait\n";
+                     common::log::line( log, "failed to find idle resource - action: wait");
                      return false;
                   }
                }
@@ -244,13 +244,13 @@ namespace casual
                {
                   if( ! ipc::device().non_blocking_push( message.target, message.message))
                   {
-                     log << "failed to send reply - type: " << message.message.type << " to: " << message.target << "\n";
+                     common::log::line( log, "failed to send reply - type: ", message.message.type, " to: ", message.target);
                      return false;
                   }
                }
                catch( const exception::system::communication::Unavailable&)
                {
-                  common::log::category::error << "failed to send reply - target: " << message.target << ", message: " << message.message << " - TODO: rollback transaction?\n";
+                  common::log::line( common::log::category::error, "failed to send reply - target: ", message.target, ", message: ", message.message, " - TODO: rollback transaction?");
                   //
                   // ipc-queue has been removed...
                   // TODO attention: deduce from message.message.type what we should do
