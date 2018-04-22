@@ -245,7 +245,7 @@ namespace casual
          {
             using id_type = state::resource::id::type;
 
-            enum class Stage : std::uint16_t
+            enum class Stage : short
             {
                involved,
                prepare_requested,

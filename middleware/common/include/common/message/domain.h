@@ -324,7 +324,7 @@ namespace casual
 
                   struct Reply : basic_message< Type::domain_process_connect_reply>
                   {
-                     enum class Directive : char
+                     enum class Directive : short
                      {
                         start,
                         singleton,
@@ -351,7 +351,7 @@ namespace casual
                   using base_reqeust = message::basic_request< Type::domain_process_lookup_request>;
                   struct Request : base_reqeust
                   {
-                     enum class Directive : char
+                     enum class Directive : short
                      {
                         wait,
                         direct

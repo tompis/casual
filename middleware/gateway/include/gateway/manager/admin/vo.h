@@ -29,14 +29,14 @@ namespace casual
                {
                   struct Connection
                   {
-                     enum class Bound : char
+                     enum class Bound : short
                      {
                         out,
                         in,
                         unknown,
                      };
 
-                     enum class Type : char
+                     enum class Type : short
                      {
                         unknown,
                         ipc,

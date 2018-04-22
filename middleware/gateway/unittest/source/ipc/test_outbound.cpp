@@ -114,7 +114,7 @@ namespace casual
                         log::debug << "request: " << request << '\n';
 
                         auto reply = common::message::reverse::type( request);
-                        reply.version = common::message::gateway::domain::protocol::Version::version_1;
+                        reply.version = common::message::gateway::domain::protocol::Version::version_2;
 
 
                         communication::ipc::blocking::send(

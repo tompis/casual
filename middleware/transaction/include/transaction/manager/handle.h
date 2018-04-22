@@ -216,7 +216,7 @@ namespace casual
          //!
          namespace domain
          {
-            enum class Directive : char
+            enum class Directive : short
             {
                keep_transaction,
                remove_transaction,

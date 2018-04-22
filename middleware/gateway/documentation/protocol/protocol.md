@@ -160,7 +160,7 @@ transaction.trid.xid.format       | uint64        |            8 | xid format ty
 transaction.trid.xid.gtrid_length | uint64        |            8 | length of the transaction gtrid part                                          
 transaction.trid.xid.bqual_length | uint64        |            8 | length of the transaction branch part                                         
 transaction.trid.xid.payload      | dynamic array |           32 | byte array with the size of gtrid_length + bqual_length (max 128)             
-transaction.state                 | uint8         |            1 | state of the transaction TX_ACTIVE, TX_TIMEOUT_ROLLBACK_ONLY, TX_ROLLBACK_ONLY
+transaction.state                 | uint16        |            2 | state of the transaction TX_ACTIVE, TX_TIMEOUT_ROLLBACK_ONLY, TX_ROLLBACK_ONLY
 buffer.type.size                  | uint64        |            8 | buffer type name size                                                         
 buffer.type.data                  | dynamic array |           25 | byte array with buffer type in the form 'type/subtype'                        
 buffer.payload.size               | uint64        |            8 | buffer payload size (could be very big)                                       

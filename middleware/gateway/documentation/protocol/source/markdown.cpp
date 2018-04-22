@@ -634,7 +634,7 @@ Connection requests from another domain that wants to connect
                      local::message_type( out, message_type{}) << "\n\n";
    
                      message_type message;
-                     message.versions = { common::message::gateway::domain::protocol::Version::version_1};
+                     message.versions = { common::message::gateway::domain::protocol::Version::version_2};
                      message.domain.name = "domain-A";
 
                      local::format::type( out, message, {
@@ -661,7 +661,7 @@ Connection reply
                      local::message_type( out, message_type{}) << "\n\n";
    
                      message_type message;
-                     message.version = common::message::gateway::domain::protocol::Version::version_1;
+                     message.version = common::message::gateway::domain::protocol::Version::version_2;
                      message.domain.name = "domain-A";
 
                      local::format::type( out, message, {
@@ -1055,6 +1055,8 @@ Sent to abruptly disconnect the conversation
             void protocol()
             {
                static_assert( common::marshal::is_network_normalizing< local::Printer>::value, "not network...");
+
+               common::terminal::output::directive().color = false;
 
                message_header( std::cout);
                domain_connect( std::cout);

@@ -81,7 +81,7 @@ namespace casual
                      std::string executable;
                      strong::process::id pid;
 
-                     enum class Severity : char
+                     enum class Severity : short
                      {
                         fatal, // shutting down
                         error, // keep going

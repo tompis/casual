@@ -64,7 +64,7 @@ namespace casual
                basic_task( T task) : m_task( std::move( task)) {}
                ~basic_task() = default;
 
-               enum class State : char
+               enum class State : short
                {
                   not_started,
                   started,

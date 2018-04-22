@@ -140,7 +140,7 @@ namespace casual
 
                      void operator() ( message_type& message)
                      {
-                        log << "lookup reply: " << message << "\n";
+                        common::log::line( log, "lookup reply: ", message);
 
                         auto request = m_cache.get( message.correlation);
 
@@ -155,20 +155,20 @@ namespace casual
                               }
                               catch( const common::exception::system::communication::Unavailable&)
                               {
-                                 common::log::category::error << "server: " << message.process << " has been terminated during interdomain call - action: reply with TPESVCERR\n";
+                                 common::log::line( common::log::category::error, "server: ", message.process, " has been terminated during interdomain call - action: reply with TPESVCERR");
                                  send_error_reply( message);
                               }
                               break;
                            }
                            case message_type::State::absent:
                            {
-                              common::log::category::error << "service: " << message.service << " is not handled by this domain (any more) - action: reply with TPESVCERR\n";
+                              common::log::line( common::log::category::error, "service: ", message.service, " is not handled by this domain (any more) - action: reply with TPESVCERR");
                               send_error_reply( message);
                               break;
                            }
                            default:
                            {
-                              common::log::category::error << "unexpected state on lookup reply: " << message << " - action: drop message\n";
+                              common::log::line( common::log::category::error, "unexpected state on lookup reply: ", message, " - action: drop message");
                               break;
                            }
                         }
@@ -282,7 +282,7 @@ namespace casual
                            }
                            default:
                            {
-                              common::log::category::error << "unexpected message type for queue request: " << message << " - action: drop message\n";
+                              common::log::line( common::log::category::error, "unexpected message type for queue request: ", message, " - action: drop message");
                            }
                         }
                      }
@@ -312,7 +312,7 @@ namespace casual
                         }
                         catch( const common::exception::system::communication::Unavailable&)
                         {
-                           common::log::category::error << "failed to lookup queue - action: send error reply\n";
+                           common::log::line( common::log::category::error, "failed to lookup queue - action: send error reply");
 
                            common::message::queue::enqueue::Reply reply;
                            reply.correlation = message.correlation;
@@ -350,7 +350,7 @@ namespace casual
                         }
                         catch( const common::exception::system::communication::Unavailable&)
                         {
-                           common::log::category::error << "failed to lookup queue - action: send error reply\n";
+                           common::log::line( common::log::category::error, "failed to lookup queue - action: send error reply");
 
                            common::message::queue::enqueue::Reply reply;
                            reply.correlation = message.correlation;
@@ -380,7 +380,7 @@ namespace casual
                {
                   Trace trace{ "gateway::inbound::handle::basic_forward::operator()"};
 
-                  log << "forward message: " << message << '\n';
+                  common::log::line( log, "forward message: ", message);
 
                   m_device.blocking_send( message);
                }
@@ -427,8 +427,8 @@ namespace casual
                            common::algorithm::copy( reply.services, std::back_inserter( message.services));
                            common::algorithm::copy( reply.queues, std::back_inserter( message.queues));
 
-                           log << "reply: " << reply << '\n';
-                           log << "message: " << message << '\n';
+                           common::log::line( log, "reply: ", reply);
+                           common::log::line( log, "message: ", message);
 
                         }
 
@@ -442,7 +442,7 @@ namespace casual
                            message.domain = common::domain::identity();
                            message.process = common::process::handle();
 
-                           log << "forward message: " << message << '\n';
+                           common::log::line( log, "forward message: ", message);
 
                            m_device.blocking_send( message);
                         }
@@ -463,7 +463,7 @@ namespace casual
                         {
                            Trace trace{ "gateway::inbound::handle::connection::discover::forward::Request"};
 
-                           log << "message: " << message << '\n';
+                           common::log::line( log, "message: ", message);
 
                            //
                            // Request from remote domain about this domain
@@ -486,7 +486,7 @@ namespace casual
                      {
                         Trace trace{ "gateway::inbound::handle::connection::discover::Request"};
 
-                        log << "message: " << message << '\n';
+                        common::log::line( log, "message: ", message);
 
                         //
                         // Make sure we gets the reply
@@ -540,7 +540,7 @@ namespace casual
                      {
                         Trace trace{ "gateway::inbound::handle::domain::discover::Reply::operator()"};
 
-                        log << "message: " << message << '\n';
+                        common::log::line( log, "message: ", message);
 
                         //
                         // Might send the accumulated message if all requested has replied.
@@ -682,7 +682,7 @@ namespace casual
                   handle::create::forward< common::message::queue::enqueue::Reply>( outbound_device)
                );
 
-               log << "start internal message pump\n";
+               common::log::line( log, "start internal message pump");
                common::message::dispatch::pump( handler, common::communication::ipc::inbound::device(), ipc_policy{});
 
             }
@@ -712,7 +712,7 @@ namespace casual
 
                auto request = worker_message< common::message::gateway::domain::connect::Request>();
 
-               log << "request: " << request << '\n';
+               common::log::line( log, "request: ", request);
                
                version_type version = version_type::invalid;
 
@@ -730,7 +730,7 @@ namespace casual
                   reply.version = version;
                   reply.domain = common::domain::identity();
 
-                  log << "reply: " << reply << '\n';
+                  common::log::line( log, "reply: ", reply);
 
                   outbound.blocking_send( reply);
                }
@@ -791,7 +791,7 @@ namespace casual
                         common::communication::ipc::outbound::Device ipc{ common::communication::ipc::inbound::id()};
 
                         message::worker::Disconnect disconnect{ reason};
-                        log << "send disconnect: " << disconnect << '\n';
+                        common::log::line( log, "send disconnect: ", disconnect);
 
                         ipc.send( disconnect, common::communication::ipc::policy::Blocking{});
                      }
@@ -857,8 +857,7 @@ namespace casual
 
                   }
 
-                  common::log::category::information << "connection established - policy: " << policy << "\n";
-
+                  common::log::line( common::log::category::information, "connection established - policy: ", policy);
 
                   //
                   // we start our request-message-pump
@@ -875,7 +874,7 @@ namespace casual
                      handle::queue::enqueue::Request{ cache}
                   );
              
-                  log << "start external message pump\n";
+                  common::log::line( log, "start external message pump");
                   common::message::dispatch::blocking::pump( handler, device);
                }
                catch( const common::exception::signal::User&)
@@ -896,8 +895,8 @@ namespace casual
 
             static version_type validate( const std::vector< version_type>& versions)
             {
-               if( common::algorithm::find( versions, version_type::version_1))
-                  return version_type::version_1;
+               if( common::algorithm::find( versions, version_type::version_2))
+                  return version_type::version_2;
 
                return version_type::invalid;
             }

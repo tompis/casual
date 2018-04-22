@@ -485,7 +485,7 @@ namespace casual
 
             namespace receive
             {
-               enum class Flag : char
+               enum class Flag : short
                {
                   blocking,
                   non_blocking

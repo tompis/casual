@@ -96,7 +96,7 @@ namespace casual
 
                struct Local : base_instance
                {
-                  enum class State : char
+                  enum class State : short
                   {
                      idle,
                      busy,

@@ -98,7 +98,7 @@ namespace casual
 
             struct Transaction
             {
-               enum class State : char
+               enum class State : short
                {
                   absent,
                   active = absent,
@@ -135,7 +135,7 @@ namespace casual
 
             struct Advertise : basic_message< Type::service_advertise>
             {
-               enum class Directive : char
+               enum class Directive : short
                {
                   add,
                   remove,
@@ -169,7 +169,7 @@ namespace casual
                //!
                struct Request : basic_message< Type::service_name_lookup_request>
                {
-                  enum class Context : char
+                  enum class Context : short
                   {
                      regular,
                      no_reply,
@@ -205,7 +205,7 @@ namespace casual
                   call::Service service;
                   common::process::Handle process;
 
-                  enum class State : char
+                  enum class State : short
                   {
                      absent,
                      busy,

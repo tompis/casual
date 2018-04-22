@@ -85,7 +85,7 @@ namespace casual
 
                         common::message::gateway::domain::connect::Request request;
                         request.domain = remote;
-                        request.versions = { common::message::gateway::domain::protocol::Version::version_1};
+                        request.versions = { common::message::gateway::domain::protocol::Version::version_2};
                         communication::ipc::blocking::send( external.queue , request);
 
                      }

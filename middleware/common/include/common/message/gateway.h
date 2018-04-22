@@ -35,7 +35,7 @@ namespace casual
                   enum class Version : size_type
                   {
                      invalid = 0,
-                     version_1 = 1000,
+                     version_2 = 2000,
                   };
                } // protocol
 
@@ -95,7 +95,7 @@ namespace casual
 
                struct Advertise : basic_message< Type::gateway_domain_advertise>
                {
-                  enum class Directive : char
+                  enum class Directive : short
                   {
                      add,
                      remove,

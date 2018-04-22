@@ -50,7 +50,7 @@ namespace casual
                   }
                   catch( const common::exception::system::communication::Unavailable&)
                   {
-                     log << "destination queue unavailable for correlation: " << message.correlation << " - action: discard\n";
+                     common::log::line( log, "destination queue unavailable for correlation: ", message.correlation, " - action: discard");
                   }
                   return false;
                }
@@ -112,7 +112,7 @@ namespace casual
 
                   if( log)
                   {
-                     log << "basic_request::operator() - message: " << message << '\n';
+                     common::log::line( log, "basic_request::operator() - message: ", message);
                   }
 
                   device.blocking_send( message);
@@ -150,7 +150,7 @@ namespace casual
 
                      void operator() ( common::message::service::call::callee::Request& message)
                      {
-                        log << "call request: " << message << '\n';
+                        common::log::line( log, "call request: ", message);
 
                         auto now = common::platform::time::clock::type::now();
 
@@ -199,7 +199,7 @@ namespace casual
 
                         void operator() ( message_type& message)
                         {
-                           log << "conversation connect request: " << message << '\n';
+                           common::log::line( log, "conversation connect request: ", message);
 
                            if( message.trid)
                            {
@@ -239,7 +239,7 @@ namespace casual
                   {
                      Trace trace{ "gateway::outbound::handle::queue::basic_request"};
 
-                     log << "message: " << message << '\n';
+                     common::log::line( log, "message: ", message);
 
                      if( message.trid)
                      {
@@ -280,7 +280,7 @@ namespace casual
 
                void operator() ( message_type& reply) const
                {
-                  log << "reply: " << reply << '\n';
+                  common::log::line( log, "reply: ", reply);
 
                   try
                   {
@@ -292,7 +292,7 @@ namespace casual
                   }
                   catch( const common::exception::system::invalid::Argument&)
                   {
-                     common::log::category::error << "failed to correlate ["  << reply.correlation << "] reply with a destination - action: ignore\n";
+                     common::log::line( common::log::category::error, "failed to correlate [" , reply.correlation, "] reply with a destination - action: ignore");
                   }
                }
 
@@ -354,7 +354,7 @@ namespace casual
                               }
                               catch( const common::exception::system::communication::Unavailable&)
                               {
-                                 common::log::category::error << "failed to advertise queues to queue-broker: " << common::range::make( advertise.queues) << '\n';
+                                 common::log::line( common::log::category::error, "failed to advertise queues to queue-broker: ", advertise.queues);
                               }
                            }
                         }
@@ -382,7 +382,7 @@ namespace casual
 
                      void operator() ( common::message::service::call::Reply& reply) const
                      {
-                        log << "reply: " << reply << '\n';
+                        common::log::line( log, "reply: ", reply);
 
                         try
                         {
@@ -398,7 +398,7 @@ namespace casual
                         }
                         catch( const common::exception::system::invalid::Argument&)
                         {
-                           common::log::category::error << "failed to correlate ["  << reply.correlation << "] reply with a destination - action: ignore\n";
+                           common::log::line( common::log::category::error, "failed to correlate [" , reply.correlation, "] reply with a destination - action: ignore");
                         }
                      }
                   private:
@@ -513,7 +513,7 @@ namespace casual
 
                auto&& outbound_device = policy.outbound();
 
-               log << "internal policy: " << policy << '\n';
+               common::log::line( log, "internal policy: ", policy);
 
                //
                // connect to the other domain
@@ -589,16 +589,16 @@ namespace casual
                {
                   common::message::gateway::domain::connect::Request request;
                   request.domain = common::domain::identity();
-                  request.versions = { version_type::version_1};
+                  request.versions = { version_type::version_2};
 
-                  log << "request: " << request << '\n';
+                  common::log::line( log, "request: ", request);
 
                   device.blocking_send( request);
                }
 
                auto reply = inbound_message< common::message::gateway::domain::connect::Reply>();
 
-               log << "request: " << reply << '\n';
+               common::log::line( log, "request: ", reply);
 
                //
                // connect to gateway
@@ -721,7 +721,7 @@ namespace casual
                         common::communication::ipc::outbound::Device ipc{ common::communication::ipc::inbound::id()};
 
                         message::worker::Disconnect disconnect{ reason};
-                        log << "send disconnect: " << disconnect << '\n';
+                        common::log::line( log, "send disconnect: ", disconnect);
 
                         ipc.send( disconnect, common::communication::ipc::policy::Blocking{});
                      }
@@ -793,7 +793,7 @@ namespace casual
                   }
 
 
-                  common::log::category::information << "connection established - policy: " << policy << "\n";
+                  common::log::line( common::log::category::information, "connection established - policy: ", policy, "");
 
                   common::message::service::remote::Metric metric;
                   metric.process = common::process::handle();
@@ -821,7 +821,7 @@ namespace casual
                      handle::domain::discover::Reply{ routing, order}
                   );
 
-                  log << "start reply message pump\n";
+                  common::log::line( log, "start reply message pump");
 
 
                   while( true)

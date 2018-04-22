@@ -40,7 +40,7 @@ namespace casual
                struct LocalVO : Base
                {
 
-                  enum class State : char
+                  enum class State : short
                   {
                      idle,
                      busy,

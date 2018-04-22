@@ -249,7 +249,7 @@ namespace casual
 
             struct Disconnect : common::message::basic_message< common::message::Type::gateway_worker_disconnect>
             {
-               enum class Reason : char
+               enum class Reason : short
                {
                   invalid,
                   signal,

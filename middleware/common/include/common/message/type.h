@@ -375,7 +375,7 @@ namespace casual
                template< message::Type type>
                struct basic_reply : basic_message< type>
                {
-                  enum class Directive : char
+                  enum class Directive : short
                   {
                      start,
                      singleton,

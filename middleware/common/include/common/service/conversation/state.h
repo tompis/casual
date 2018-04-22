@@ -28,7 +28,7 @@ namespace casual
                {
                   struct Information
                   {
-                     enum class Duplex : char
+                     enum class Duplex : short
                      {
                         send,
                         receive,
