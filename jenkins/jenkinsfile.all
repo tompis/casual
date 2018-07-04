@@ -333,7 +333,7 @@ try
                   stage('Deploy - Centos')
                   {
                      sh """
-                     if [[ -d /var/lib/jenkins/git/casual/docker ]]
+                     if [ -d /var/lib/jenkins/git/casual/docker ]
                      then
                         cd /var/lib/jenkins/git/casual/docker
                         ./restart.sh
