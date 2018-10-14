@@ -61,18 +61,19 @@ namespace casual
                std::ostream& operator << ( std::ostream& out, const Request& value)
                {
                   return out << "{ correlation: " << value.correlation
-                        << ", process: " << value.process
-                        << ", trid: " << value.trid
-                        << ", queue: " << value.queue
-                        << ", name: " << value.name
-                        << ", message: " << value.message
-                        << '}';
+                     << ", process: " << value.process
+                     << ", trid: " << value.trid
+                     << ", queue: " << value.queue
+                     << ", name: " << value.name
+                     << ", message: " << value.message
+                     << '}';
                }
 
                std::ostream& operator << ( std::ostream& out, const Reply& value)
                {
                   return out << "{ id: " << value.id
-                        << '}';
+                     << ", result: " << value.result
+                     << '}';
                }
 
             } // enqueue
@@ -82,24 +83,25 @@ namespace casual
                std::ostream& operator << ( std::ostream& out, const Selector& value)
                {
                   return out << "{ id: " << value.id
-                        << ", properties: " << value.properties
-                        << '}';
+                     << ", properties: " << value.properties
+                     << '}';
                }
 
                std::ostream& operator << ( std::ostream& out, const Request& value)
                {
                   return out << "{ name: " << value.name
-                        << ", queue: " << value.queue
-                        << ", block: " << std::boolalpha << value.block
-                        << ", selector: " << value.selector
-                        << ", process: " << value.process
-                        << ", trid: " << value.trid << '}';
+                     << ", queue: " << value.queue
+                     << ", block: " << std::boolalpha << value.block
+                     << ", selector: " << value.selector
+                     << ", process: " << value.process
+                     << ", trid: " << value.trid << '}';
                }
 
                std::ostream& operator << ( std::ostream& out, const Reply& value)
                {
                   return out << "{ message: " << range::make( value.message)
-                        << '}';
+                     << ", result: " << value.result
+                     << '}';
                }
 
                namespace forget

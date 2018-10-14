@@ -84,7 +84,7 @@ namespace casual
                using base_reply = basic_reply< code::tx, Type::transaction_commit_reply>;
                struct Reply : base_reply
                {
-                  enum class Stage : char
+                  enum class Stage : short
                   {
                      prepare = 0,
                      commit = 1,
@@ -129,7 +129,7 @@ namespace casual
 
                struct Reply : base_reply
                {
-                  enum class Stage : char
+                  enum class Stage : short
                   {
                      rollback = 0,
                      error = 2,

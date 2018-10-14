@@ -242,7 +242,7 @@ namespace casual
          {
             struct Exit
             {
-               enum class Reason : char
+               enum class Reason : short
                {
                   core,
                   exited,

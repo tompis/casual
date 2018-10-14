@@ -102,7 +102,7 @@ namespace casual
          {
             struct Instance : admin::instance::Base
             {
-               enum class State : char
+               enum class State : short
                {
                   idle,
                   busy,
@@ -130,7 +130,7 @@ namespace casual
 
                struct Instance
                {
-                  enum class State : char
+                  enum class State : short
                   {
                      idle,
                      busy,

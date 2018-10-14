@@ -634,7 +634,7 @@ Connection requests from another domain that wants to connect
                      local::message_type( out, message_type{}) << "\n\n";
    
                      message_type message;
-                     message.versions = { common::message::gateway::domain::protocol::Version::version_1};
+                     message.versions = { common::message::gateway::domain::protocol::Version::version_2};
                      message.domain.name = "domain-A";
 
                      local::format::type( out, message, {
@@ -661,7 +661,7 @@ Connection reply
                      local::message_type( out, message_type{}) << "\n\n";
    
                      message_type message;
-                     message.version = common::message::gateway::domain::protocol::Version::version_1;
+                     message.version = common::message::gateway::domain::protocol::Version::version_2;
                      message.domain.name = "domain-A";
 
                      local::format::type( out, message, {
@@ -826,6 +826,7 @@ Represent enqueue reply.
                   local::format::type( out, message, {
                            { "execution", "uuid of the current execution path"},
                            { "id", "id of the enqueued message"},
+                           { "result", "result of the operation (subset of xatmi-codes)"},
                         });
                }
 
@@ -893,13 +894,14 @@ Represent dequeue reply.
                            { "message.element.properties.data", "data of message properties"},
                            { "message.element.reply.size", "length of the reply queue"},
                            { "message.element.reply.data", "data of reply queue"},
-                           { "message.element.available", "when the message was available for dequeue (us since epoc)"},
+                           { "message.element.available", "when the message was available for dequeue (us since epoch)"},
                            { "message.element.type.size", "length of the type string"},
                            { "message.element.type.data", "data of the type string"},
                            { "message.element.payload.size", "size of the payload"},
                            { "message.element.payload.data", "data of the payload"},
                            { "message.element.redelivered", "how many times the message has been redelivered"},
-                           { "message.element.timestamp", "when the message was enqueued (us since epoc)"},
+                           { "message.element.timestamp", "when the message was enqueued (us since epoch)"},
+                           { "result", "result of the operation (subset of xatmi-codes)"},
                         });
                }
             }

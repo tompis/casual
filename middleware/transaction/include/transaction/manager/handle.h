@@ -50,16 +50,6 @@ namespace casual
       {
          using dispatch_type = common::communication::ipc::dispatch::Handler;
 
-         namespace implementation
-         {
-            struct Interface
-            {
-               virtual bool prepare( State& state, common::message::transaction::resource::prepare::Reply& message, Transaction& transaction) const = 0;
-               virtual bool commit( State& state, common::message::transaction::resource::commit::Reply& message, Transaction& transaction) const = 0;
-               virtual bool rollback( State& state, common::message::transaction::resource::rollback::Reply& message, Transaction& transaction) const = 0;
-            };
-         } // implementation
-
 
          namespace process
          {
@@ -226,7 +216,7 @@ namespace casual
          //!
          namespace domain
          {
-            enum class Directive : char
+            enum class Directive : short
             {
                keep_transaction,
                remove_transaction,

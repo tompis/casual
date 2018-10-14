@@ -96,7 +96,7 @@ namespace casual
 
                struct Sequential : base_instance
                {
-                  enum class State : char
+                  enum class State : short
                   {
                      idle,
                      busy,

@@ -359,19 +359,13 @@ namespace casual
 
                } // transaction
 
-               namespace implementation
+               namespace dispatch
                {
-                  struct Local : handle::implementation::Interface
+                  namespace localized
                   {
-                     static const Local* instance()
+                     bool prepare( State& state, common::message::transaction::resource::prepare::Reply& message, Transaction& transaction)
                      {
-                        static Local singleton;
-                        return &singleton;
-                     }
-
-                     bool prepare( State& state, common::message::transaction::resource::prepare::Reply& message, Transaction& transaction) const override
-                     {
-                        Trace trace{ "transaction::handle::resource::prepare local reply"};
+                        Trace trace{ "transaction::handle::local::dispatch::localized::prepare"};
 
                         using reply_type = common::message::transaction::commit::Reply;
 
@@ -461,9 +455,9 @@ namespace casual
                         return false;
                      }
 
-                     bool commit( State& state, common::message::transaction::resource::commit::Reply& message, Transaction& transaction) const override
+                     bool commit( State& state, common::message::transaction::resource::commit::Reply& message, Transaction& transaction) 
                      {
-                        Trace trace{ "transaction::handle::resource::commit local reply"};
+                        Trace trace{ "transaction::handle::local::dispatch::localized::commit"};
 
                         using reply_type = common::message::transaction::commit::Reply;
 
@@ -529,9 +523,9 @@ namespace casual
                         return false;
                      }
 
-                     bool rollback( State& state, common::message::transaction::resource::rollback::Reply& message, Transaction& transaction) const override
+                     bool rollback( State& state, common::message::transaction::resource::rollback::Reply& message, Transaction& transaction)
                      {
-                        Trace trace{ "transaction::handle::resource::rollback local reply"};
+                        Trace trace{ "transaction::handle::local::dispatch::localized::rollback"};
 
                         using reply_type = common::message::transaction::rollback::Reply;
 
@@ -586,25 +580,24 @@ namespace casual
                            }
                         }
                         return false;
-
                      }
 
+                     auto get()
+                     {
+                        return Transaction::Dispatch{
+                           &prepare,
+                           &commit,
+                           &rollback
+                        };
+                     }
 
-                  private:
-                     Local() = default;
-                  };
+                  } // localized
 
-                  struct Remote : handle::implementation::Interface
+                  namespace remote
                   {
-                     static const Remote* instance()
+                     bool prepare( State& state, common::message::transaction::resource::prepare::Reply& message, Transaction& transaction)
                      {
-                        static Remote singleton;
-                        return &singleton;
-                     }
-
-                     bool prepare( State& state, common::message::transaction::resource::prepare::Reply& message, Transaction& transaction) const override
-                     {
-                        Trace trace{ "transaction::handle::implementation::Remote::prepare reply"};
+                        Trace trace{ "transaction::handle::implementation::remote::prepare"};
 
                         //
                         // Transaction is owned by another domain, so we just act as a resource.
@@ -626,9 +619,9 @@ namespace casual
                         return false;
                      }
 
-                     bool commit( State& state, common::message::transaction::resource::commit::Reply& message, Transaction& transaction) const override
+                     bool commit( State& state, common::message::transaction::resource::commit::Reply& message, Transaction& transaction)
                      {
-                        Trace trace{ "transaction::handle::implementation::Remote::commit reply"};
+                        Trace trace{ "transaction::handle::implementation::remote::commit"};
 
                         //
                         // Transaction is owned by another domain, so we just act as a resource.
@@ -650,9 +643,9 @@ namespace casual
                         return true;
                      }
 
-                     bool rollback( State& state, common::message::transaction::resource::rollback::Reply& message, Transaction& transaction) const override
+                     bool rollback( State& state, common::message::transaction::resource::rollback::Reply& message, Transaction& transaction)
                      {
-                        Trace trace{ "transaction::handle::implementation::Remote::rollback reply"};
+                        Trace trace{ "transaction::handle::implementation::remote::rollback"};
 
                         //
                         // Transaction is owned by another domain, so we just act as a resource.
@@ -674,9 +667,16 @@ namespace casual
                         return true;
                      }
 
-                  protected:
-                     Remote() = default;
-                  };
+                     auto get()
+                     {
+                        return Transaction::Dispatch{
+                           &prepare,
+                           &commit,
+                           &rollback
+                        };
+                     }
+
+                  } // remote
 
 
                   namespace one
@@ -685,18 +685,11 @@ namespace casual
                      {
                         namespace commit
                         {
-
-                           struct Remote : implementation::Remote
+                           namespace remote
                            {
-                              static const Remote* instance()
+                              bool prepare( State& state, common::message::transaction::resource::prepare::Reply& message, Transaction& transaction)
                               {
-                                 static Remote singleton;
-                                 return &singleton;
-                              }
-
-                              bool prepare( State& state, common::message::transaction::resource::prepare::Reply& message, Transaction& transaction) const override
-                              {
-                                 Trace trace{ "transaction::handle::implementation::one::phase::commit::Remote::prepare reply"};
+                                 Trace trace{ "transaction::handle::local::dispatch::one::phase::commit::remote::prepare"};
                                  //
                                  // We're done with the prepare phase, start with commit or rollback
                                  //
@@ -777,9 +770,9 @@ namespace casual
                                  return false;
                               }
 
-                              bool rollback( State& state, common::message::transaction::resource::rollback::Reply& message, Transaction& transaction) const override
+                              bool rollback( State& state, common::message::transaction::resource::rollback::Reply& message, Transaction& transaction)
                               {
-                                 Trace trace{ "transaction::handle::implementation::one::phase::commit::Remote::handle rollback reply"};
+                                 Trace trace{ "transaction::handle::local::dispatch::one::phase::commit::remote::rollback"};
 
                                  using reply_type = common::message::transaction::resource::commit::Reply;
 
@@ -795,10 +788,15 @@ namespace casual
                                  return true;
                               }
 
-                           private:
-                              Remote() = default;
-                           };
-
+                              auto get()
+                              {
+                                 return Transaction::Dispatch{
+                                    &prepare,
+                                    &dispatch::remote::commit, // we use the ordinary remote commit
+                                    &rollback
+                                 };
+                              }
+                           } // remote
                         } // commit
                      } // phase
                   } // one
@@ -1032,7 +1030,7 @@ namespace casual
                      return false;
                   }
 
-                  return transaction.implementation->prepare( m_state, message, transaction);
+                  return transaction.implementation.prepare( m_state, message, transaction);
 
                }
 
@@ -1051,7 +1049,7 @@ namespace casual
                      return false;
                   }
 
-                  return transaction.implementation->commit( m_state, message, transaction);
+                  return transaction.implementation.commit( m_state, message, transaction);
                }
 
 
@@ -1067,7 +1065,7 @@ namespace casual
                      return false;
                   }
 
-                  return transaction.implementation->rollback( m_state, message, transaction);
+                  return transaction.implementation.rollback( m_state, message, transaction);
                }
             } // reply
          } // resource
@@ -1137,7 +1135,8 @@ namespace casual
             }
 
             // Local normal commit phase
-            transaction.implementation = local::implementation::Local::instance();
+            //
+            transaction.implementation = local::dispatch::localized::get();
 
             // Only the owner of the transaction can fiddle with the transaction ?
 
@@ -1214,7 +1213,8 @@ namespace casual
             auto& transaction = *location;
 
             // Local normal rollback phase
-            transaction.implementation = local::implementation::Local::instance();
+            //
+            transaction.implementation = local::dispatch::localized::get();
 
             // Make sure we add the involved resources from the rollback message (if any)
             local::resource::involved( m_state, transaction, message);
@@ -1371,7 +1371,7 @@ namespace casual
                   // state 2:
                   //
 
-                  transaction.implementation = local::implementation::Remote::instance();
+                  transaction.implementation = local::dispatch::remote::get();
 
                   switch( transaction.stage())
                   {
@@ -1487,7 +1487,7 @@ namespace casual
                      return Directive::keep_transaction;
                   }
 
-                  transaction.implementation = local::implementation::one::phase::commit::Remote::instance();
+                  transaction.implementation = local::dispatch::one::phase::commit::remote::get();
 
                   prepare_remote_owner( transaction, message);
 
@@ -1564,7 +1564,7 @@ namespace casual
                   {
                      // remote 'explicit' rollback
 
-                     transaction.implementation = local::implementation::Remote::instance();
+                     transaction.implementation = local::dispatch::remote::get();
 
                      prepare_remote_owner( transaction, message);
 

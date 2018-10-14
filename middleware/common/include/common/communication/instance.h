@@ -57,7 +57,7 @@ namespace casual
 
             namespace fetch
             {
-               enum class Directive : char
+               enum class Directive : short
                {
                   wait,
                   direct

@@ -194,7 +194,7 @@ namespace casual
 
                            common::message::gateway::domain::connect::Request request;
                            request.domain = common::domain::identity();
-                           request.versions = { common::message::gateway::domain::protocol::Version::version_1};
+                           request.versions = { common::message::gateway::domain::protocol::Version::version_2};
                            
                            log::line( verbose::log, "request: ", request);
 
@@ -217,7 +217,7 @@ namespace casual
 
                            log::line( verbose::log, "reply: ", reply);
 
-                           if( reply.version != common::message::gateway::domain::protocol::Version::version_1)
+                           if( reply.version != common::message::gateway::domain::protocol::Version::version_2)
                               throw common::exception::system::invalid::Argument{ "invalid protocol"};
                         }
 

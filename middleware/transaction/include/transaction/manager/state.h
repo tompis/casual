@@ -222,14 +222,30 @@ namespace casual
          } // pending
       } // state
 
+      class State;
 
       struct Transaction
       {
+         //!
+         //! Holds specific implementations for the current transaction. 
+         //! That is, depending on where the task comes from and if there
+         //! are some optimizations there are different semantics for 
+         //! the transaction.
+         //!
+         struct Dispatch
+         {
+            std::function< bool( State&, common::message::transaction::resource::prepare::Reply&, Transaction&)> prepare;
+            std::function< bool( State&, common::message::transaction::resource::commit::Reply&, Transaction&)> commit;
+            std::function< bool( State&, common::message::transaction::resource::rollback::Reply&, Transaction&)> rollback;
+
+            inline explicit operator bool () { return static_cast< bool>( prepare);}
+         };
+
          struct Resource
          {
             using id_type = state::resource::id::type;
 
-            enum class Stage : std::uint16_t
+            enum class Stage : short
             {
                involved,
                prepare_requested,
@@ -336,7 +352,7 @@ namespace casual
          //! Depending on context the transaction will have different
          //! handle-implementations.
          //!
-         const handle::implementation::Interface* implementation = nullptr;
+         Dispatch implementation;
 
          common::transaction::ID trid;
          std::vector< Resource> resources;

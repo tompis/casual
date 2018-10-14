@@ -70,7 +70,7 @@ namespace casual
 
                      message.domain.id = common::Uuid{ "315dacc6182e4c12bf9877efa924cb86"};
                      message.domain.name = "domain A";
-                     message.versions = { version_type::version_1};
+                     message.versions = { version_type::version_2};
 
                      generate( message, basename + "message.gateway.domain.connect.Request");
                   }
@@ -81,7 +81,7 @@ namespace casual
 
                      message.domain.id = common::Uuid{ "315dacc6182e4c12bf9877efa924cb86"};
                      message.domain.name = "domain A";
-                     message.version = version_type::version_1;
+                     message.version = version_type::version_2;
 
                      generate( message, basename + "message.gateway.domain.connect.Reply");
                   }

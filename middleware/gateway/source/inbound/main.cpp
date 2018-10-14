@@ -739,8 +739,8 @@ namespace casual
                   {
                      auto reply = common::message::reverse::type( request);
 
-                     if( common::algorithm::find( request.versions, version_type::version_1))
-                        reply.version = version_type::version_1;
+                     if( common::algorithm::find( request.versions, version_type::version_2))
+                        reply.version = version_type::version_2;
 
                      reply.domain = common::domain::identity();
                      return reply;

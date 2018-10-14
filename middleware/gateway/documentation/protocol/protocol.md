@@ -160,7 +160,7 @@ transaction.trid.xid.format       | uint64        |            8 | xid format ty
 transaction.trid.xid.gtrid_length | uint64        |            8 | length of the transaction gtrid part                                          
 transaction.trid.xid.bqual_length | uint64        |            8 | length of the transaction branch part                                         
 transaction.trid.xid.payload      | dynamic array |           32 | byte array with the size of gtrid_length + bqual_length (max 128)             
-transaction.state                 | uint8         |            1 | state of the transaction TX_ACTIVE, TX_TIMEOUT_ROLLBACK_ONLY, TX_ROLLBACK_ONLY
+transaction.state                 | uint16        |            2 | state of the transaction TX_ACTIVE, TX_TIMEOUT_ROLLBACK_ONLY, TX_ROLLBACK_ONLY
 buffer.type.size                  | uint64        |            8 | buffer type name size                                                         
 buffer.type.data                  | dynamic array |           25 | byte array with buffer type in the form 'type/subtype'                        
 buffer.payload.size               | uint64        |            8 | buffer payload size (could be very big)                                       
@@ -311,10 +311,11 @@ Represent enqueue reply.
 
 message type: **6101**
 
-role name | network type | network size | description                       
---------- | ------------ | ------------ | ----------------------------------
-execution | fixed array  |           16 | uuid of the current execution path
-id        | fixed array  |           16 | id of the enqueued message        
+role name | network type | network size | description                                    
+--------- | ------------ | ------------ | -----------------------------------------------
+execution | fixed array  |           16 | uuid of the current execution path             
+id        | fixed array  |           16 | id of the enqueued message                     
+result    | uint32       |            4 | result of the operation (subset of xatmi-codes)
 
 ### dequeue 
 
@@ -344,22 +345,23 @@ Represent dequeue reply.
 
 message type: **6201**
 
-role name                       | network type  | network size | description                                               
-------------------------------- | ------------- | ------------ | ----------------------------------------------------------
-execution                       | fixed array   |           16 | uuid of the current execution path                        
-message.size                    | uint64        |            8 | number of messages dequeued                               
-message.element.id              | fixed array   |           16 | id of the message                                         
-message.element.properties.size | uint64        |            8 | length of message properties                              
-message.element.properties.data | dynamic array |          128 | data of message properties                                
-message.element.reply.size      | uint64        |            8 | length of the reply queue                                 
-message.element.reply.data      | dynamic array |          128 | data of reply queue                                       
-message.element.available       | uint64        |            8 | when the message was available for dequeue (us since epoc)
-message.element.type.size       | uint64        |            8 | length of the type string                                 
-message.element.type.data       | dynamic array |          128 | data of the type string                                   
-message.element.payload.size    | uint64        |            8 | size of the payload                                       
-message.element.payload.data    | dynamic array |         1024 | data of the payload                                       
-message.element.redelivered     | uint64        |            8 | how many times the message has been redelivered           
-message.element.timestamp       | uint64        |            8 | when the message was enqueued (us since epoc)             
+role name                       | network type  | network size | description                                                
+------------------------------- | ------------- | ------------ | -----------------------------------------------------------
+execution                       | fixed array   |           16 | uuid of the current execution path                         
+message.size                    | uint64        |            8 | number of messages dequeued                                
+message.element.id              | fixed array   |           16 | id of the message                                          
+message.element.properties.size | uint64        |            8 | length of message properties                               
+message.element.properties.data | dynamic array |          128 | data of message properties                                 
+message.element.reply.size      | uint64        |            8 | length of the reply queue                                  
+message.element.reply.data      | dynamic array |          128 | data of reply queue                                        
+message.element.available       | uint64        |            8 | when the message was available for dequeue (us since epoch)
+message.element.type.size       | uint64        |            8 | length of the type string                                  
+message.element.type.data       | dynamic array |          128 | data of the type string                                    
+message.element.payload.size    | uint64        |            8 | size of the payload                                        
+message.element.payload.data    | dynamic array |         1024 | data of the payload                                        
+message.element.redelivered     | uint64        |            8 | how many times the message has been redelivered            
+message.element.timestamp       | uint64        |            8 | when the message was enqueued (us since epoch)             
+result                          | uint32        |            4 | result of the operation (subset of xatmi-codes)            
 
 ## conversation messages
 

@@ -174,7 +174,7 @@ namespace casual
          } // outbound
 
          namespace inbound
-         {
+         { 
             struct Limit
             {
                size_type size = 0;
@@ -394,6 +394,7 @@ namespace casual
                {
                   archive & value.execution;
                   archive & value.id;
+                  archive & value.result;
                })
             }
 
@@ -414,6 +415,7 @@ namespace casual
                {
                   archive & value.execution;
                   archive & value.message;
+                  archive & value.result;
                })               
             }
          } // queue

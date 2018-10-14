@@ -36,7 +36,7 @@ namespace casual
                   enum class Version : size_type
                   {
                      invalid = 0,
-                     version_1 = 1000,
+                     version_2 = 2000,
                   };
                } // protocol
 

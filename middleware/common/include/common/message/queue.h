@@ -14,6 +14,7 @@
 #include "common/marshal/marshal.h"
 #include "common/buffer/type.h"
 #include "common/strong/id.h"
+#include "common/code/queue.h"
 
 namespace casual
 {
@@ -132,11 +133,13 @@ namespace casual
                struct Reply : basic_message< Type::queue_enqueue_reply>
                {
                   common::Uuid id;
+                  code::queue result = code::queue::ok;
 
                   CASUAL_CONST_CORRECT_MARSHAL(
                   {
                      base_type::marshal( archive);
                      archive & id;
+                     archive & result;
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const Reply& value);
@@ -204,11 +207,13 @@ namespace casual
                   };
 
                   std::vector< Message> message;
+                  code::queue result = code::queue::ok;
 
                   CASUAL_CONST_CORRECT_MARSHAL(
                   {
                      base_type::marshal( archive);
                      archive & message;
+                     archive & result;
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const Reply& value);
