@@ -13,6 +13,8 @@
 #include "common/platform.h"
 #include "common/view/string.h"
 
+#include "common/serialize/macro.h"
+
 #include <string>
 
 namespace casual
@@ -40,18 +42,14 @@ namespace casual
          inline const uuid_type& get() const { return m_uuid;}
          inline uuid_type& get() { return m_uuid;}
 
-         //!
          //! Copy to native uuid
          //!
          //! @param uuid target to copy to.
-         //!
          void copy( uuid_type& uuid) const;
 
          explicit operator bool() const noexcept;
 
          bool empty() const;
-
-
 
 
          friend std::ostream& operator << ( std::ostream& out, const Uuid& uuid);
@@ -63,18 +61,10 @@ namespace casual
          friend bool operator == ( const Uuid::uuid_type& rhs, const Uuid& lhs);
 
 
-
-         template< typename A>
-         void marshal( A& archive)
+         CASUAL_CONST_CORRECT_SERIALIZE(
          {
-            archive & m_uuid;
-         }
-
-         template< typename A>
-         void marshal( A& archive) const
-         {
-            archive & m_uuid;
-         }
+            CASUAL_SERIALIZE( m_uuid);
+         })
 
       private:
          uuid_type m_uuid = {};

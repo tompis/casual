@@ -20,6 +20,8 @@
 
 #include "common/service/header.h"
 
+#include "common/serialize/line.h"
+
 namespace casual
 {
    namespace common
@@ -44,11 +46,11 @@ namespace casual
                std::string category;
                common::service::transaction::Type transaction = common::service::transaction::Type::automatic;
 
-               CASUAL_CONST_CORRECT_MARSHAL(
+               CASUAL_CONST_CORRECT_SERIALIZE(
                {
-                  archive & name;
-                  archive & category;
-                  archive & transaction;
+                  CASUAL_SERIALIZE( name);
+                  CASUAL_SERIALIZE( category);
+                  CASUAL_SERIALIZE( transaction);
                })
             };
             static_assert( traits::is_movable< Base>::value, "not movable");
@@ -61,13 +63,13 @@ namespace casual
 
             common::platform::time::unit timeout = common::platform::time::unit::zero();
 
-            CASUAL_CONST_CORRECT_MARSHAL(
+            CASUAL_CONST_CORRECT_SERIALIZE(
             {
-               service::Base::marshal( archive);
-               archive & timeout;
+               service::Base::serialize( archive);
+               CASUAL_SERIALIZE( timeout);
             })
 
-            friend std::ostream& operator << ( std::ostream& out, const Service& value);
+            //friend std::ostream& operator << ( std::ostream& out, const Service& value);
          };
          static_assert( traits::is_movable< Service>::value, "not movable");
 
@@ -85,20 +87,20 @@ namespace casual
 
                   std::vector< strong::ipc::id> event_subscribers;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     message::Service::marshal( archive);
-                     archive & event_subscribers;
+                     message::Service::serialize( archive);
+                     CASUAL_SERIALIZE( event_subscribers);
                   })
 
-                  friend std::ostream& operator << ( std::ostream& out, const call::Service& value);
+                  //friend std::ostream& operator << ( std::ostream& out, const call::Service& value);
                };
                static_assert( traits::is_movable< Service>::value, "not movable");
             } // call
 
             struct Transaction
             {
-               enum class State : char
+               enum class State : short
                {
                   absent,
                   active = absent,
@@ -110,14 +112,14 @@ namespace casual
                common::transaction::ID trid;
                State state = State::active;
 
-               CASUAL_CONST_CORRECT_MARSHAL(
+               CASUAL_CONST_CORRECT_SERIALIZE(
                {
-                  archive & trid;
-                  archive & state;
+                  CASUAL_SERIALIZE( trid);
+                  CASUAL_SERIALIZE( state);
                })
 
                friend std::ostream& operator << ( std::ostream& out, State value);
-               friend std::ostream& operator << ( std::ostream& out, const Transaction& message);
+               //friend std::ostream& operator << ( std::ostream& out, const Transaction& message);
             };
             static_assert( traits::is_movable< Transaction>::value, "not movable");
 
@@ -146,16 +148,16 @@ namespace casual
                std::vector< advertise::Service> services;
 
 
-               CASUAL_CONST_CORRECT_MARSHAL(
+               CASUAL_CONST_CORRECT_SERIALIZE(
                {
-                  base_type::marshal( archive);
-                  CASUAL_MARSHAL( directive);
-                  CASUAL_MARSHAL( process);
-                  CASUAL_MARSHAL( services);
+                  base_type::serialize( archive);
+                  CASUAL_SERIALIZE( directive);
+                  CASUAL_SERIALIZE( process);
+                  CASUAL_SERIALIZE( services);
                })
 
                friend std::ostream& operator << ( std::ostream& out, Directive value);
-               friend std::ostream& operator << ( std::ostream& out, const Advertise& message);
+               //friend std::ostream& operator << ( std::ostream& out, const Advertise& message);
             };
             static_assert( traits::is_movable< Advertise>::value, "not movable");
 
@@ -177,13 +179,13 @@ namespace casual
 
                      platform::size::type hops = 0;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
+                     CASUAL_CONST_CORRECT_SERIALIZE(
                      {
-                        message::Service::marshal( archive);
-                        CASUAL_MARSHAL( hops);
+                        message::Service::serialize( archive);
+                        CASUAL_SERIALIZE( hops);
                      })
 
-                     friend std::ostream& operator << ( std::ostream& out, const Service& value);
+                     //friend std::ostream& operator << ( std::ostream& out, const Service& value);
                   };
 
                   static_assert( traits::is_movable< Service>::value, "not movable");
@@ -206,17 +208,17 @@ namespace casual
                   std::vector< advertise::Service> services;
 
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     base_type::marshal( archive);
-                     CASUAL_MARSHAL( directive);
-                     CASUAL_MARSHAL( process);
-                     CASUAL_MARSHAL( order);
-                     CASUAL_MARSHAL( services);
+                     base_type::serialize( archive);
+                     CASUAL_SERIALIZE( directive);
+                     CASUAL_SERIALIZE( process);
+                     CASUAL_SERIALIZE( order);
+                     CASUAL_SERIALIZE( services);
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, Directive value);
-                  friend std::ostream& operator << ( std::ostream& out, const Advertise& message);
+                  //friend std::ostream& operator << ( std::ostream& out, const Advertise& message);
                };
                static_assert( traits::is_movable< Advertise>::value, "not movable");
 
@@ -233,24 +235,24 @@ namespace casual
                      std::string name;
                      common::platform::time::unit duration;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
+                     CASUAL_CONST_CORRECT_SERIALIZE(
                      {
-                        CASUAL_MARSHAL( name);
-                        CASUAL_MARSHAL( duration);
+                        CASUAL_SERIALIZE( name);
+                        CASUAL_SERIALIZE( duration);
                      })
-                     friend std::ostream& operator << ( std::ostream& out, const Service& value);
+                     //friend std::ostream& operator << ( std::ostream& out, const Service& value);
                   };
 
                   common::process::Handle process;
                   std::vector< Service> services;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     base_type::marshal( archive);
-                     CASUAL_MARSHAL( process);
-                     CASUAL_MARSHAL( services);
+                     base_type::serialize( archive);
+                     CASUAL_SERIALIZE( process);
+                     CASUAL_SERIALIZE( services);
                   })
-                  friend std::ostream& operator << ( std::ostream& out, const Metric& value);
+                  //friend std::ostream& operator << ( std::ostream& out, const Metric& value);
 
                };
                static_assert( traits::is_movable< Metric>::value, "not movable");
@@ -275,17 +277,17 @@ namespace casual
                   common::process::Handle process;
                   Context context = Context::regular;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     base_type::marshal( archive);
-                     archive & requested;
-                     archive & process;
-                     archive & context;
+                     base_type::serialize( archive);
+                     CASUAL_SERIALIZE( requested);
+                     CASUAL_SERIALIZE( process);
+                     CASUAL_SERIALIZE( context);
                   })
 
 
                   friend std::ostream& operator << ( std::ostream& out, const Context& value);
-                  friend std::ostream& operator << ( std::ostream& out, const Request& value);
+                  //friend std::ostream& operator << ( std::ostream& out, const Request& value);
                };
                static_assert( traits::is_movable< Request>::value, "not movable");
 
@@ -308,15 +310,15 @@ namespace casual
 
                   inline bool busy() const { return state == State::busy;}
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     base_type::marshal( archive);
-                     archive & service;
-                     archive & process;
-                     archive & state;
+                     base_type::serialize( archive);
+                     CASUAL_SERIALIZE( service);
+                     CASUAL_SERIALIZE( process);
+                     CASUAL_SERIALIZE( state);
                   })
 
-                  friend std::ostream& operator << ( std::ostream& out, const Reply& value);
+                  //friend std::ostream& operator << ( std::ostream& out, const Reply& value);
                };
                static_assert( traits::is_movable< Reply>::value, "not movable");
 
@@ -327,11 +329,11 @@ namespace casual
                      std::string requested;
                      common::process::Handle process;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
+                     CASUAL_CONST_CORRECT_SERIALIZE(
                      {
-                        base_type::marshal( archive);
-                        archive & requested;
-                        archive & process;
+                        base_type::serialize( archive);
+                        CASUAL_SERIALIZE( requested);
+                        CASUAL_SERIALIZE( process);
                      })
 
                      friend std::ostream& operator << ( std::ostream& out, const Request& value);
@@ -347,10 +349,10 @@ namespace casual
                      };
                      State state = State::absent;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
+                     CASUAL_CONST_CORRECT_SERIALIZE(
                      {
-                        base_type::marshal( archive);
-                        archive & state;
+                        base_type::serialize( archive);
+                        CASUAL_SERIALIZE( state);
                      })
 
                      friend std::ostream& operator << ( std::ostream& out, const Reply& value);
@@ -384,14 +386,14 @@ namespace casual
 
                   common::service::header::Fields header;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     archive & process;
-                     archive & service;
-                     archive & parent;
-                     archive & trid;
-                     archive & flags;
-                     archive & header;
+                     CASUAL_SERIALIZE( process);
+                     CASUAL_SERIALIZE( service);
+                     CASUAL_SERIALIZE( parent);
+                     CASUAL_SERIALIZE( trid);
+                     CASUAL_SERIALIZE( flags);
+                     CASUAL_SERIALIZE( header);
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const common_request& value);
@@ -402,9 +404,9 @@ namespace casual
                {
                   request::Flags flags;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
-                     base_request::marshal( archive);
-                     archive & flags;
+                  CASUAL_CONST_CORRECT_SERIALIZE(
+                     base_request::serialize( archive);
+                     CASUAL_SERIALIZE( flags);
                   )
                };
 
@@ -435,22 +437,22 @@ namespace casual
                      code::xatmi result = code::xatmi::ok;
                      long user = 0;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
+                     CASUAL_CONST_CORRECT_SERIALIZE(
                      {
-                        archive & result;
-                        archive & user;
+                        CASUAL_SERIALIZE( result);
+                        CASUAL_SERIALIZE( user);
                      })
                   } code;
 
                   Transaction transaction;
                   common::buffer::Payload buffer;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     base_type::marshal( archive);
-                     archive & code;
-                     archive & transaction;
-                     archive & buffer;
+                     base_type::serialize( archive);
+                     CASUAL_SERIALIZE( code);
+                     CASUAL_SERIALIZE( transaction);
+                     CASUAL_SERIALIZE( buffer);
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const Reply& message);
@@ -466,10 +468,10 @@ namespace casual
                   
                   common::process::Handle process;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     base_type::marshal( archive);
-                     archive & process;
+                     base_type::serialize( archive);
+                     CASUAL_SERIALIZE( process);
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const ACK& message);

@@ -14,6 +14,8 @@
 #include "common/log/category.h"
 #include "common/flag.h"
 
+#include <array>
+
 namespace casual
 {
 

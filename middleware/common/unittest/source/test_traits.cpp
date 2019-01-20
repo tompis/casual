@@ -183,40 +183,6 @@ namespace casual
       }
 
 
-      TEST( casual_common_traits_function, has_serialize__false)
-      {
-         common::unittest::Trace trace;
-
-         struct A
-         {
-         };
-
-         EXPECT_FALSE( ( traits::has::serialize< A, long>::value));
-         //EXPECT_FALSE( test_1< A>::value);
-      }
-
-      namespace local
-      {
-         namespace
-         {
-            struct A
-            {
-               template< typename A>
-               void serialize( A& archive) {}
-            };
-         } // <unnamed>
-      } // local
-
-      TEST( casual_common_traits_function, has_serialize__true)
-      {
-         common::unittest::Trace trace;
-
-         EXPECT_TRUE( ( traits::has::serialize< local::A, long>::value));
-      }
-
-
-
-
    }
 
 } // casual

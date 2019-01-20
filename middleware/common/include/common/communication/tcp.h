@@ -12,7 +12,7 @@
 #include "common/communication/socket.h"
 #include "common/communication/message.h"
 #include "common/communication/device.h"
-#include "common/marshal/network.h"
+#include "common/serialize/native/network.h"
 
 #include "common/platform.h"
 #include "common/flag.h"
@@ -226,7 +226,7 @@ namespace casual
                   using base_connector::base_connector;
                };
 
-               using Device = communication::inbound::Device< Connector, marshal::binary::network::create::Input>;
+               using Device = communication::inbound::Device< Connector, serialize::native::binary::network::create::Input>;
 
             } // inbound
 
@@ -239,14 +239,14 @@ namespace casual
                   inline void reconnect() const { throw; }
                };
 
-               using Device = communication::outbound::Device< Connector,  marshal::binary::network::create::Output>;
+               using Device = communication::outbound::Device< Connector,  serialize::native::binary::network::create::Output>;
 
                namespace blocking 
                {
                   template< typename M> 
                   auto send( const Socket& socket, M&& message)
                   {
-                     return native::send( socket, marshal::complete( std::forward< M>( message), marshal::binary::network::create::Output{}), {});
+                     return native::send( socket, serialize::native::complete( std::forward< M>( message), serialize::native::binary::network::create::Output{}), {});
                   }
                } // blocking 
             } // outbound
@@ -260,16 +260,23 @@ namespace casual
          } // tcp
       } // communication
 
-      namespace marshal
+      namespace serialize
       {
-         template<>
-         struct is_network_normalizing< communication::tcp::inbound::Device> : std::true_type {};
+         namespace traits
+         {
+            namespace is
+            {
+               namespace network
+               {
+                  template<>
+                  struct normalizing< communication::tcp::inbound::Device>: std::true_type {};
 
-         template<>
-         struct is_network_normalizing< communication::tcp::outbound::Device> : std::true_type {};
-
-      } // marshal
-
+                  template<>
+                  struct normalizing< communication::tcp::outbound::Device>: std::true_type {};
+               } // network
+            } // is 
+         } // traits
+      } // serialize
    } // common
 } // casual
 

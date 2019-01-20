@@ -8,7 +8,7 @@
 #pragma once
 
 
-#include "common/marshal/marshal.h"
+#include "common/serialize/macro.h"
 #include "common/uuid.h"
 #include "common/file.h"
 #include "common/process.h"
@@ -31,9 +31,9 @@ namespace casual
             Uuid id;
             std::string name;
 
-            CASUAL_CONST_CORRECT_MARSHAL({
-               archive & id;
-               archive & name;
+            CASUAL_CONST_CORRECT_SERIALIZE({
+               CASUAL_SERIALIZE( id);
+               CASUAL_SERIALIZE( name);
             })
 
             friend std::ostream& operator << ( std::ostream& out, const Identity& value);

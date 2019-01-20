@@ -7,8 +7,8 @@
 
 #include "gateway/message.h"
 
-#include "common/marshal/binary.h"
-#include "common/marshal/network.h"
+#include "common/serialize/native/binary.h"
+#include "common/serialize/native/network.h"
 #include "common/network/byteorder.h"
 #include "common/communication/tcp.h"
 
@@ -91,7 +91,7 @@ namespace casual
                      };
 
 
-                     const auto found = common::algorithm::find( names, typeid( common::marshal::binary::network::detail::cast( value)));
+                     const auto found = common::algorithm::find( names, typeid( common::serialize::native::binary::network::detail::cast( value)));
 
                      if( found)
                      {
@@ -103,14 +103,14 @@ namespace casual
 
 
                   template< typename T>
-                  auto network( T&& value) -> std::enable_if_t< ! common::marshal::binary::network::detail::is_network_array< T>::value, Type>
+                  auto network( T&& value) -> std::enable_if_t< ! common::serialize::native::binary::network::detail::is_network_array< T>::value, Type>
                   {
-                     auto network = common::network::byteorder::encode( common::marshal::binary::network::detail::cast( value));
+                     auto network = common::network::byteorder::encode( common::serialize::native::binary::network::detail::cast( value));
                      return Type{ name( network), common::memory::size( network)};
                   }
 
                   template< typename T>
-                  auto network( T&& value) -> std::enable_if_t< common::marshal::binary::network::detail::is_network_array< T>::value, Type>
+                  auto network( T&& value) -> std::enable_if_t< common::serialize::native::binary::network::detail::is_network_array< T>::value, Type>
                   {
                      return Type{ "fixed array", static_cast< common::platform::size::type>( common::memory::size( value))};
                   }
@@ -195,7 +195,7 @@ namespace casual
                private:
 
                   template< typename T>
-                  std::enable_if_t< ! common::marshal::binary::detail::is_native_marshable< T>::value>
+                  std::enable_if_t< ! common::serialize::native::binary::detail::is_native_marshable< T>::value>
                   write( T& value)
                   {  
                      using casual::casual_marshal_value;
@@ -203,7 +203,7 @@ namespace casual
                   }
 
                   template< typename T>
-                  std::enable_if_t< common::marshal::binary::detail::is_native_marshable< T>::value>
+                  std::enable_if_t< common::serialize::native::binary::detail::is_native_marshable< T>::value>
                   write( T& value)
                   {
                      write_pod( value);

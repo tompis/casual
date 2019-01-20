@@ -526,9 +526,6 @@ namespace casual
                template< typename T>
                using push_back = decltype( std::declval< T&>().push_back( *std::begin( std::declval< T&>())));
 
-               template< typename T, typename A>
-               using serialize = decltype( std::declval< T&>().serialize( std::declval< A&>()));
-
                template< typename T> 
                using ostream_stream_operator = decltype( std::declval< std::ostream&>() << std::declval< T&>());
 
@@ -547,12 +544,8 @@ namespace casual
             template< typename T>
             using insert = detect::is_detected< detail::insert, T>;
 
-
             template< typename T>
             using push_back = detect::is_detected< detail::push_back, T>;
-
-            template< typename T, typename A>
-            using serialize = detect::is_detected< detail::serialize, T, A>;
 
             template< typename T>
             using ostream_stream_operator = detect::is_detected< detail::ostream_stream_operator, T>;

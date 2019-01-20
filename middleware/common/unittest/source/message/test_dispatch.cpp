@@ -17,7 +17,7 @@
 #include "common/message/transaction.h"
 #include "common/communication/ipc.h"
 
-#include "common/marshal/complete.h"
+#include "common/serialize/native/complete.h"
 
 
 #include <functional>
@@ -104,7 +104,7 @@ namespace casual
                local::dispatch_type handler{ local::TestHandler()};
 
                local::TestHandler::message_type message;
-               auto complete = marshal::complete( message);
+               auto complete = serialize::native::complete( message);
 
                EXPECT_TRUE( handler( complete));
             }
@@ -116,7 +116,7 @@ namespace casual
                local::dispatch_type handler{ local::TestHandler()};
 
                message::service::call::ACK message;
-               auto complete = marshal::complete( message);
+               auto complete = serialize::native::complete( message);
 
                //
                // We have not handler for this message-type.

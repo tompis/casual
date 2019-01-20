@@ -8,8 +8,8 @@
 #include "gateway/message.h"
 
 #include "common/communication/message.h"
-#include "common/marshal/network.h"
-#include "common/marshal/complete.h"
+#include "common/serialize/native/network.h"
+#include "common/serialize/native/complete.h"
 
 #include "common/argument.h"
 #include "common/exception/handle.h"
@@ -39,7 +39,7 @@ namespace casual
                {
                   std::ofstream file{ filename + '.' + std::to_string( common::cast::underlying( common::message::type( message))) + ".bin", std::ios::binary | std::ios::trunc};
 
-                  write( common::marshal::complete( message, common::marshal::binary::network::create::Output{}), file);
+                  write( common::serialize::native::complete( message, common::serialize::native::binary::network::create::Output{}), file);
                }
 
 

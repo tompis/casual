@@ -28,9 +28,9 @@ namespace casual
 
                strong::ipc::id address;
 
-               CASUAL_CONST_CORRECT_MARSHAL(
+               CASUAL_CONST_CORRECT_SERIALIZE(
                {
-                  archive & address;
+                  CASUAL_SERIALIZE( address);
                })
                friend std::ostream& operator << ( std::ostream& out, const Node& value);
             };
@@ -46,9 +46,9 @@ namespace casual
                   return node;
                }
 
-               CASUAL_CONST_CORRECT_MARSHAL(
+               CASUAL_CONST_CORRECT_SERIALIZE(
                {
-                  archive & nodes;
+                  CASUAL_SERIALIZE( nodes);
                })
 
                friend std::ostream& operator << ( std::ostream& out, const Route& value);
@@ -63,11 +63,11 @@ namespace casual
                   Route recording;
                   flag::service::conversation::connect::Flags flags;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     base_request::marshal( archive);
-                     archive & recording;
-                     archive & flags;
+                     base_request::serialize( archive);
+                     CASUAL_SERIALIZE( recording);
+                     CASUAL_SERIALIZE( flags);
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const basic_request& value);
@@ -93,12 +93,12 @@ namespace casual
                   Route recording;
                   code::xatmi status;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     reply_base::marshal( archive);
-                     archive & route;
-                     archive & recording;
-                     archive & status;
+                     reply_base::serialize( archive);
+                     CASUAL_SERIALIZE( route);
+                     CASUAL_SERIALIZE( recording);
+                     CASUAL_SERIALIZE( status);
                   })
                   friend std::ostream& operator << ( std::ostream& out, const Reply& value);
                };
@@ -115,13 +115,13 @@ namespace casual
                service::Transaction transaction;
                code::xatmi status = code::xatmi::ok;
 
-               CASUAL_CONST_CORRECT_MARSHAL(
+               CASUAL_CONST_CORRECT_SERIALIZE(
                {
-                  send_base::marshal( archive);
-                  archive & route;
-                  archive & flags;
-                  archive & events;
-                  archive & status;
+                  send_base::serialize( archive);
+                  CASUAL_SERIALIZE( route);
+                  CASUAL_SERIALIZE( flags);
+                  CASUAL_SERIALIZE( events);
+                  CASUAL_SERIALIZE( status);
                })
                friend std::ostream& operator << ( std::ostream& out, const basic_send& value);
             };
@@ -144,11 +144,11 @@ namespace casual
                Route route;
                flag::service::conversation::Events events;
 
-               CASUAL_CONST_CORRECT_MARSHAL(
+               CASUAL_CONST_CORRECT_SERIALIZE(
                {
-                  disconnect_base::marshal( archive);
-                  archive & route;
-                  archive & events;
+                  disconnect_base::serialize( archive);
+                  CASUAL_SERIALIZE( route);
+                  CASUAL_SERIALIZE( events);
                })
 
                friend std::ostream& operator << ( std::ostream& out, const Disconnect& value);

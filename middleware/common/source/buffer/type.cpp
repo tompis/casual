@@ -7,7 +7,7 @@
 
 #include "common/buffer/type.h"
 #include "common/exception/xatmi.h"
-#include "common/marshal/network.h"
+#include "common/serialize/native/network.h"
 #include "common/log.h"
 
 #include "xatmi/extended.h"
@@ -104,7 +104,7 @@ namespace casual
 
                   platform::binary::type binary;
                   {
-                     common::marshal::binary::network::Output archive{ binary};
+                     common::serialize::native::binary::network::Output archive{ binary};
                      archive << value;
                   }
                   out.write( binary.data(), binary.size());
@@ -123,7 +123,7 @@ namespace casual
                   if( binary.empty())
                      throw exception::system::invalid::Argument{ "not a valid buffer on input stream"};
 
-                  common::marshal::binary::network::Input archive{ binary};
+                  common::serialize::native::binary::network::Input archive{ binary};
 
                   Payload result;
                   archive >> result;

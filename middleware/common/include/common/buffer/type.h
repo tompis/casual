@@ -10,7 +10,7 @@
 
 #include "common/platform.h"
 
-#include "common/marshal/marshal.h"
+#include "common/serialize/macro.h"
 #include "common/algorithm.h"
 #include "common/network/byteorder.h"
 
@@ -27,8 +27,6 @@ namespace casual
    {
       namespace buffer
       {
-
-
          namespace type
          {
             const std::string& x_octet();
@@ -44,10 +42,7 @@ namespace casual
             {
                return algorithm::split( type, '/');
             }
-
          } // type
-
-
 
          struct Payload
          {
@@ -73,10 +68,10 @@ namespace casual
             std::string type;
             platform::binary::type memory;
 
-            CASUAL_CONST_CORRECT_MARSHAL(
+            CASUAL_CONST_CORRECT_SERIALIZE(
             {
-               archive & type;
-               archive & memory;
+               CASUAL_SERIALIZE( type);
+               CASUAL_SERIALIZE( memory);
             })
 
             friend std::ostream& operator << ( std::ostream& out, const Payload& value);
@@ -108,9 +103,8 @@ namespace casual
                platform::binary::size::type reserved = 0;
 
 
-
                template< typename A>
-               void marshal( A& archive) const
+               void serialize( A& archive) const
                {
                   archive << payload().type;
                   archive << transport;

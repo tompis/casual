@@ -12,8 +12,8 @@
 #include "common/communication/message.h"
 
 #include "common/message/dispatch.h"
-#include "common/marshal/binary.h"
-#include "common/marshal/complete.h"
+#include "common/serialize/native/binary.h"
+#include "common/serialize/native/complete.h"
 #include "common/exception/signal.h"
 #include "common/exception/system.h"
 #include "common/predicate.h"
@@ -89,7 +89,7 @@ namespace casual
             using cache_type = std::vector< message::Complete>;
             using cache_range_type =  range::type_t< cache_type>;
 
-            template< typename Connector, typename Unmarshal = marshal::binary::create::Input>
+            template< typename Connector, typename Unmarshal = serialize::native::binary::create::Input>
             struct Device
             {
 
@@ -331,7 +331,7 @@ namespace casual
                template< typename M>
                Uuid push( M&& message)
                {
-                  return put( marshal::complete( std::forward< M>( message), marshal::create::reverse_t< unmarshal_type>{}));
+                  return put( serialize::native::complete( std::forward< M>( message), serialize::native::create::reverse_t< unmarshal_type>{}));
                }
 
 
@@ -379,7 +379,7 @@ namespace casual
                {
                   if( complete)
                   {
-                     marshal::complete( complete, message, unmarshal_type{});
+                     serialize::native::complete( complete, message, unmarshal_type{});
                      return true;
                   }
                   return false;
@@ -447,7 +447,7 @@ namespace casual
             //!
             //! Doesn't do much. More for symmetry with inbound
             //!
-            template< typename Connector, typename Marshal = marshal::binary::create::Output>
+            template< typename Connector, typename Marshal = serialize::native::binary::create::Output>
             struct Device
             {
                using connector_type = Connector;

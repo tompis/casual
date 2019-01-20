@@ -9,7 +9,7 @@
 
 
 
-#include "common/marshal/marshal.h"
+#include "common/serialize/macro.h"
 #include "common/string.h"
 
 #include <string>
@@ -42,10 +42,10 @@ namespace casual
                   //! @returns <key> : <value>  
                   std::string http() const;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     archive & key;
-                     archive & value;
+                     CASUAL_SERIALIZE( key);
+                     CASUAL_SERIALIZE( value);
                   })
 
                   friend bool operator == (  const Field& lhs, const Field& rhs);
@@ -105,9 +105,9 @@ namespace casual
                   //!
                   const std::string& operator[]( const std::string& key ) const;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     archive & container();
+                     CASUAL_SERIALIZE( container());
                   })
 
                   inline fields_type& container() { return *this;}

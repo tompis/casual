@@ -9,7 +9,7 @@
 
 
 
-#include "common/marshal/binary.h"
+#include "common/serialize/native/binary.h"
 #include "common/process.h"
 #include "common/communication/ipc.h"
 
@@ -39,19 +39,19 @@ namespace casual
 
                template< typename M>
                Message( M&& message, targets_type targets, Targets task)
-                  : Message{ marshal::complete( std::forward< M>( message)), std::move( targets), task}
+                  : Message{ serialize::native::complete( std::forward< M>( message)), std::move( targets), task}
                {
                }
 
                template< typename M>
                Message( M&& message, targets_type targets)
-                  : Message{ marshal::complete( std::forward< M>( message)), std::move( targets), Targets::all}
+                  : Message{ serialize::native::complete( std::forward< M>( message)), std::move( targets), Targets::all}
                {
                }
 
                template< typename M>
                Message( M&& message, target_type target)
-                  : Message{ marshal::complete( std::forward< M>( message)), { target}, Targets::first}
+                  : Message{ serialize::native::complete( std::forward< M>( message)), { target}, Targets::first}
                {
                }
 

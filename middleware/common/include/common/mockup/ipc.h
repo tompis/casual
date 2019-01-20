@@ -16,7 +16,7 @@
 #include "common/message/type.h"
 #include "common/message/dispatch.h"
 
-#include "common/marshal/binary.h"
+#include "common/serialize/native/binary.h"
 
 
 namespace casual
@@ -58,10 +58,10 @@ namespace casual
 
                Uuid send( id_type destination, communication::message::Complete&& complete);
 
-               template< typename M, typename C = marshal::binary::create::Output>
-               Uuid send( id_type destination, M&& message, C creator = marshal::binary::create::Output{})
+               template< typename M, typename C = serialize::native::binary::create::Output>
+               Uuid send( id_type destination, M&& message, C creator = serialize::native::binary::create::Output{})
                {
-                  return send( destination, marshal::complete( std::forward< M>( message), creator));
+                  return send( destination, serialize::native::complete( std::forward< M>( message), creator));
                }
 
 

@@ -69,9 +69,7 @@ namespace casual
 
             Stream( std::string category);
 
-            //!
             //! deleted - use streams only with common::log::line or common::log::write
-            //!
             template< typename T>
             Stream& operator << ( T&& value) = delete;
          };

@@ -18,7 +18,7 @@
 #include "common/message/queue.h"
 #include "common/message/conversation.h"
 #include "common/domain.h"
-#include "common/marshal/binary.h"
+#include "common/serialize/native/binary.h"
 
 #include <thread>
 
@@ -85,7 +85,7 @@ namespace casual
             std::string local;
             std::string peer;
 
-            CASUAL_CONST_CORRECT_MARSHAL(
+            CASUAL_CONST_CORRECT_SERIALIZE(
             {
                archive & local;
                archive & peer;
@@ -106,8 +106,8 @@ namespace casual
             common::message::gateway::domain::protocol::Version version;
             Address address;
 
-            CASUAL_CONST_CORRECT_MARSHAL({
-               common::message::basic_message< type>::marshal( archive);
+            CASUAL_CONST_CORRECT_SERIALIZE({
+               common::message::basic_message< type>::serialize( archive);
                archive & process;
                archive & domain;
                archive & version;
@@ -141,8 +141,8 @@ namespace casual
                   std::vector< std::string> services;
                   std::vector< std::string> queues;
 
-                  CASUAL_CONST_CORRECT_MARSHAL({
-                     base_reply::marshal( archive);
+                  CASUAL_CONST_CORRECT_SERIALIZE({
+                     base_reply::serialize( archive);
                      archive & services;
                      archive & queues;
                   })
@@ -164,8 +164,8 @@ namespace casual
 
                   friend std::ostream& operator << ( std::ostream& out, const Done& value);
 
-                  CASUAL_CONST_CORRECT_MARSHAL({
-                     base_type::marshal( archive);
+                  CASUAL_CONST_CORRECT_SERIALIZE({
+                     base_type::serialize( archive);
                      archive & descriptor;
                   })
                };
@@ -180,7 +180,7 @@ namespace casual
                size_type size = 0;
                size_type messages = 0;
 
-               CASUAL_CONST_CORRECT_MARSHAL(
+               CASUAL_CONST_CORRECT_SERIALIZE(
                   archive & size;
                   archive & messages;
                )

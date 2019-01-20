@@ -31,11 +31,11 @@ namespace casual
                common::process::Handle process;
                common::transaction::ID trid;
 
-               CASUAL_CONST_CORRECT_MARSHAL(
+               CASUAL_CONST_CORRECT_SERIALIZE(
                {
-                  basic_message< type>::marshal( archive);
-                  archive & process;
-                  archive & trid;
+                  basic_message< type>::serialize( archive);
+                  CASUAL_SERIALIZE( process);
+                  CASUAL_SERIALIZE( trid);
                })
 
             };
@@ -54,10 +54,10 @@ namespace casual
             {
                State state = State::ok;
 
-               CASUAL_CONST_CORRECT_MARSHAL(
+               CASUAL_CONST_CORRECT_SERIALIZE(
                {
-                  basic_transaction< type>::marshal( archive);
-                  archive & state;
+                  basic_transaction< type>::serialize( archive);
+                  CASUAL_SERIALIZE( state);
                })
             };
 
@@ -71,10 +71,10 @@ namespace casual
                {
                   std::vector< strong::resource::id> resources;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     base_request::marshal( archive);
-                     archive & resources;
+                     base_request::serialize( archive);
+                     CASUAL_SERIALIZE( resources);
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const Request& message);
@@ -93,10 +93,10 @@ namespace casual
 
                   Stage stage = Stage::prepare;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     base_reply::marshal( archive);
-                     archive & stage;
+                     base_reply::serialize( archive);
+                     CASUAL_SERIALIZE( stage);
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const Stage& stage);
@@ -114,10 +114,10 @@ namespace casual
                {
                   std::vector< strong::resource::id> resources;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     base_request::marshal( archive);
-                     archive & resources;
+                     base_request::serialize( archive);
+                     CASUAL_SERIALIZE( resources);
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const Request& message);
@@ -137,10 +137,10 @@ namespace casual
 
                   Stage stage = Stage::rollback;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     base_reply::marshal( archive);
-                     archive & stage;
+                     base_reply::serialize( archive);
+                     CASUAL_SERIALIZE( stage);
                   })
                   friend std::ostream& operator << ( std::ostream& out, const Reply::Stage& message);
                   friend std::ostream& operator << ( std::ostream& out, const Reply& message);
@@ -168,13 +168,13 @@ namespace casual
                   std::string openinfo;
                   std::string closeinfo;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     archive & id;
-                     archive & name;
-                     archive & key;
-                     archive & openinfo;
-                     archive & closeinfo;
+                     CASUAL_SERIALIZE( id);
+                     CASUAL_SERIALIZE( name);
+                     CASUAL_SERIALIZE( key);
+                     CASUAL_SERIALIZE( openinfo);
+                     CASUAL_SERIALIZE( closeinfo);
                   })
                };
 
@@ -185,10 +185,10 @@ namespace casual
                   {
                      std::vector< std::string> resources;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
+                     CASUAL_CONST_CORRECT_SERIALIZE(
                      {
-                        base_request::marshal( archive);
-                        archive & resources;
+                        base_request::serialize( archive);
+                        CASUAL_SERIALIZE( resources);
                      })
                   };
                   static_assert( traits::is_movable< Request>::value, "not movable");
@@ -198,10 +198,10 @@ namespace casual
                   {
                      std::vector< Resource> resources;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
+                     CASUAL_CONST_CORRECT_SERIALIZE(
                      {
-                        base_reply::marshal( archive);
-                        archive & resources;
+                        base_reply::serialize( archive);
+                        CASUAL_SERIALIZE( resources);
                      })
                   };
                   static_assert( traits::is_movable< Reply>::value, "not movable");
@@ -216,11 +216,11 @@ namespace casual
                   Statistics statistics;
 
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     base_type::marshal( archive);
-                     archive & resource;
-                     archive & statistics;
+                     base_type::serialize( archive);
+                     CASUAL_SERIALIZE( resource);
+                     CASUAL_SERIALIZE( statistics);
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const basic_reply& message)
@@ -239,10 +239,10 @@ namespace casual
                {
                   std::vector< strong::resource::id> resources;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     base_type::marshal( archive);
-                     archive & resources;
+                     base_type::serialize( archive);
+                     CASUAL_SERIALIZE( resources);
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const Involved& value);
@@ -257,11 +257,11 @@ namespace casual
                   id::type resource;
                   flag::xa::Flags flags = flag::xa::Flag::no_flags;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     basic_transaction< type>::marshal( archive);
-                     archive & resource;
-                     archive & flags;
+                     basic_transaction< type>::serialize( archive);
+                     CASUAL_SERIALIZE( resource);
+                     CASUAL_SERIALIZE( flags);
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const basic_request& message)
@@ -285,12 +285,12 @@ namespace casual
                      id::type resource;
                      code::xa state = code::xa::ok;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
+                     CASUAL_CONST_CORRECT_SERIALIZE(
                      {
-                        base_type::marshal( archive);
-                        archive & process;
-                        archive & resource;
-                        archive & state;
+                        base_type::serialize( archive);
+                        CASUAL_SERIALIZE( process);
+                        CASUAL_SERIALIZE( resource);
+                        CASUAL_SERIALIZE( state);
                      })
 
                      friend std::ostream& operator << ( std::ostream& out, const Reply& message);

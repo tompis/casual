@@ -10,7 +10,7 @@
 
 #include "common/platform.h"
 #include "common/log.h"
-#include "common/marshal/marshal.h"
+#include "common/serialize/macro.h"
 #include "common/message/type.h"
 #include "common/communication/ipc.h"
 #include "common/execute.h"
@@ -78,11 +78,11 @@ namespace casual
             //!
             size_type size() const;
 
-            CASUAL_CONST_CORRECT_MARSHAL(
+            CASUAL_CONST_CORRECT_SERIALIZE(
             {
                // we don't serialize execution
-               //base_type::marshal( archive);
-               archive & payload;
+               //base_type::serialize( archive);
+               CASUAL_SERIALIZE( payload);
             })
 
             //

@@ -175,11 +175,11 @@ namespace casual
                //! So we can send complete messages as part of other
                //! messages
                //!
-               CASUAL_CONST_CORRECT_MARSHAL(
+               CASUAL_CONST_CORRECT_SERIALIZE(
                {
-                  archive & type;
-                  archive & correlation;
-                  archive & payload;
+                  CASUAL_SERIALIZE( type);
+                  CASUAL_SERIALIZE( correlation);
+                  CASUAL_SERIALIZE( payload);
                })
 
 

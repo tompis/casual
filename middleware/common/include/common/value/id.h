@@ -8,7 +8,7 @@
 #pragma once
 
 
-#include "common/marshal/marshal.h"
+#include "common/serialize/macro.h"
 #include "common/platform.h"
 #include "common/compare.h"
 #include "common/traits.h"
@@ -73,12 +73,8 @@ namespace casual
             } // policy
          } // id
 
-
-
-         //!
          //! "id" abstraction to help make "id-handling" more explicit, typesafe and
          //! enable overloading on a specific id-type
-         //!
          template< typename T, typename P = id::policy::default_initialize< T>>
          class basic_id : public Compare< basic_id< T, P>>
          {
@@ -112,9 +108,9 @@ namespace casual
                swap( m_value, other.m_value);
             }
  
-            CASUAL_CONST_CORRECT_MARSHAL(
+            CASUAL_CONST_CORRECT_SERIALIZE(
             {
-               archive & m_value;
+               CASUAL_SERIALIZE( m_value);
             })
 
             value_type& underlaying() noexcept { return m_value;}

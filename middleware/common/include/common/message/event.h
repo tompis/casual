@@ -30,9 +30,9 @@ namespace casual
                   {
                      std::vector< common::message::Type> types;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
-                        base_begin::marshal( archive);
-                        archive & types;
+                     CASUAL_CONST_CORRECT_SERIALIZE(
+                        base_begin::serialize( archive);
+                        CASUAL_SERIALIZE( types);
                      )
 
                      friend std::ostream& operator << ( std::ostream& out, const Begin& value);
@@ -61,10 +61,10 @@ namespace casual
                         common::Uuid identification;
 
 
-                        CASUAL_CONST_CORRECT_MARSHAL(
-                           base_connect::marshal( archive);
-                           archive & process;
-                           archive & identification;
+                        CASUAL_CONST_CORRECT_SERIALIZE(
+                           base_connect::serialize( archive);
+                           CASUAL_SERIALIZE( process);
+                           CASUAL_SERIALIZE( identification);
                         )
 
                      };
@@ -89,13 +89,13 @@ namespace casual
                         warning
                      } severity = Severity::error;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
-                        base_error::marshal( archive);
-                        archive & message;
-                        archive & executable;
-                        archive & pid;
-                        archive & details;
-                        archive & severity;
+                     CASUAL_CONST_CORRECT_SERIALIZE(
+                        base_error::serialize( archive);
+                        CASUAL_SERIALIZE( message);
+                        CASUAL_SERIALIZE( executable);
+                        CASUAL_SERIALIZE( pid);
+                        CASUAL_SERIALIZE( details);
+                        CASUAL_SERIALIZE( severity);
                      )
 
                      friend std::ostream& operator << ( std::ostream& out, Severity value);
@@ -119,11 +119,11 @@ namespace casual
                      std::string name;
                      Context context;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
-                        base_group::marshal( archive);
-                        archive & id;
-                        archive & name;
-                        archive & context;
+                     CASUAL_CONST_CORRECT_SERIALIZE(
+                        base_group::serialize( archive);
+                        CASUAL_SERIALIZE( id);
+                        CASUAL_SERIALIZE( name);
+                        CASUAL_SERIALIZE( context);
                      )
                   };
                }
@@ -133,9 +133,9 @@ namespace casual
                {
                   common::domain::Identity domain;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
-                     common::message::basic_message< type>::marshal( archive);
-                     archive & domain;
+                  CASUAL_CONST_CORRECT_SERIALIZE(
+                     common::message::basic_message< type>::serialize( archive);
+                     CASUAL_SERIALIZE( domain);
                   )
                };
 
@@ -173,11 +173,11 @@ namespace casual
                      std::string path;
                      std::vector< strong::process::id> pids;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
-                        base_spawn::marshal( archive);
-                        archive & alias;
-                        archive & path;
-                        archive & pids;
+                     CASUAL_CONST_CORRECT_SERIALIZE(
+                        base_spawn::serialize( archive);
+                        CASUAL_SERIALIZE( alias);
+                        CASUAL_SERIALIZE( path);
+                        CASUAL_SERIALIZE( pids);
                      )
 
                      friend std::ostream& operator << ( std::ostream& out, const Spawn& value);
@@ -191,9 +191,9 @@ namespace casual
 
                      common::process::lifetime::Exit state;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
-                        base_exit::marshal( archive);
-                        archive & state;
+                     CASUAL_CONST_CORRECT_SERIALIZE(
+                        base_exit::serialize( archive);
+                        CASUAL_SERIALIZE( state);
                      )
 
                      friend std::ostream& operator << ( std::ostream& out, const Exit& value);
@@ -218,16 +218,16 @@ namespace casual
                   common::platform::time::point::type start;
                   common::platform::time::point::type end;
 
-                  CASUAL_CONST_CORRECT_MARSHAL
+                  CASUAL_CONST_CORRECT_SERIALIZE
                   (
-                     base_type::marshal( archive);
-                     archive & service;
-                     archive & parent;
-                     archive & process;
-                     archive & execution;
-                     archive & trid;
-                     archive & start;
-                     archive & end;
+                     base_type::serialize( archive);
+                     CASUAL_SERIALIZE( service);
+                     CASUAL_SERIALIZE( parent);
+                     CASUAL_SERIALIZE( process);
+                     CASUAL_SERIALIZE( execution);
+                     CASUAL_SERIALIZE( trid);
+                     CASUAL_SERIALIZE( start);
+                     CASUAL_SERIALIZE( end);
                   )
 
                   friend std::ostream& operator << ( std::ostream& out, const Call& value);

@@ -11,7 +11,7 @@
 #include "common/buffer/pool.h"
 
 #include "common/message/service.h"
-#include "common/marshal/binary.h"
+#include "common/serialize/native/binary.h"
 
 
 #include "xatmi.h"
@@ -199,7 +199,7 @@ namespace casual
                EXPECT_TRUE( message.buffer.payload().memory.size() == 128) << "message.buffer.payload.memory.size(): " << message.buffer.payload().memory.size();
                EXPECT_TRUE( message.buffer.payload().memory.data() == info);
 
-               marshal::binary::Output output( marshal_buffer);
+               serialize::native::binary::Output output( marshal_buffer);
                output << message;
 
                buffer::pool::Holder::instance().deallocate( handle);
@@ -211,7 +211,7 @@ namespace casual
 
                message::service::call::callee::Request message;
 
-               marshal::binary::Input input( marshal_buffer);
+               serialize::native::binary::Input input( marshal_buffer);
                input >> message;
 
                EXPECT_TRUE( message.buffer.type == type);

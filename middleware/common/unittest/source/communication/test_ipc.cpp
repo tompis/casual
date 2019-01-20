@@ -193,7 +193,7 @@ namespace casual
                }
 
                message::Complete complete{ transport.type(), transport.correlation(), transport.complete_size(), transport};
-               marshal::complete( complete, receive_message);
+               serialize::native::complete( complete, receive_message);
             }
 
             EXPECT_TRUE( ( algorithm::equal( receive_message.payload, send_message.payload)));
@@ -229,7 +229,7 @@ namespace casual
                }
                complete.add( transport);
 
-               marshal::complete( complete, receive_message);
+               serialize::native::complete( complete, receive_message);
             }
 
             EXPECT_TRUE( ( algorithm::equal( receive_message.payload, send_message.payload)));
@@ -337,11 +337,11 @@ namespace casual
                   platform::size::type index = 0;
                   platform::binary::type payload;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     base_type::marshal( archive);
-                     archive & index;
-                     archive & payload;
+                     base_type::serialize( archive);
+                     CASUAL_SERIALIZE( index);
+                     CASUAL_SERIALIZE( payload);
                   })
                };
 

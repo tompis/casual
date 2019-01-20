@@ -11,7 +11,7 @@
 #include "common/execution.h"
 #include "common/communication/message.h"
 #include "common/traits.h"
-#include "common/marshal/complete.h"
+#include "common/serialize/native/complete.h"
 #include "common/log/category.h"
 
 
@@ -165,7 +165,7 @@ namespace casual
                   {
                      message_type message;
 
-                     marshal::complete( complete, message, unmarshal_type{});
+                     serialize::native::complete( complete, message, unmarshal_type{});
                      execution::id( message.execution);
 
                      m_handler( message);

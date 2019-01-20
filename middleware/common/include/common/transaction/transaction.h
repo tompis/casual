@@ -47,9 +47,7 @@ namespace casual
 
             Timeout timout;
 
-            //!
             //! associated rm:s to this transaction
-            //!
             std::vector< strong::resource::id> resources;
 
 
@@ -59,45 +57,27 @@ namespace casual
             explicit operator bool() const;
 
 
-            //!
             //! associate a pending message reply
-            //!
             void associate( const Uuid& correlation);
 
-
-            //!
             //! discards a pending reply from this transaction
-            //!
             void replied( const Uuid& correlation);
 
-
-            //!
             //! @return true if this transaction has any pending replies
             //! associated
-            //!
             bool pending() const;
 
-            //!
             //! @return true if this transaction has @p correlation associated
-            //!
             bool associated( const Uuid& correlation) const;
 
-
-            //!
             //! associated descriptors to this transaction
-            //!
             const std::vector< Uuid>& correlations() const;
 
-            //!
             //! @return true if the transaction is only local
-            //!
             bool local() const;
 
-
-            //!
             //! Associate this transaction with 'external' resources. That is,
             //! make it "not local" so it will trigger a commit request to the TM
-            //!
             void external();
 
 
@@ -106,10 +86,8 @@ namespace casual
             friend std::ostream& operator << ( std::ostream& out, const Transaction& rhs);
 
          private:
-
             std::vector< Uuid> m_pending;
             bool m_local = true;
-
          };
 
       } // transaction

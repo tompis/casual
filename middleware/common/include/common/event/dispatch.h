@@ -11,7 +11,7 @@
 #include "common/message/event.h"
 
 #include "common/communication/message.h"
-#include "common/marshal/complete.h"
+#include "common/serialize/native/complete.h"
 
 #include "common/message/pending.h"
 
@@ -86,7 +86,7 @@ namespace casual
 
             common::message::pending::Message create( const Event& event) const
             {
-               return pending( marshal::complete( event));
+               return pending( serialize::native::complete( event));
             }
 
             friend std::ostream& operator << ( std::ostream& out, const Dispatch& value)

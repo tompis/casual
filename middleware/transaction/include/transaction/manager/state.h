@@ -14,7 +14,7 @@
 #include "common/algorithm.h"
 #include "common/metric.h"
 
-#include "common/marshal/complete.h"
+#include "common/serialize/native/complete.h"
 
 #include "transaction/manager/log.h"
 
@@ -165,7 +165,7 @@ namespace casual
                struct base_message
                {
                   template< typename M>
-                  base_message( M&& information) : message{ common::marshal::complete( std::forward< M>( information))}
+                  base_message( M&& information) : message{ common::serialize::native::complete( std::forward< M>( information))}
                   {
                   }
 

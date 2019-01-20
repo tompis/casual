@@ -14,7 +14,7 @@
 
 #include "common/algorithm.h"
 
-#include "common/marshal/marshal.h"
+#include "common/serialize/macro.h"
 
 
 
@@ -78,10 +78,10 @@ namespace casual
                return pid && ipc;
             }
 
-            CASUAL_CONST_CORRECT_MARSHAL(
+            CASUAL_CONST_CORRECT_SERIALIZE(
             {
-               archive & pid;
-               archive & ipc;
+               CASUAL_SERIALIZE( pid);
+               CASUAL_SERIALIZE( ipc);
             })
          };
 
@@ -271,11 +271,11 @@ namespace casual
                friend std::ostream& operator << ( std::ostream& out, const Reason& value);
                friend std::ostream& operator << ( std::ostream& out, const Exit& terminated);
 
-               CASUAL_CONST_CORRECT_MARSHAL(
+               CASUAL_CONST_CORRECT_SERIALIZE(
                {
-                  archive & pid;
-                  archive & status;
-                  archive & reason;
+                  CASUAL_SERIALIZE( pid);
+                  CASUAL_SERIALIZE( status);
+                  CASUAL_SERIALIZE( reason);
                })
 
             };

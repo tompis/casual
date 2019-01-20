@@ -463,7 +463,7 @@ namespace casual
                         message.process.pid = pid;
                         message.process.ipc = ipc.connector().handle().ipc();
 
-                        replier( marshal::complete( message));
+                        replier( serialize::native::complete( message));
                      }
 
                      if( ! algorithm::find( replier.types(), common::message::domain::process::connect::Reply::type()))

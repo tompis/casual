@@ -146,12 +146,23 @@ casual_common_objectfiles = [
     Compile( 'source/argument.cpp'),
     Compile( 'source/argument/cardinality.cpp'),
     Compile( 'source/terminal.cpp'),
+
+    Compile( 'source/serialize/archive.cpp'),
+    Compile( 'source/serialize/line.cpp'),
+    Compile( 'source/serialize/log.cpp'),
+    Compile( 'source/serialize/ini.cpp'),
+    Compile( 'source/serialize/json.cpp'),
+    Compile( 'source/serialize/xml.cpp'),
+    Compile( 'source/serialize/yaml.cpp'),
+    Compile( 'source/serialize/binary.cpp'),
+    Compile( 'source/serialize/create.cpp'),
+    
 ]
 
 
 common = LinkLibrary( 'bin/casual-common', 
 	casual_common_objectfiles,
-	platform_specific_libs)
+	platform_specific_libs + [ 'yaml-cpp', 'pugixml'])
 
 install_libs.append( common)
 
@@ -242,7 +253,6 @@ unittest_objectfiles = [
     Compile( 'unittest/source/test_signal.cpp'),
                          
     Compile( 'unittest/source/test_buffer.cpp'),
-    Compile( 'unittest/source/test_marshal.cpp'),
  
     Compile( 'unittest/source/test_uuid.cpp'),
     Compile( 'unittest/source/test_file.cpp'),
@@ -294,7 +304,10 @@ unittest_objectfiles = [
     Compile( 'unittest/source/test_argument.cpp'),
     Compile( 'unittest/source/test_metric.cpp'),
 
-    #Compile( 'unittest/source/communication/test_pipe.cpp'),
+    Compile( 'unittest/source/serialize/test_traits.cpp'),
+    Compile( 'unittest/source/serialize/test_macro.cpp'),
+    Compile( 'unittest/source/serialize/test_line.cpp'),
+    Compile( 'unittest/source/serialize/native/test_binary.cpp'),
 ]
 
 

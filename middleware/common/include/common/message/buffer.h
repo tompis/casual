@@ -33,10 +33,10 @@ namespace casual
 
                   common::buffer::payload::Send buffer;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     Base::marshal( archive);
-                     archive << buffer;
+                     Base::serialize( archive);
+                     CASUAL_SERIALIZE( buffer);
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const basic_request& value)
@@ -64,10 +64,10 @@ namespace casual
 
                   common::buffer::Payload buffer;
 
-                  CASUAL_CONST_CORRECT_MARSHAL(
+                  CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     Base::marshal( archive);
-                     archive & buffer;
+                     Base::serialize( archive);
+                     CASUAL_SERIALIZE( buffer);
                   })
 
                   friend std::ostream& operator << ( std::ostream& out, const basic_request& value)
@@ -78,15 +78,10 @@ namespace casual
                   }
                };
 
-
             } // callee
-
          } // buffer
       } // message
    } // common
-
-
-
 } // casual
 
 

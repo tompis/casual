@@ -11,7 +11,7 @@
 
 #include "common/traits.h"
 #include "common/mockup/ipc.h"
-#include "common/marshal/binary.h"
+#include "common/serialize/native/binary.h"
 
 namespace casual
 {

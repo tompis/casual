@@ -48,11 +48,11 @@ namespace casual
                      common::domain::Identity domain;
                      std::vector< protocol::Version> versions;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
+                     CASUAL_CONST_CORRECT_SERIALIZE(
                      {
-                        base_type::marshal( archive);
-                        archive & domain;
-                        archive & versions;
+                        base_type::serialize( archive);
+                        CASUAL_SERIALIZE( domain);
+                        CASUAL_SERIALIZE( versions);
                      })
 
                      friend std::ostream& operator << ( std::ostream& out, const Request& value);
@@ -63,11 +63,11 @@ namespace casual
                      common::domain::Identity domain;
                      protocol::Version version = protocol::Version::invalid;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
+                     CASUAL_CONST_CORRECT_SERIALIZE(
                      {
-                        base_type::marshal( archive);
-                        archive & domain;
-                        archive & version;
+                        base_type::serialize( archive);
+                        CASUAL_SERIALIZE( domain);
+                        CASUAL_SERIALIZE( version);
                      })
 
                      friend std::ostream& operator << ( std::ostream& out, const Reply& value);
@@ -92,13 +92,13 @@ namespace casual
                      std::vector< std::string> services;
                      std::vector< std::string> queues;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
+                     CASUAL_CONST_CORRECT_SERIALIZE(
                      {
-                        base_type::marshal( archive);
-                        archive & process;
-                        archive & domain;
-                        archive & services;
-                        archive & queues;
+                        base_type::serialize( archive);
+                        CASUAL_SERIALIZE( process);
+                        CASUAL_SERIALIZE( domain);
+                        CASUAL_SERIALIZE( services);
+                        CASUAL_SERIALIZE( queues);
                      })
 
                      friend std::ostream& operator << ( std::ostream& out, const Request& value);
@@ -120,13 +120,13 @@ namespace casual
                      std::vector< Service> services;
                      std::vector< Queue> queues;
 
-                     CASUAL_CONST_CORRECT_MARSHAL(
+                     CASUAL_CONST_CORRECT_SERIALIZE(
                      {
-                        base_type::marshal( archive);
-                        archive & process;
-                        archive & domain;
-                        archive & services;
-                        archive & queues;
+                        base_type::serialize( archive);
+                        CASUAL_SERIALIZE( process);
+                        CASUAL_SERIALIZE( domain);
+                        CASUAL_SERIALIZE( services);
+                        CASUAL_SERIALIZE( queues);
                      })
 
                      friend std::ostream& operator << ( std::ostream& out, const Reply& value);
@@ -149,10 +149,10 @@ namespace casual
                      {
                         std::vector< discover::Reply> replies;
 
-                        CASUAL_CONST_CORRECT_MARSHAL(
+                        CASUAL_CONST_CORRECT_SERIALIZE(
                         {
-                           base_type::marshal( archive);
-                           archive & replies;
+                           base_type::serialize( archive);
+                           CASUAL_SERIALIZE( replies);
                         })
 
                         friend std::ostream& operator << ( std::ostream& out, const Reply& value);

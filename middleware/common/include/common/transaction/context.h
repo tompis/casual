@@ -42,9 +42,7 @@ namespace casual
 
             static Context& instance();
 
-            //!
             //! Correspond to the tx API
-            //!
             //! @{
             void open();
             void close();
@@ -64,73 +62,47 @@ namespace casual
             bool info( TXINFO* info);
             //! @}
 
-            //!
             //! Correspond to casual extension of the tx API
-            //!
             //! @{
             void suspend( XID* xid);
             void resume( const XID* xid);
             //! @}
 
-            //!
             //! Correspond to the ax API
-            //!
             //! @{
             void resource_registration( resource::id rmid, XID* xid);
             void resource_unregistration( resource::id rmid);
             //! @}
 
-
-
-            //!
             //! @ingroup service-start
             //!
             //! Join transaction. could be a null xid.
-            //!
             void join( const transaction::ID& trid);
 
-            //!
             //! @ingroup service-start
             //!
             //! Start a new transaction
-            //!
             void start( const platform::time::point::type& start);
 
-            //!
             //! trid server is invoked with
-            //!
-            //! @{
             transaction::ID caller;
-            //! @}
 
 
             void update( message::service::call::Reply& state);
 
-            //!
             //! commits or rollback transaction created from this server
-            //!
             message::service::Transaction finalize( bool commit);
 
-
-            //!
             //! @return current transaction. 'null xid' if there are none...
-            //!
             Transaction& current();
 
-
-            //!
             //! @return true if @p correlation is associated with an active transaction
-            //!
             bool associated( const Uuid& correlation);
-
 
             void configure( std::vector< resource::Link> resources, std::vector< std::string> names);
 
-
-            //!
             //! @return true if there are pending transactions that is owned by this
             //! process
-            //!
             bool pending() const;
 
          private:
@@ -155,7 +127,6 @@ namespace casual
             };
 
             Commit_Return m_commit_return = Commit_Return::completed;
-
 
 
             struct resources_type
