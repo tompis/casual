@@ -208,12 +208,12 @@ namespace casual
                            end( name);
                         }
 
-                        bool serialtype_start( const char* const name)
+                        bool composite_start( const char* const name)
                         {
                            return start( name);
                         }
 
-                        void serialtype_end( const char* const name)
+                        void composite_end(  const char* const name)
                         {
                            end( name);
                         }
@@ -343,12 +343,12 @@ namespace casual
                            end( name);
                         }
 
-                        void serialtype_start( const char* const name)
+                        void composite_start( const char* const name)
                         {
                            start( name);
                         }
 
-                        void serialtype_end( const char* const name)
+                        void composite_end(  const char* const name)
                         {
                            end( name);
                         }

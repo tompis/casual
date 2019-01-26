@@ -45,9 +45,9 @@ namespace casual
                   return result;
                }
 
-               inline bool serialtype_start( const char* name)
+               inline bool composite_start( const char* name)
                {
-                  return apply( Implementation::serialtype_start( name), name);
+                  return apply( Implementation::composite_start( name), name);
                }
 
                template< typename T>
@@ -159,9 +159,9 @@ namespace casual
                   m_canonical.composite_end();
                }
 
-               inline bool serialtype_start( const char* name)
+               inline bool composite_start( const char* name)
                {
-                  auto result = Implementation::serialtype_start( name);
+                  auto result = Implementation::composite_start( name);
 
                   if( result)
                      m_canonical.composite_start( name);
@@ -169,9 +169,9 @@ namespace casual
                   return result;
                }
 
-               void serialtype_end( const char* name) 
+               void composite_end(  const char* name) 
                {
-                  Implementation::serialtype_end( name);
+                  Implementation::omposite_end(  name);
                   m_canonical.composite_end();
                }
 

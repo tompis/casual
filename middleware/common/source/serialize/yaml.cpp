@@ -229,7 +229,7 @@ namespace casual
                            end( name);
                         }
 
-                        bool serialtype_start( const char* const name)
+                        bool composite_start( const char* const name)
                         {
                            if( ! start( name))
                            {
@@ -244,7 +244,7 @@ namespace casual
                            return true;
                         }
 
-                        void serialtype_end( const char* const name)
+                        void composite_end(  const char* const name)
                         {
                            end( name);
                         }
@@ -382,7 +382,7 @@ namespace casual
                            m_output << YAML::Newline;
                         }
 
-                        void serialtype_start( const char* const name)
+                        void composite_start( const char* const name)
                         {
                            if( name)
                            {
@@ -392,7 +392,7 @@ namespace casual
                            m_output << YAML::BeginMap;
                         }
 
-                        void serialtype_end( const char* const name)
+                        void composite_end(  const char* const name)
                         {
                            m_output << YAML::EndMap;
                            m_output << YAML::Newline;

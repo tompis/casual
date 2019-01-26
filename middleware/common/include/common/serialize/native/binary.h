@@ -83,6 +83,14 @@ namespace casual
                      return *this;
                   }
 
+                  inline void container_start( platform::size::type size, const char*) 
+                  { 
+                     write_size( size);
+                  }
+                  inline void container_end( const char*) { /* no op */}
+                  inline void composite_start( const char*) { /* no op */}
+                  inline void composite_end(  const char* name) { /* no-op */ }
+
                   template< typename Iter>
                   void append( Iter first, Iter last)
                   {
@@ -107,14 +115,14 @@ namespace casual
                private:
 
                   template< typename T>
-                  std::enable_if_t< ! traits::is::value::serializable< traits::remove_cvref_t< T>>::value>
+                  std::enable_if_t< traits::has::serialize< traits::remove_cvref_t< T>, basic_output>::value>
                   write( const T& value)
                   {
-                     customize::composite::write( *this, value);
+                     value.serialize( *this);
                   }
 
                   template< typename T>
-                  std::enable_if_t< traits::is::value::serializable< traits::remove_cvref_t< T>>::value>
+                  std::enable_if_t< ! traits::has::serialize< traits::remove_cvref_t< T>, basic_output>::value>
                   write( const T& value)
                   {
                      write_pod( value);
@@ -189,6 +197,16 @@ namespace casual
                      return *this;
                   }
 
+                  inline std::tuple< platform::size::type, bool> container_start( platform::size::type size, const char*) 
+                  { 
+                     read_size( size);
+                     return { size, true};
+                  }
+                  inline void container_end( const char*) { /* no-op */ }
+
+                  inline bool composite_start( const char*) { return true;}
+                  inline void composite_end(  const char* name) { /* no-op */ }
+
 
                   template< typename Iter>
                   void consume( Iter out, size_type size)
@@ -213,14 +231,14 @@ namespace casual
                private:
 
                   template< typename T>
-                  std::enable_if_t< ! traits::is::value::serializable< traits::remove_cvref_t< T>>::value>
+                  std::enable_if_t< traits::has::serialize< traits::remove_cvref_t< T>, basic_input>::value>
                   read( T&& value)
                   {
-                     customize::composite::read( *this, std::forward< T>( value));
+                     value.serialize( *this);
                   }
 
                   template< typename T>
-                  std::enable_if_t< traits::is::value::serializable< traits::remove_cvref_t< T>>::value>
+                  std::enable_if_t< ! traits::has::serialize< traits::remove_cvref_t< T>, basic_input>::value>
                   read( T& value)
                   {
                      read_pod( value);

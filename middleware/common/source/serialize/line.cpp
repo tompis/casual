@@ -50,13 +50,13 @@ namespace casual
                      m_stream << ']';
                   }
 
-                  void serialtype_start( const char* name)
+                  void composite_start( const char* name)
                   {
                      begin_scope();
                      maybe_name( m_stream, name) << "{ ";
                   }
                   
-                  void serialtype_end( const char*)
+                  void composite_end(  const char*)
                   {
                      m_stream << '}';
                   }

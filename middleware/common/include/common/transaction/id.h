@@ -108,7 +108,7 @@ namespace casual
                return ! ( lhs == rhs);
             }
 
-            template< typename T>
+            template< typename T, typename A, typename E>
             friend struct serialize::customize::Value;
 
             //! The XA-XID object.
@@ -154,10 +154,9 @@ namespace casual
          namespace customize
          {
             //! specialization for transaction ID
-            template<>
-            struct Value< transaction::ID>
+            template< typename A>
+            struct Value< transaction::ID, A>
             {
-               template< typename A> 
                static auto write( A& archive, const transaction::ID& value, const char*) -> 
                   std::enable_if_t< ! traits::need::named< A>::value>
                {
@@ -172,7 +171,6 @@ namespace casual
                   }
                }
 
-               template< typename A> 
                static auto read( A& archive, transaction::ID& value, const char*) -> 
                   std::enable_if_t< ! traits::need::named< A>::value>
                {

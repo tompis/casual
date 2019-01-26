@@ -37,8 +37,8 @@ namespace casual
                         //! @{
                         //! No op
                         void container_end( const char*) { /*no op*/}
-                        void serialtype_start( const char*) {  /*no op*/}
-                        void serialtype_end( const char*) { /*no op*/}
+                        void composite_start( const char*) {  /*no op*/}
+                        void composite_end(  const char*) { /*no op*/}
                         //! @}
 
 
@@ -58,10 +58,10 @@ namespace casual
                         //! @{
                         //! No op
                         void container_end( const char*) { /*no op*/}
-                        void serialtype_end( const char*) { /*no op*/}
+                        void composite_end(  const char*) { /*no op*/}
                         //! @}
 
-                        bool serialtype_start( const char*) { return true;}
+                        bool composite_start( const char*) { return true;}
 
                         std::tuple< size_type, bool> container_start( size_type size, const char*)
                         {

@@ -45,8 +45,8 @@ namespace casual
             inline std::tuple< platform::size::type, bool> container_start( platform::size::type size, const char* name) { return m_protocol->container_start( size, name);}
             inline void container_end( const char* name) { m_protocol->container_end( name);}
 
-            inline bool serialtype_start( const char* name) { return m_protocol->serialtype_start( name);}
-            inline void serialtype_end( const char* name) { m_protocol->serialtype_end( name);}
+            inline bool composite_start( const char* name) { return m_protocol->composite_start( name);}
+            inline void composite_end(  const char* name) { m_protocol->composite_end(  name);}
 
             inline bool read( bool& value, const char* name) { return m_protocol->read( value, name);}
             inline bool read( char& value, const char* name){ return m_protocol->read( value, name);}
@@ -74,8 +74,8 @@ namespace casual
                virtual std::tuple< platform::size::type, bool> container_start( platform::size::type size, const char* name) = 0;
                virtual void container_end( const char* name) = 0;
 
-               virtual bool serialtype_start( const char* name) = 0;
-               virtual void serialtype_end( const char* name) = 0;
+               virtual bool composite_start( const char* name) = 0;
+               virtual void composite_end(  const char* name) = 0;
 
                virtual bool read( bool& value, const char* name) = 0;
                virtual bool read( char& value, const char* name) = 0;
@@ -101,8 +101,8 @@ namespace casual
                std::tuple< platform::size::type, bool> container_start( platform::size::type size, const char* name) override { return m_protocol.container_start( size, name);}
                void container_end( const char* name) override { m_protocol.container_end( name);}
 
-               bool serialtype_start( const char* name) override { return m_protocol.serialtype_start( name);}
-               void serialtype_end( const char* name) override { m_protocol.serialtype_end( name);}
+               bool composite_start( const char* name) override { return m_protocol.composite_start( name);}
+               void composite_end(  const char* name) override { m_protocol.omposite_end(  name);}
 
                bool read( bool& value, const char* name) override { return m_protocol.read( value, name);}
                bool read( char& value, const char* name) override { return m_protocol.read( value, name);}
@@ -148,36 +148,22 @@ namespace casual
          Reader& operator >> ( Reader& archive, NVP&& nvp);
 
 
+
          template< typename T>
-         std::enable_if_t< traits::is_pod< T>::value, bool>
+         std::enable_if_t< ! traits::has::serialize< T, Reader>::value, bool>
          serialize( Reader& archive, T& value, const char* const name)
          {
-            return archive.read( value, name);
+            return customize::value::read( archive, value, name);
          }
 
-
          template< typename T>
-         std::enable_if_t< traits::has::serialize< T, Reader&>::value, bool>
+         std::enable_if_t< traits::has::serialize< T, Reader>::value, bool>
          serialize( Reader& archive, T& value, const char* const name)
          {
-            if( archive.serialtype_start( name))
+            if( archive.composite_start( name))
             {
                value.serialize( archive);
-               archive.serialtype_end( name);
-               return true;
-            }
-            return false;
-         }
-
-         template< typename T>
-         std::enable_if_t< std::is_enum< T >::value, bool>
-         serialize( Reader& archive, T& value, const char* const name)
-         {
-            typename std::underlying_type< T>::type contained;
-
-            if( serialize( archive, contained, name))
-            {
-               value = static_cast< T>( contained);
+               archive.composite_end(  name);
                return true;
             }
             return false;
@@ -327,8 +313,8 @@ namespace casual
             inline void container_start( platform::size::type size, const char* name) { m_protocol->container_start( size, name);}
             inline void container_end( const char* name) { m_protocol->container_end( name);}
 
-            inline void serialtype_start( const char* name) { m_protocol->serialtype_start( name);}
-            inline void serialtype_end( const char* name) { m_protocol->serialtype_end( name);}
+            inline void composite_start( const char* name) { m_protocol->composite_start( name);}
+            inline void composite_end(  const char* name) { m_protocol->composite_end(  name);}
 
             inline void write( bool value, const char* name) { m_protocol->write( value, name);}
             inline void write( char value, const char* name) { m_protocol->write( value, name);}
@@ -354,8 +340,8 @@ namespace casual
                virtual void container_start( platform::size::type size, const char* name) = 0;
                virtual void container_end( const char* name) = 0;
 
-               virtual void serialtype_start( const char* name) = 0;
-               virtual void serialtype_end( const char* name) = 0;
+               virtual void composite_start( const char* name) = 0;
+               virtual void composite_end(  const char* name) = 0;
 
                virtual void write( bool value, const char* name) = 0;
                virtual void write( char value, const char* name) = 0;
@@ -381,8 +367,8 @@ namespace casual
                void container_start( platform::size::type size, const char* name) override { m_protocol.container_start( size, name);}
                void container_end( const char* name) override { m_protocol.container_end( name);}
 
-               void serialtype_start( const char* name) override { m_protocol.serialtype_start( name);}
-               void serialtype_end( const char* name) override { m_protocol.serialtype_end( name);}
+               void composite_start( const char* name) override { m_protocol.composite_start( name);}
+               void composite_end(  const char* name) override { m_protocol.omposite_end(  name);}
 
                void write( bool value, const char* name) override { m_protocol.write( value, name);}
                void write( char value, const char* name) override { m_protocol.write( value, name);}
@@ -421,120 +407,38 @@ namespace casual
 
          };
 
-         template< typename NV>
-         Writer& operator << ( Writer& archive, NV&& nvp);
-
-
-         template< typename T>
-         std::enable_if_t< traits::is_pod< T>::value>
-         serialize( Writer& archive, const T& value, const char* const name)
-         {
-            customize::value::write( archive, value, name);
-         }
-
-
-         template< typename T>
-         std::enable_if_t< traits::has::serialize< traits::remove_cvref_t< T>, Writer&>::value>
-         serialize( Writer& archive, const T& value, const char* const name)
-         {
-            archive.serialtype_start( name);
-
-            customize::composite::write( archive, value);
-
-            archive.serialtype_end( name);
-         }
-
-
          namespace detail
          {
-            template< platform::size::type index>
-            struct tuple_write
+            template< typename T>
+            std::enable_if_t< ! traits::has::serialize< traits::remove_cvref_t< T>, Writer>::value>
+            serialize( Writer& archive, const T& value, const char* const name)
             {
-               template< typename T>
-               static void serialize( Writer& archive, const T& value)
-               {
-                  archive << named::value::make( std::get< std::tuple_size< T>::value - index>( value), nullptr);
-                  tuple_write< index - 1>::serialize( archive, value);
-               }
-            };
-
-            template<>
-            struct tuple_write< 0>
-            {
-               template< typename T>
-               static void serialize( Writer&, const T&) {}
-            };
+               customize::value::write( archive, value, name);
+            }
 
             template< typename T>
-            void serialize_tuple( Writer& archive, const T& value, const char* const name)
+            std::enable_if_t< traits::has::serialize< traits::remove_cvref_t< T>, Writer>::value>
+            serialize( Writer& archive, const T& value, const char* const name)
             {
-               archive.container_start( std::tuple_size< T>::value, name);
-               tuple_write< std::tuple_size< T>::value>::serialize( archive, value);
-               archive.container_end( name);
-            }
+               archive.composite_start( name);
+               value.serialize( archive);
+               archive.composite_end(  name);
+            } 
          } // detail
 
-         template< typename... T>
-         void serialize( Writer& archive, const std::tuple< T...>& value, const char* const name)
+         template< typename NV>
+         Writer& operator << ( Writer& archive, NV&& named)
          {
-            detail::serialize_tuple( archive, value, name);
-         }
-
-         template< typename K, typename V>
-         void serialize( Writer& archive, const std::pair< K, V>& value, const char* const name)
-         {
-            detail::serialize_tuple( archive, value, name);
-         }
-
-
-         template< typename T>
-         std::enable_if_t< std::is_enum< T >::value>
-         serialize( Writer& archive, const T& value, const char* const name)
-         {
-            serialize( archive, static_cast< std::underlying_type_t< T>>( value), name);
-         }
-
-
-         template< typename T>
-         std::enable_if_t< 
-            traits::container::is_container< T>::value 
-            && ! traits::container::is_string< T>::value 
-            && ! std::is_same< platform::binary::type, T>::value>
-         serialize( Writer& archive, const T& container, const char* const name)
-         {
-            archive.container_start( container.size(), name);
-
-            for( auto& element : container)
-            {
-               archive << named::value::make( element, nullptr);
-            }
-
-            archive.container_end( name);
-         }
-
-
-         template< typename T>
-         void serialize( Writer& archive, const optional< T>& value, const char* const name)
-         {
-            if( value)
-            {
-               archive << named::value::make( value.value(), name);
-            }
-         }
-
-         template< typename NVP>
-         Writer& operator & ( Writer& archive, NVP&& nvp)
-         {
-            return operator << ( archive, std::forward< NVP>( nvp));
-         }
-
-
-         template< typename NVP>
-         Writer& operator << ( Writer& archive, NVP&& nvp)
-         {
-            serialize( archive, nvp.value(), nvp.name());
+            detail::serialize( archive, named.value(), named.name());
             return archive;
-         }                  
+         }
+
+         template< typename NV>
+         Writer& operator & ( Writer& archive, NV&& named)
+         {
+            return operator << ( archive, std::forward< NV>( named));
+         }
+
       } // serialize
    } // common
 } // casual

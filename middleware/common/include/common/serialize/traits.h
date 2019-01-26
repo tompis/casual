@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "common/serialize/customize.h"
 
 #include "common/traits.h"
 #include "common/platform.h"

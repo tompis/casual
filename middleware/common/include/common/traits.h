@@ -580,6 +580,7 @@ namespace casual
             using tuple = detect::is_detected< detail::tuple, T>;
 
             static_assert( is::tuple< std::tuple< int, int>>::value, "");
+            static_assert( is::tuple< std::pair< int, int>>::value, "");
             static_assert( ! is::tuple< int>::value, "");
 
 

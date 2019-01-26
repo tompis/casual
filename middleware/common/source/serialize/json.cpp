@@ -238,7 +238,7 @@ namespace casual
                            end( name);
                         }
 
-                        bool serialtype_start( const char* const name)
+                        bool composite_start( const char* const name)
                         {
                            if( ! start( name))
                            {
@@ -255,7 +255,7 @@ namespace casual
 
                         }
 
-                        void serialtype_end( const char* const name)
+                        void composite_end(  const char* const name)
                         {
                            end( name);
                         }
@@ -375,13 +375,13 @@ namespace casual
                         }
 
 
-                        void serialtype_start( const char* const name)
+                        void composite_start( const char* const name)
                         {
                            start( name);
 
                            m_stack.back()->SetObject();
                         }
-                        void serialtype_end( const char* const name)
+                        void composite_end(  const char* const name)
                         {
                            end( name);
                         }

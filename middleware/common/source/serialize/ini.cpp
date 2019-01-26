@@ -303,7 +303,7 @@ namespace casual
 
                         void container_end( const char* const name) {}
 
-                        bool serialtype_start( const char* const name)
+                        bool composite_start( const char* const name)
                         {
                            if( name)
                            {
@@ -326,7 +326,7 @@ namespace casual
 
                         }
 
-                        void serialtype_end( const char* const name)
+                        void composite_end(  const char* const name)
                         {
                            m_node_stack.pop_back();
                         }
@@ -500,7 +500,7 @@ namespace casual
                            }
                         }
 
-                        void serialtype_start( const char* const name)
+                        void composite_start( const char* const name)
                         {
                            const auto final = name ? name : m_name_stack.back();
 
@@ -509,7 +509,7 @@ namespace casual
                            m_node_stack.push_back( &child->second);
                         }
 
-                        void serialtype_end( const char* const name)
+                        void composite_end(  const char* const name)
                         {
                            m_node_stack.pop_back();
                         }

@@ -63,7 +63,7 @@ namespace casual
                         flush();
                      }
 
-                     void serialtype_start( const char* name)
+                     void composite_start( const char* name)
                      {
                         add( name);
                         ++m_indent;
@@ -71,7 +71,7 @@ namespace casual
                         flush();
                      }
                      
-                     void serialtype_end( const char*)
+                     void composite_end(  const char*)
                      {
                         --m_indent;
                         flush();
