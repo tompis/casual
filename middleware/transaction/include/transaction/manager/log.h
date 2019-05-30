@@ -11,7 +11,7 @@
 
 #include "sql/database.h"
 
-#include "serviceframework/platform.h"
+#include "common/platform.h"
 
 #include "common/message/transaction.h"
 
@@ -58,11 +58,11 @@ namespace casual
             {
                struct update_t
                {
-                  serviceframework::platform::size::type prepare = 0;
-                  serviceframework::platform::size::type remove = 0;
+                  common::platform::size::type prepare = 0;
+                  common::platform::size::type remove = 0;
                } update;
 
-               serviceframework::platform::size::type writes = 0;
+               common::platform::size::type writes = 0;
             };
 
             const Stats& stats() const;

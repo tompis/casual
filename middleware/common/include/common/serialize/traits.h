@@ -56,12 +56,25 @@ namespace casual
                namespace detail
                {
                   template< typename T, typename A>
-                  using serialize = decltype( std::declval< T&>().serialize( std::declval< A&>()));
+                  using serialize = decltype( std::declval< traits::remove_cvref_t< T>&>().serialize( std::declval< traits::remove_cvref_t< A>&>()));
                } // detail
 
                template< typename T, typename A>
                using serialize = detect::is_detected< detail::serialize, T, A>;
             } // has
+
+            namespace can
+            {
+               namespace detail
+               {
+                  template< typename T, typename A>
+                  using serialize = decltype( std::declval< traits::remove_cvref_t< A>&>() << std::declval< traits::remove_cvref_t< T>&>());
+               } // detail
+
+               template< typename T, typename A>
+               using serialize = detect::is_detected< detail::serialize, T, A>;
+               
+            } // can
 
             namespace is
             {

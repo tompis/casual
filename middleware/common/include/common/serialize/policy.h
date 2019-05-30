@@ -171,7 +171,7 @@ namespace casual
 
                void composite_end(  const char* name) 
                {
-                  Implementation::omposite_end(  name);
+                  Implementation::composite_end(  name);
                   m_canonical.composite_end();
                }
 

@@ -12,7 +12,7 @@
 #include "common/communication/message.h"
 #include "common/traits.h"
 #include "common/serialize/native/complete.h"
-#include "common/log/category.h"
+#include "common/log/stream.h"
 
 
 #include <map>
@@ -46,11 +46,9 @@ namespace casual
 
                }
 
-               //!
                //! Dispatch a message.
                //!
                //! @return true if the message was handled.
-               //!
                template< typename M>
                bool operator () ( M&& complete) const
                {
@@ -59,9 +57,7 @@ namespace casual
 
                platform::size::type size() const { return m_handlers.size();}
 
-               //!
                //! @return all message-types that this instance handles
-               //!
                std::vector< message_type> types() const
                {
                   std::vector< message_type> result;
@@ -75,7 +71,6 @@ namespace casual
                }
 
 
-               //!
                //! Inserts handler, that is, adds new handlers
                //!
                //! @param handlers

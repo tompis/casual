@@ -16,7 +16,7 @@
 #include "common/exception/handle.h"
 
 #include "serviceframework/service/protocol/call.h"
-#include "serviceframework/archive/create.h"
+#include "common/serialize/create.h"
 #include "serviceframework/log.h"
 
 #include "xatmi.h"
@@ -182,7 +182,7 @@ namespace casual
          {
             auto state = call::state();
 
-            auto archive = serviceframework::archive::create::writer::from( format.value_or( ""), std::cout);
+            auto archive = common::serialize::create::writer::from( format.value_or( ""), std::cout);
             archive << CASUAL_MAKE_NVP( state);
          }
 

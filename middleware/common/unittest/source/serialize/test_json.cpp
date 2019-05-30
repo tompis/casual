@@ -8,13 +8,13 @@
 #include <gtest/gtest.h>
 
 
-#include "serviceframework/archive/json.h"
+#include "common/serialize/json.h"
 
 #include "../../include/test_vo.h"
 
 namespace casual
 {
-   namespace serviceframework
+   namespace common
    { 
       namespace local
       {
@@ -23,21 +23,21 @@ namespace casual
             template< typename T>
             void value_to_string( T&& value, std::string& string)
             {
-               auto writer = archive::json::writer( string);
+               auto writer = serialize::json::writer( string);
                writer << CASUAL_MAKE_NVP( value);
             }
 
             template< typename T>
             void string_to_strict_value( const std::string& string, T&& value)
             {
-               auto reader = archive::json::strict::reader( string);
+               auto reader = serialize::json::strict::reader( string);
                reader >> CASUAL_MAKE_NVP( value);
             }
 
             template< typename T>
             void string_to_relaxed_value( const std::string& string, T&& value)
             {
-               auto reader = archive::json::relaxed::reader( string);
+               auto reader = serialize::json::relaxed::reader( string);
                reader >> CASUAL_MAKE_NVP( value);
             }
 
@@ -45,7 +45,7 @@ namespace casual
       } // local
 
 
-      TEST( serviceframework_json_archive, relaxed_read_serializible)
+      TEST( serviceframework_json_archive, relaxed_read_serializable)
       {
          //const std::string json = test::SimpleVO::json();
 
@@ -140,8 +140,8 @@ namespace casual
 
          EXPECT_THROW
          ({
-            auto reader = archive::json::strict::reader( json);
-         }, exception::archive::invalid::Document);
+            auto reader = serialize::json::strict::reader( json);
+         }, exception::casual::invalid::Document);
       }
 
       TEST( serviceframework_json_archive, read_with_invalid_long__expecting_exception)
@@ -167,7 +167,7 @@ namespace casual
          ({
             test::SimpleVO value;
             local::string_to_strict_value( json, value);
-         }, exception::archive::invalid::Node);
+         }, exception::casual::invalid::Node);
 
       }
 
@@ -193,11 +193,11 @@ namespace casual
          ({
             test::SimpleVO value;
             local::string_to_strict_value( json, value);
-         }, exception::archive::invalid::Node);
+         }, exception::casual::invalid::Node);
 
       }
 
-   } // serviceframework
-}
+   } // common
+} // casual
 
 

@@ -9,13 +9,13 @@
 #include <gtest/gtest.h>
 
 
-#include "serviceframework/namevaluepair.h"
-#include "serviceframework/archive/json.h"
-#include "serviceframework/archive/yaml.h"
-#include "serviceframework/archive/xml.h"
-#include "serviceframework/archive/ini.h"
-#include "serviceframework/archive/binary.h"
-#include "serviceframework/log.h"
+#include "common/serialize/macro.h"
+#include "common/serialize/json.h"
+#include "common/serialize/yaml.h"
+#include "common/serialize/xml.h"
+#include "common/serialize/ini.h"
+#include "common/serialize/binary.h"
+#include "common/serialize/line.h"
 
 #include "common/log.h"
 
@@ -32,9 +32,8 @@
 
 namespace casual
 {
-   namespace serviceframework
+   namespace common
    {
-
       namespace holder
       {
          template< typename P>
@@ -73,10 +72,10 @@ namespace casual
             struct json : base< B>
             {
                template< typename T>
-               static auto reader( T&& buffer) { return archive::json::strict::reader( buffer);}
+               static auto reader( T&& buffer) { return serialize::json::strict::reader( buffer);}
 
                template< typename T>
-               static auto writer( T&& buffer) { return archive::json::writer( buffer);}
+               static auto writer( T&& buffer) { return serialize::json::writer( buffer);}
             };
 
             namespace relaxed    
@@ -85,7 +84,7 @@ namespace casual
                struct json : policy::json< B>
                {
                   template< typename T>
-                  static auto reader( T&& buffer) { return archive::json::relaxed::reader( buffer);}
+                  static auto reader( T&& buffer) { return serialize::json::relaxed::reader( buffer);}
                };
             } // relaxed  
 
@@ -93,10 +92,10 @@ namespace casual
             struct yaml : base< B>
             {
                template< typename T>
-               static auto reader( T&& buffer) { return archive::yaml::strict::reader( buffer);}
+               static auto reader( T&& buffer) { return serialize::yaml::strict::reader( buffer);}
 
                template< typename T>
-               static auto writer( T&& buffer) { return archive::yaml::writer( buffer);}
+               static auto writer( T&& buffer) { return serialize::yaml::writer( buffer);}
             };
 
             namespace relaxed    
@@ -105,7 +104,7 @@ namespace casual
                struct yaml : policy::yaml< B>
                {
                   template< typename T>
-                  static auto reader( T&& buffer) { return archive::yaml::relaxed::reader( buffer);}
+                  static auto reader( T&& buffer) { return serialize::yaml::relaxed::reader( buffer);}
                };
             } // relaxed  
 
@@ -113,10 +112,10 @@ namespace casual
             struct xml : base< B>
             {
                template< typename T>
-               static auto reader( T&& buffer) { return archive::xml::strict::reader( buffer);}
+               static auto reader( T&& buffer) { return serialize::xml::strict::reader( buffer);}
 
                template< typename T>
-               static auto writer( T&& buffer) { return archive::xml::writer( buffer);}
+               static auto writer( T&& buffer) { return serialize::xml::writer( buffer);}
             };
 
             namespace relaxed    
@@ -125,17 +124,17 @@ namespace casual
                struct xml : policy::xml< B>
                {
                   template< typename T>
-                  static auto reader( T&& buffer) { return archive::xml::relaxed::reader( buffer);}
+                  static auto reader( T&& buffer) { return serialize::xml::relaxed::reader( buffer);}
                };
             } // relaxed  
 
             struct binary : base< platform::binary::type>
             {
                template< typename T>
-               static auto reader( T&& buffer) { return archive::binary::reader( buffer);}
+               static auto reader( T&& buffer) { return serialize::binary::reader( buffer);}
 
                template< typename T>
-               static auto writer( T&& buffer) { return archive::binary::writer( buffer);}
+               static auto writer( T&& buffer) { return serialize::binary::writer( buffer);}
             };
 
          } // policy
@@ -317,8 +316,6 @@ namespace casual
          EXPECT_TRUE( TestFixture::write_read( value) == value);
       }
 
-
-   } // serviceframework
-
-}
+   } // common
+} // casual
 

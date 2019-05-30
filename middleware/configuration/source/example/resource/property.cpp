@@ -7,7 +7,7 @@
 
 #include "configuration/example/resource/property.h"
 
-#include "serviceframework/archive/create.h"
+#include "common/serialize/create.h"
 
 #include <fstream>
 
@@ -49,7 +49,7 @@ namespace casual
                void write( const resources_type& resources, const std::string& name)
                {
                   common::file::Output file{ name};
-                  auto archive = serviceframework::archive::create::writer::from( file.extension(), file);
+                  auto archive = common::serialize::create::writer::from( file.extension(), file);
                   archive << CASUAL_MAKE_NVP( resources);
                }
 

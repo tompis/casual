@@ -8,9 +8,8 @@
 #pragma once
 
 
-
-#include "serviceframework/namevaluepair.h"
-#include "serviceframework/platform.h"
+#include "common/serialize/macro.h"
+#include "common/platform.h"
 
 #include <string>
 #include <vector>
@@ -25,23 +24,23 @@ namespace casual
          {
             struct Limit
             {
-               serviceframework::optional< serviceframework::platform::size::type> size;
-               serviceframework::optional< serviceframework::platform::size::type> messages;
+               common::optional< common::platform::size::type> size;
+               common::optional< common::platform::size::type> messages;
 
                CASUAL_CONST_CORRECT_SERIALIZE
                (
-                  archive & CASUAL_MAKE_NVP( size);
-                  archive & CASUAL_MAKE_NVP( messages);
+                  CASUAL_SERIALIZE( size);
+                  CASUAL_SERIALIZE( messages);
                )
             };
 
             struct Default
             {
-               serviceframework::optional< Limit> limit;
+               common::optional< Limit> limit;
 
                CASUAL_CONST_CORRECT_SERIALIZE
                (
-                  archive & CASUAL_MAKE_NVP( limit);
+                  CASUAL_SERIALIZE( limit);
                )
             };
 
@@ -58,8 +57,8 @@ namespace casual
             CASUAL_CONST_CORRECT_SERIALIZE
             (
                listener::Default::serialize( archive);
-               archive & CASUAL_MAKE_NVP( address);
-               archive & CASUAL_MAKE_NVP( note);
+               CASUAL_SERIALIZE( address);
+               CASUAL_SERIALIZE( note);
             )
 
             friend bool operator == ( const Listener& lhs, const Listener& rhs);
@@ -70,13 +69,13 @@ namespace casual
          {
             struct Default
             {
-               serviceframework::optional< bool> restart;
-               serviceframework::optional< std::string> address;
+               common::optional< bool> restart;
+               common::optional< std::string> address;
 
                CASUAL_CONST_CORRECT_SERIALIZE
                (
-                  archive & CASUAL_MAKE_NVP( restart);
-                  archive & CASUAL_MAKE_NVP( address);
+                  CASUAL_SERIALIZE( restart);
+                  CASUAL_SERIALIZE( address);
                )
 
             };
@@ -95,9 +94,9 @@ namespace casual
             CASUAL_CONST_CORRECT_SERIALIZE
             (
                connection::Default::serialize( archive);
-               archive & CASUAL_MAKE_NVP( note);
-               archive & CASUAL_MAKE_NVP( services);
-               archive & CASUAL_MAKE_NVP( queues);
+               CASUAL_SERIALIZE( note);
+               CASUAL_SERIALIZE( services);
+               CASUAL_SERIALIZE( queues);
             )
 
             friend bool operator == ( const Connection& lhs, const Connection& rhs);
@@ -115,8 +114,8 @@ namespace casual
 
                CASUAL_CONST_CORRECT_SERIALIZE
                (
-                  archive & CASUAL_MAKE_NVP( listener);
-                  archive & CASUAL_MAKE_NVP( connection);
+                  CASUAL_SERIALIZE( listener);
+                  CASUAL_SERIALIZE( connection);
                )
             };
          } // manager
@@ -130,9 +129,9 @@ namespace casual
 
             CASUAL_CONST_CORRECT_SERIALIZE
             (
-               archive & serviceframework::name::value::pair::make( "default", manager_default);
-               archive & CASUAL_MAKE_NVP( listeners);
-               archive & CASUAL_MAKE_NVP( connections);
+               CASUAL_SERIALIZE_NAME( manager_default, "default");
+               CASUAL_SERIALIZE( listeners);
+               CASUAL_SERIALIZE( connections);
             )
 
             //!

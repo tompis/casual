@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 
 
-#include "serviceframework/archive/xml.h"
+#include "common/serialize/xml.h"
 
 #include <sstream>
 
@@ -16,7 +16,7 @@
 
 namespace casual
 {
-   namespace serviceframework
+   namespace common
    { 
       namespace local
       {
@@ -25,14 +25,14 @@ namespace casual
             template<typename T>
             void value_to_string( const T& value, std::string& string)
             {
-               auto writer = archive::xml::writer( string);
+               auto writer = serialize::xml::writer( string);
                writer << CASUAL_MAKE_NVP( value);
             }
 
             template<typename T>
             void string_to_value( const std::string& string, T& value)
             {
-               auto reader = archive::xml::strict::reader( string);
+               auto reader = serialize::xml::strict::reader( string);
                reader >> CASUAL_MAKE_NVP( value);
             }
 
@@ -40,10 +40,10 @@ namespace casual
       }
 
 
-      TEST( serviceframework_xml_archive, relaxed_read_serializible)
+      TEST( serviceframework_xml_archive, relaxed_read_serializable)
       {
 
-         auto reader = archive::xml::relaxed::reader( test::SimpleVO::xml());
+         auto reader = serialize::xml::relaxed::reader( test::SimpleVO::xml());
 
          test::SimpleVO value;
 
@@ -154,8 +154,8 @@ namespace casual
 
          EXPECT_THROW
          ({
-            auto reader = archive::xml::strict::reader( xml);
-         }, exception::archive::invalid::Document);
+            auto reader = serialize::xml::strict::reader( xml);
+         }, exception::casual::invalid::Document);
 
       }
 
@@ -179,7 +179,7 @@ namespace casual
          ({
             test::SimpleVO value;
             local::string_to_value( xml, value);
-         }, exception::archive::invalid::Node);
+         }, exception::casual::invalid::Node);
 
       }
 
@@ -203,7 +203,7 @@ namespace casual
          ({
             test::SimpleVO value;
             local::string_to_value( xml, value);
-         }, exception::archive::invalid::Node);
+         }, exception::casual::invalid::Node);
       }
 
       TEST( serviceframework_xml_archive, read_with_too_long_short__expecting_exception)
@@ -226,11 +226,10 @@ namespace casual
          ({
             test::SimpleVO value;
             local::string_to_value( xml, value);
-         }, exception::archive::invalid::Node);
+         }, exception::casual::invalid::Node);
 
       }
 
-   } // serviceframework
-
+   } // common
 } // casual
 

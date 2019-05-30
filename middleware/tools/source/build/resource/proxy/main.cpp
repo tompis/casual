@@ -102,8 +102,8 @@ int main( int argc, char** argv)
 
                            CASUAL_CONST_CORRECT_SERIALIZE
                            (
-                              archive & CASUAL_MAKE_NVP( link);
-                              archive & CASUAL_MAKE_NVP( compile);
+                              CASUAL_SERIALIZE( link);
+                              CASUAL_SERIALIZE( compile);
                            )
 
                         } directives;
@@ -117,13 +117,13 @@ int main( int argc, char** argv)
 
                         CASUAL_CONST_CORRECT_SERIALIZE
                         (
-                           archive & CASUAL_MAKE_NVP( output);
-                           archive & CASUAL_MAKE_NVP( key);
-                           archive & CASUAL_MAKE_NVP( directives);
-                           archive & CASUAL_MAKE_NVP( compiler);
-                           archive & CASUAL_MAKE_NVP( verbose);
-                           archive & CASUAL_MAKE_NVP( keep_source);
-                           archive & CASUAL_MAKE_NVP( properties_file);
+                           CASUAL_SERIALIZE( output);
+                           CASUAL_SERIALIZE( key);
+                           CASUAL_SERIALIZE( directives);
+                           CASUAL_SERIALIZE( compiler);
+                           CASUAL_SERIALIZE( verbose);
+                           CASUAL_SERIALIZE( keep_source);
+                           CASUAL_SERIALIZE( properties_file);
 
                         )
                      };

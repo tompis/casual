@@ -63,7 +63,7 @@ namespace casual
 
          CASUAL_CONST_CORRECT_SERIALIZE(
          {
-            CASUAL_SERIALIZE( m_uuid);
+            CASUAL_SERIALIZE_NAME( m_uuid, nullptr);
          })
 
       private:

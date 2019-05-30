@@ -9,9 +9,8 @@
 
 #include "../../include/test_vo.h"
 
-#include "serviceframework/archive/yaml.h"
-#include "serviceframework/exception.h"
-#include "serviceframework/log.h"
+#include "common/serialize/yaml.h"
+#include "common/serialize/line.h"
 
 
 #include "common/algorithm.h"
@@ -19,7 +18,7 @@
 
 namespace casual
 {
-   namespace serviceframework
+   namespace common
    {
       
       namespace local
@@ -29,21 +28,21 @@ namespace casual
             template<typename T>
             void string_to_strict_value( const std::string& string, T&& value)
             {
-               auto reader = archive::yaml::strict::reader( string);
+               auto reader = serialize::yaml::strict::reader( string);
                reader >> CASUAL_MAKE_NVP( value);
             }
 
             template<typename T>
             void string_to_relaxed_value( const std::string& string, T&& value)
             {
-               auto reader = archive::yaml::relaxed::reader( string);
+               auto reader = serialize::yaml::relaxed::reader( string);
                reader >> CASUAL_MAKE_NVP( value);
             }
 
             template<typename T>
             void value_to_string( T&& value, std::string& string)
             {
-               auto writer = archive::yaml::writer( string);
+               auto writer = serialize::yaml::writer( string);
                writer << CASUAL_MAKE_NVP( value);
             }
 
@@ -54,7 +53,7 @@ namespace casual
                template< typename A>
                void serialize( A& archive)
                {
-                  archive & CASUAL_MAKE_NVP( array);
+                  CASUAL_SERIALIZE( array);
                }
 
             };
@@ -104,17 +103,16 @@ value:
 
       TEST( serviceframework_yaml_archive, strict_read_not_in_document__gives_throws)
       {
-         auto reader = archive::yaml::strict::reader( test::SimpleVO::yaml());
+         auto reader = serialize::yaml::strict::reader( test::SimpleVO::yaml());
 
          test::SimpleVO wrongRoleName;
 
          EXPECT_THROW(
          {
             reader >> CASUAL_MAKE_NVP( wrongRoleName);
-         }, exception::archive::invalid::Node);
+         }, exception::casual::invalid::Node);
 
       }
-
 
       TEST( serviceframework_yaml_archive, write_read_vector_pod)
       {
@@ -124,8 +122,6 @@ value:
             std::vector< long> values = { 1, 2, 34, 45, 34, 34, 23};
             local::value_to_string( values, yaml);
          }
-
-
 
          std::vector< long> values;
          local::string_to_relaxed_value( yaml, values);
@@ -198,7 +194,7 @@ value:
          local::string_to_relaxed_value( yaml, values);
 
 
-         ASSERT_TRUE( values.size() == 2) << CASUAL_MAKE_NVP( values);
+         ASSERT_TRUE( values.size() == 2) << "values: " << values;
          EXPECT_TRUE( values.at( 10).m_string == "kalle");
          EXPECT_TRUE( values.at( 10).m_values.at( 0).m_short == 1);
          EXPECT_TRUE( values.at( 10).m_values.at( 0).m_string == "one");
@@ -248,15 +244,13 @@ value:
 
          EXPECT_THROW
          ({
-            archive::yaml::strict::reader( yaml);
-         }, exception::archive::invalid::Document);
+            serialize::yaml::strict::reader( yaml);
+         }, exception::casual::invalid::Document);
       }
 
       TEST( serviceframework_yaml_archive, read_invalid_bool__expecting_exception)
       {
-         static std::string yaml
-         {
-            R"(
+         constexpr auto yaml = R"(
 value:
    m_bool: jajjemensan
    m_long: 123
@@ -264,18 +258,16 @@ value:
    m_short: 23
    m_longlong: 1234567890123456789
    m_time: 1234567890
-)"
-         };
+)";
 
          EXPECT_THROW
          ({
             test::SimpleVO value;
             local::string_to_strict_value( yaml, value);
-         }, exception::archive::invalid::Node);
+         }, exception::casual::invalid::Node);
       }
 
-   } // serviceframework
-
+   } // common
 } // casual
 
 

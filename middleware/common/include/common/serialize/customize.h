@@ -35,8 +35,6 @@ namespace casual
                }
             };
 
-
-
             namespace value
             {
                template< typename A, typename T>
@@ -206,8 +204,8 @@ namespace casual
                {
                   template< typename T> 
                   using container = traits::bool_constant< 
-                     common::traits::container::is_container< T>::value
-                     && ! common::traits::container::is_string< T>::value
+                     common::traits::is::container::like< T>::value
+                     && ! serialize::traits::is_pod< T>::value
                   >; 
                } // is
      
@@ -224,7 +222,7 @@ namespace casual
 
                   template< typename A, typename C>
                   auto read( A& archive, C& container, const char* name) ->
-                     std::enable_if_t< traits::container::is_associative< traits::remove_cvref_t< C>>::value, bool>
+                     std::enable_if_t< common::traits::is::associative::like< traits::remove_cvref_t< C>>::value, bool>
                   {
                      auto properties = archive.container_start( 0, name);
 
@@ -249,7 +247,7 @@ namespace casual
 
                   template< typename A, typename C>
                   auto read( A& archive, C& container, const char* name) ->
-                     std::enable_if_t< traits::container::is_sequence< traits::remove_cvref_t< C>>::value, bool>
+                     std::enable_if_t< common::traits::is::sequence::like< traits::remove_cvref_t< C>>::value, bool>
                   {
                      auto properties = archive.container_start( 0, name);
 
@@ -293,35 +291,45 @@ namespace casual
                }
             };
 
-            //! Specialization for optional
+            //! Specialization for optional-like
             template< typename T, typename A>
-            struct Value< common::optional< T>, A>
+            struct Value< T, A, std::enable_if_t< common::traits::is::optional_like< T>::value>>
             {
-               using value_type = common::optional< T>;
-
                template< typename V> 
                static void write( A& archive, V&& value, const char* name)
                {
                   if( value)
                   {
-                     value::write( archive, std::forward< V>( value).value(), name);
+                     archive.container_start( 1, name);
+                     value::write( archive, value.value(), nullptr);
                   }
+                  else 
+                  {
+                     archive.container_start( 0, name);
+                  }
+                  archive.container_end( name);
                }
 
-               static bool read( A& archive, value_type& value, const char* name)
+               template< typename V>
+               static bool read( A& archive, V& value, const char* name)
                {
-                  typename value_type::value_type contained;
-                  
-                  if( value::read( archive, contained, name))
+                  auto properties = archive.container_start( 0, name);
+
+                  if( std::get< 1>( properties))
                   {
+                     std::decay_t< decltype( value.value())> contained;
+
+                     customize::value::read( archive, contained, nullptr);
                      value = std::move( contained);
+
+                     archive.container_end( name);
                      return true;
                   }
                   return false;
                }
             };
 
-            //! Specialization for time_type
+            //! Specialization for time
             //! @{
 
             template< typename R, typename P, typename A>

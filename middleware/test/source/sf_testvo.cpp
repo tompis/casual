@@ -39,8 +39,8 @@ struct TestVO::Implementation
    {
       //## additional serialization protected section begin [200.impl.serial.10]
       //## additional serialization protected section end   [200.impl.serial.10]
-      archive & CASUAL_MAKE_NVP( someLong);
-      archive & CASUAL_MAKE_NVP( someString);
+      CASUAL_SERIALIZE( someLong);
+      CASUAL_SERIALIZE( someString);
       //## additional serialization protected section begin [200.impl.serial.20]
       //## additional serialization protected section end   [200.impl.serial.20]
    }

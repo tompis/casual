@@ -10,8 +10,8 @@
 
 #include "configuration/environment.h"
 
-#include "serviceframework/namevaluepair.h"
-#include "serviceframework/platform.h"
+#include "common/serialize/macro.h"
+#include "common/platform.h"
 
 namespace casual
 {
@@ -23,19 +23,19 @@ namespace casual
          {
             struct Default
             {
-               serviceframework::optional< serviceframework::platform::size::type> instances;
-               serviceframework::optional< bool> restart;
-               serviceframework::optional< std::vector< std::string>> memberships;
+               common::optional< common::platform::size::type> instances;
+               common::optional< bool> restart;
+               common::optional< std::vector< std::string>> memberships;
 
-               serviceframework::optional< Environment> environment;
+               common::optional< Environment> environment;
 
 
                CASUAL_CONST_CORRECT_SERIALIZE
                (
-                  archive & CASUAL_MAKE_NVP( instances);
-                  archive & CASUAL_MAKE_NVP( restart);
-                  archive & CASUAL_MAKE_NVP( memberships);
-                  archive & CASUAL_MAKE_NVP( environment);
+                  CASUAL_SERIALIZE( instances);
+                  CASUAL_SERIALIZE( restart);
+                  CASUAL_SERIALIZE( memberships);
+                  CASUAL_SERIALIZE( environment);
                )
             };
 
@@ -47,21 +47,21 @@ namespace casual
             Executable( std::function< void(Executable&)> foreign);
 
             std::string path;
-            serviceframework::optional< std::string> alias;
-            serviceframework::optional< std::string> note;
+            common::optional< std::string> alias;
+            common::optional< std::string> note;
 
 
-            serviceframework::optional< std::vector< std::string>> arguments;
+            common::optional< std::vector< std::string>> arguments;
 
 
             CASUAL_CONST_CORRECT_SERIALIZE
             (
-               archive & CASUAL_MAKE_NVP( path);
-               archive & CASUAL_MAKE_NVP( alias);
-               archive & CASUAL_MAKE_NVP( arguments);
+               CASUAL_SERIALIZE( path);
+               CASUAL_SERIALIZE( alias);
+               CASUAL_SERIALIZE( arguments);
 
                executable::Default::serialize( archive);
-               archive & CASUAL_MAKE_NVP( note);
+               CASUAL_SERIALIZE( note);
             )
 
             friend bool operator == ( const Executable& lhs, const Executable& rhs);
@@ -81,14 +81,14 @@ namespace casual
             Server();
             Server( std::function< void(Server&)> foreign);
 
-            serviceframework::optional< std::vector< std::string>> restrictions;
-            serviceframework::optional< std::vector< std::string>> resources;
+            common::optional< std::vector< std::string>> restrictions;
+            common::optional< std::vector< std::string>> resources;
 
             CASUAL_CONST_CORRECT_SERIALIZE
             (
                Executable::serialize( archive);
-               archive & CASUAL_MAKE_NVP( restrictions);
-               archive & CASUAL_MAKE_NVP( resources);
+               CASUAL_SERIALIZE( restrictions);
+               CASUAL_SERIALIZE( resources);
             )
 
             friend bool operator == ( const Server& lhs, const Server& rhs);

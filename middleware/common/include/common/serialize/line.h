@@ -9,7 +9,7 @@
 #include "common/serialize/archive.h"
 #include "common/serialize/traits.h"
 
-#include "common/stream.h"
+#include "common/log/stream.h"
 
 #include <iosfwd>
 
@@ -33,15 +33,16 @@ namespace casual
          template< typename C> 
          struct has_formatter< C, std::enable_if_t< 
             serialize::traits::has::serialize< C, serialize::Writer>::value
-            && ! traits::has::ostream_stream_operator< C>::value>>
-            : std::true_type
+            && ! traits::has::ostream_stream_operator< C>::value
+            >> : std::true_type
          {
             struct formatter
             {
-               void operator () ( std::ostream& out, const C& value) const
+               template< typename V>
+               void operator () ( std::ostream& out, V&& value) const
                {
                   auto archive = serialize::line::writer( out);
-                  archive << serialize::named::value::make( value, nullptr);
+                  archive << serialize::named::value::make( std::forward< V>( value), nullptr);
                }
             };
          };

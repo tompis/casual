@@ -529,6 +529,15 @@ namespace casual
                template< typename T> 
                using ostream_stream_operator = decltype( std::declval< std::ostream&>() << std::declval< T&>());
 
+               namespace value
+               {
+                  template< typename T>
+                  using insert = decltype( std::declval< T&>().insert( *std::begin( std::declval< T&>())));
+               } // value
+
+               template< typename T>
+               using flush = decltype( std::declval< T&>().flush());
+
             } // detail
 
             template< typename T>
@@ -540,15 +549,23 @@ namespace casual
             template< typename T>
             using empty = detect::is_detected< detail::empty, T>;
 
-
             template< typename T>
             using insert = detect::is_detected< detail::insert, T>;
+
+            namespace value
+            {
+               template< typename T>
+               using insert = detect::is_detected< detail::value::insert, T>;
+            } // value
 
             template< typename T>
             using push_back = detect::is_detected< detail::push_back, T>;
 
             template< typename T>
             using ostream_stream_operator = detect::is_detected< detail::ostream_stream_operator, T>;
+
+            template< typename T>
+            using flush = detect::is_detected< detail::flush, T>;
          } // has
 
          namespace is
@@ -622,6 +639,29 @@ namespace casual
                using like = bool_constant< is::iterable< T>::value 
                   && is::binary::value< detect::detected_t< detail::iterator_value, T>>::value>;
             } // binary
+
+            namespace sequence
+            {
+               template< typename T>
+               using like = bool_constant< is::iterable< T>::value 
+                  && has::resize< T>::value>;
+               
+            } // sequence
+
+            namespace associative
+            {
+               template< typename T>
+               using like = bool_constant< is::iterable< T>::value 
+                  && has::value::insert< T>::value>;
+               
+            } // associative
+
+            namespace container
+            {
+               template< typename T>
+               using like = bool_constant< is::sequence::like< T>::value 
+                  || is::associative::like< T>::value>;
+            } // container
 
             namespace reverse
             {

@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 
 
-#include "serviceframework/namevaluepair.h"
+#include "common/serialize/macro.h"
 
 
 

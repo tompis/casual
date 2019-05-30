@@ -147,12 +147,9 @@ namespace casual
       static_assert( ! std::is_trivial< Range< int*>>::value, "trivially copyable");
 
 
-
-      //!
       //! This is not intended to be a serious attempt at a range-library
       //! Rather an abstraction that helps our use-cases and to get a feel for
       //! what a real range-library could offer. It's a work in progress
-      //!
       namespace range
       {
          namespace category

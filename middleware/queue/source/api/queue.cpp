@@ -45,7 +45,7 @@ namespace casual
                } // exception
 
                template< typename M>
-               serviceframework::platform::Uuid enqueue( const queue::Lookup& lookup, M&& message)
+               common::platform::Uuid enqueue( const queue::Lookup& lookup, M&& message)
                {
                   Trace trace( "casual::queue::enqueue");
 
@@ -225,7 +225,7 @@ namespace casual
             } // <unnamed>
          } // local
 
-         serviceframework::platform::Uuid enqueue( const std::string& queue, const Message& message)
+         common::platform::Uuid enqueue( const std::string& queue, const Message& message)
          {
             Trace trace( "casual::queue::enqueue");
 
@@ -326,12 +326,12 @@ namespace casual
                   Payload& operator = ( Payload&&) = default;
 
                   std::string type;
-                  serviceframework::platform::binary::type data;
+                  common::platform::binary::type data;
 
                   CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     archive & CASUAL_MAKE_NVP( type);
-                     archive & CASUAL_MAKE_NVP( data);
+                     CASUAL_SERIALIZE( type);
+                     CASUAL_SERIALIZE( data);
                   })
                };
 
@@ -340,7 +340,7 @@ namespace casual
 
             } // reference
 
-            serviceframework::platform::Uuid enqueue( const std::string& queue, const Message& message)
+            common::platform::Uuid enqueue( const std::string& queue, const Message& message)
             {
                Trace trace{ "casual::queue::xatmi::enqueue"};
 

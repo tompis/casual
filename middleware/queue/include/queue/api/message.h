@@ -8,8 +8,8 @@
 #pragma once
 
 
-#include "serviceframework/namevaluepair.h"
-#include "serviceframework/platform.h"
+#include "common/serialize/macro.h"
+#include "common/platform.h"
 #include "serviceframework/log.h"
 
 #include <string>
@@ -20,7 +20,7 @@ namespace casual
    {
       inline namespace v1  {
 
-      using size_type = serviceframework::platform::size::type;
+      using size_type = common::platform::size::type;
 
       struct Attributes
       {
@@ -37,13 +37,13 @@ namespace casual
          //!
          //! When the message is available, in absolute time.
          //!
-         serviceframework::platform::time::point::type available = serviceframework::platform::time::point::type::min();
+         common::platform::time::point::type available = common::platform::time::point::type::min();
 
          CASUAL_CONST_CORRECT_SERIALIZE(
          {
-            archive & CASUAL_MAKE_NVP( properties);
-            archive & CASUAL_MAKE_NVP( reply);
-            archive & CASUAL_MAKE_NVP( available);
+            CASUAL_SERIALIZE( properties);
+            CASUAL_SERIALIZE( reply);
+            CASUAL_SERIALIZE( available);
          })
 
       };
@@ -59,24 +59,24 @@ namespace casual
          //!
          //! If not 'null', the first message that has this particular id is dequeued
          //!
-         serviceframework::platform::Uuid id;
+         common::platform::Uuid id;
 
          CASUAL_CONST_CORRECT_SERIALIZE(
          {
-            archive & CASUAL_MAKE_NVP( properties);
-            archive & CASUAL_MAKE_NVP( id);
+            CASUAL_SERIALIZE( properties);
+            CASUAL_SERIALIZE( id);
          })
       };
 
       struct Payload
       {
          std::string type;
-         serviceframework::platform::binary::type data;
+         common::platform::binary::type data;
 
          CASUAL_CONST_CORRECT_SERIALIZE(
          {
-            archive & CASUAL_MAKE_NVP( type);
-            archive & CASUAL_MAKE_NVP( data);
+            CASUAL_SERIALIZE( type);
+            CASUAL_SERIALIZE( data);
          })
       };
 
@@ -101,9 +101,9 @@ namespace casual
 
          CASUAL_CONST_CORRECT_SERIALIZE(
          {
-            archive & CASUAL_MAKE_NVP( id);
-            archive & CASUAL_MAKE_NVP( attributes);
-            archive & CASUAL_MAKE_NVP( payload);
+            CASUAL_SERIALIZE( id);
+            CASUAL_SERIALIZE( attributes);
+            CASUAL_SERIALIZE( payload);
          })
       };
 
@@ -130,8 +130,8 @@ namespace casual
 
                   CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     archive & CASUAL_MAKE_NVP( type);
-                     archive & CASUAL_MAKE_NVP( size);
+                     CASUAL_SERIALIZE( type);
+                     CASUAL_SERIALIZE( size);
                   })
 
                } payload;
@@ -143,16 +143,16 @@ namespace casual
 
                CASUAL_CONST_CORRECT_SERIALIZE(
                {
-                  archive & CASUAL_MAKE_NVP( id);
-                  archive & CASUAL_MAKE_NVP( trid);
+                  CASUAL_SERIALIZE( id);
+                  CASUAL_SERIALIZE( trid);
 
-                  archive & CASUAL_MAKE_NVP( state);
+                  CASUAL_SERIALIZE( state);
 
-                  archive & CASUAL_MAKE_NVP( attributes);
-                  archive & CASUAL_MAKE_NVP( payload);
+                  CASUAL_SERIALIZE( attributes);
+                  CASUAL_SERIALIZE( payload);
 
-                  archive & CASUAL_MAKE_NVP( redelivered);
-                  archive & CASUAL_MAKE_NVP( timestamp);
+                  CASUAL_SERIALIZE( redelivered);
+                  CASUAL_SERIALIZE( timestamp);
                })
             };
 

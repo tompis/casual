@@ -7,13 +7,10 @@
 
 #include <gtest/gtest.h>
 
-
 #include "serviceframework/service/protocol.h"
-#include "serviceframework/archive/create.h"
-
+#include "common/serialize/create.h"
 
 #include "../../include/test_vo.h"
-
 
 #include "common/unittest.h"
 
@@ -41,7 +38,7 @@ namespace casual
             {
                auto result = prepare( std::move( protocol));
 
-               auto writer = archive::create::writer::from( result.payload.type, result.payload.memory);
+               auto writer = common::serialize::create::writer::from( result.payload.type, result.payload.memory);
                writer << CASUAL_MAKE_NVP( value);
 
                return result;
@@ -124,7 +121,7 @@ namespace casual
          {
             test::SimpleVO value;
 
-            auto reader = archive::create::reader::strict::from( result.payload.type, result.payload.memory);
+            auto reader = common::serialize::create::reader::strict::from( result.payload.type, result.payload.memory);
             reader >> CASUAL_MAKE_NVP( value);
 
             EXPECT_TRUE( value.m_bool == false);

@@ -51,4 +51,9 @@ namespace casual
 #define CASUAL_SERIALIZE( value) \
    casual::common::serialize::detail::dispatch( archive, value, #value)
 
+#define CASUAL_SERIALIZE_NAME( value, name) \
+   casual::common::serialize::detail::dispatch( archive, value, name)
 
+
+#define CASUAL_MAKE_NVP( member) \
+      casual::common::serialize::named::value::make( member, #member)

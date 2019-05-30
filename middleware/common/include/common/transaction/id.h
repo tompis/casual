@@ -149,16 +149,17 @@ namespace casual
          
       } // transaction
 
+
       namespace serialize
       {
          namespace customize
          {
             //! specialization for transaction ID
+            //! @{
             template< typename A>
-            struct Value< transaction::ID, A>
+            struct Value< transaction::ID, A, std::enable_if_t< ! traits::need::named< A>::value>>
             {
-               static auto write( A& archive, const transaction::ID& value, const char*) -> 
-                  std::enable_if_t< ! traits::need::named< A>::value>
+               static void write( A& archive, const transaction::ID& value, const char*)
                {
                   archive << value.xid.formatID;
 
@@ -171,8 +172,7 @@ namespace casual
                   }
                }
 
-               static auto read( A& archive, transaction::ID& value, const char*) -> 
-                  std::enable_if_t< ! traits::need::named< A>::value>
+               static void read( A& archive, transaction::ID& value, const char*)
                {
                   archive >> value.xid.formatID;
 
@@ -190,6 +190,21 @@ namespace casual
                }
             };
 
+            template< typename A>
+            struct Value< transaction::ID, A, std::enable_if_t< traits::need::named< A>::value>>
+            {
+               static void write( A& archive, const transaction::ID& value, const char* name)
+               {
+                  std::ostringstream out;
+                  out << value;
+
+                  CASUAL_SERIALIZE_NAME( out.str(), name);
+               }
+               
+            };
+
+
+            //! @}
          } // customize
       } // serialize
 

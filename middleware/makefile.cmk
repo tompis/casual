@@ -4,7 +4,7 @@ Parallel( False)
 
 Build( 'common/makefile.cmk')
 Build( 'xatmi/makefile.cmk')
-Build( 'serviceframework/makefile.cmk')
+#Build( 'serviceframework/makefile.cmk')
 Build( 'buffer/makefile.cmk')
 Build( 'configuration/makefile.cmk')
 Build( 'tools/makefile.cmk')

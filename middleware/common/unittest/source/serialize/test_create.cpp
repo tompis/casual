@@ -8,13 +8,13 @@
 #include "common/unittest.h"
 
 
-#include "serviceframework/archive/create.h"
+#include "common/serialize/create.h"
 
 #include "common/buffer/type.h"
 
 namespace casual
 {
-   namespace serviceframework
+   namespace common
    {
       struct Directive
       {
@@ -58,11 +58,11 @@ namespace casual
                {
                   switch( directive.type)
                   {
-                     case Directive::Type::relaxed: return archive::create::reader::relaxed::from( directive.format, source);
-                     case Directive::Type::strict: return archive::create::reader::strict::from( directive.format, source);
-                     case Directive::Type::consumed: return archive::create::reader::consumed::from( directive.format, source);
+                     case Directive::Type::relaxed: return serialize::create::reader::relaxed::from( directive.format, source);
+                     case Directive::Type::strict: return serialize::create::reader::strict::from( directive.format, source);
+                     case Directive::Type::consumed: return serialize::create::reader::consumed::from( directive.format, source);
                   }
-                  return archive::create::reader::strict::from( directive.format, source);
+                  return serialize::create::reader::strict::from( directive.format, source);
                }
             } // create
          } // <unnamed>
@@ -104,7 +104,7 @@ namespace casual
          std::stringstream data;
 
          {
-            auto archive = archive::create::writer::from( directive.format, data);
+            auto archive = serialize::create::writer::from( directive.format, data);
             int int_value = 42;
 
             archive << CASUAL_MAKE_NVP( int_value);
@@ -129,7 +129,7 @@ namespace casual
          platform::binary::type data;
 
          {
-            auto archive = archive::create::writer::from( directive.format, data);
+            auto archive = serialize::create::writer::from( directive.format, data);
             int int_value = 42;
 
             archive << CASUAL_MAKE_NVP( int_value);
@@ -151,10 +151,10 @@ namespace casual
 
          EXPECT_THROW(
          {
-            archive::create::writer::from( "foo", std::cout);
-         }, serviceframework::exception::Validation);
+            serialize::create::writer::from( "foo", std::cout);
+         }, exception::system::invalid::Argument);
 
       }
 
-   } // serviceframework
+   } // common
 } // casual

@@ -17,7 +17,7 @@
 
 #include "serviceframework/service/protocol/call.h"
 #include "serviceframework/archive/log.h"
-#include "serviceframework/archive/create.h"
+#include "common/serialize/create.h"
 
 
 namespace casual
@@ -345,7 +345,7 @@ namespace casual
                void state( const common::optional< std::string>& format)
                {
                   auto state = call::state();
-                  auto archive = serviceframework::archive::create::writer::from( format.value_or( ""), std::cout);
+                  auto archive = common::serialize::create::writer::from( format.value_or( ""), std::cout);
 
                   archive << CASUAL_MAKE_NVP( state);
                }

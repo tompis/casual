@@ -9,8 +9,8 @@
 
 #include "domain/common.h"
 
-#include "serviceframework/namevaluepair.h"
-#include "serviceframework/archive/create.h"
+#include "common/serialize/macro.h"
+#include "common/serialize/create.h"
 
 #include "common/environment.h"
 #include "common/exception/handle.h"
@@ -155,8 +155,8 @@ namespace casual
 
                         CASUAL_CONST_CORRECT_SERIALIZE
                         (
-                           archive & CASUAL_MAKE_NVP( major);
-                           archive & CASUAL_MAKE_NVP( minor);
+                           CASUAL_SERIALIZE( major);
+                           CASUAL_SERIALIZE( minor);
                         )
 
                      };
@@ -171,7 +171,7 @@ namespace casual
 
                         CASUAL_CONST_CORRECT_SERIALIZE
                         (
-                           archive & CASUAL_MAKE_NVP( version);
+                           CASUAL_SERIALIZE( version);
                            archive & serviceframework::name::value::pair::make( "state", state.get());
                         )
                      };
@@ -193,7 +193,7 @@ namespace casual
                   auto persistent = local::persistent( state);
 
                   common::file::Output file{ name};
-                  auto archive = serviceframework::archive::create::writer::from( file.extension(), file);
+                  auto archive = common::serialize::create::writer::from( file.extension(), file);
                   
                   archive << CASUAL_MAKE_NVP( persistent);
                }
@@ -206,7 +206,7 @@ namespace casual
                   auto persistent = local::persistent( state);
 
                   common::file::Input file{ name};
-                  auto archive = serviceframework::archive::create::reader::relaxed::from( file.extension(), file);
+                  auto archive = common::serialize::create::reader::relaxed::from( file.extension(), file);
                   
                   archive >> CASUAL_MAKE_NVP( persistent);
 

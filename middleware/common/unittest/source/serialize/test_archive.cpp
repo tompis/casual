@@ -9,8 +9,8 @@
 #include <gtest/gtest.h>
 
 
-#include "serviceframework/namevaluepair.h"
-#include "serviceframework/archive/binary.h"
+#include "common/serialize/macro.h"
+#include "common/serialize/binary.h"
 
 #include "common/log.h"
 
@@ -30,8 +30,8 @@ namespace casual
    TEST( serviceframework_binary_writer, serialize_pod)
    {
 
-      serviceframework::platform::binary::type buffer;
-      auto writer = serviceframework::archive::binary::writer( buffer);
+      common::platform::binary::type buffer;
+      auto writer = common::serialize::binary::writer( buffer);
 
       writer << CASUAL_MAKE_NVP( 10);
    }
@@ -39,12 +39,12 @@ namespace casual
    TEST( serviceframework_binary_writer, serialize_string)
    {
 
-      serviceframework::platform::binary::type buffer;
-      auto writer = serviceframework::archive::binary::writer( buffer);
+      common::platform::binary::type buffer;
+      auto writer = common::serialize::binary::writer( buffer);
 
       writer << CASUAL_MAKE_NVP( std::string{ "test"});
 
-      auto reader = serviceframework::archive::binary::reader( buffer);
+      auto reader = common::serialize::binary::reader( buffer);
 
       std::string result;
 
@@ -60,12 +60,12 @@ namespace casual
    TEST( serviceframework_binary_reader_writer, serialize_pod)
    {
 
-      serviceframework::platform::binary::type buffer;
-      auto writer = serviceframework::archive::binary::writer( buffer);
+      common::platform::binary::type buffer;
+      auto writer = common::serialize::binary::writer( buffer);
 
       writer << CASUAL_MAKE_NVP( 34L);
 
-      auto reader = serviceframework::archive::binary::reader( buffer);
+      auto reader = common::serialize::binary::reader( buffer);
 
       long result;
 
@@ -80,8 +80,8 @@ namespace casual
    TEST( serviceframework_binary_reader_writer, serialize_vector_long)
    {
 
-      serviceframework::platform::binary::type buffer;
-      auto writer = serviceframework::archive::binary::writer( buffer);
+      common::platform::binary::type buffer;
+      auto writer = common::serialize::binary::writer( buffer);
 
 
       std::vector< long> someInts = { 1, 2, 3, 4 };
@@ -90,7 +90,7 @@ namespace casual
 
       std::vector< long> result;
 
-      auto reader = serviceframework::archive::binary::reader( buffer);
+      auto reader = common::serialize::binary::reader( buffer);
 
       reader >> CASUAL_MAKE_NVP( result);
 
@@ -106,8 +106,8 @@ namespace casual
    TEST( serviceframework_binary_reader_writer, map_long_string)
    {
 
-      serviceframework::platform::binary::type buffer;
-      auto writer = serviceframework::archive::binary::writer( buffer);
+      common::platform::binary::type buffer;
+      auto writer = common::serialize::binary::writer( buffer);
 
       std::map< long, std::string> value = { { 1, "test 1"}, { 2, "test 2"}, { 3, "test 3"}, { 4, "test 4"} };
 
@@ -116,7 +116,7 @@ namespace casual
 
       std::map< long, std::string> result;
 
-      auto reader = serviceframework::archive::binary::reader( buffer);
+      auto reader = common::serialize::binary::reader( buffer);
 
       reader >> CASUAL_MAKE_NVP( result);
 
@@ -138,18 +138,18 @@ namespace casual
 
       CASUAL_CONST_CORRECT_SERIALIZE
       (
-         archive & CASUAL_MAKE_NVP( someString);
-         archive & CASUAL_MAKE_NVP( someLong);
+         CASUAL_SERIALIZE( someString);
+         CASUAL_SERIALIZE( someLong);
       )
    };
 
    TEST( serviceframework_binary_reader_writer, serializible)
    {
 
-      serviceframework::platform::binary::type buffer;
+      common::platform::binary::type buffer;
 
       {
-         auto writer = serviceframework::archive::binary::writer( buffer);
+         auto writer = common::serialize::binary::writer( buffer);
 
          Serializible value;
          value.someLong = 23;
@@ -159,7 +159,7 @@ namespace casual
       }
 
       {
-         auto reader = serviceframework::archive::binary::reader( buffer);
+         auto reader = common::serialize::binary::reader( buffer);
 
          Serializible value;
          reader >> CASUAL_MAKE_NVP( value);
@@ -173,7 +173,7 @@ namespace casual
    TEST( serviceframework_binary_reader_writer, complex_serializible)
    {
 
-      serviceframework::platform::binary::type buffer;
+      common::platform::binary::type buffer;
 
       {
          test::Composite value;
@@ -186,13 +186,13 @@ namespace casual
 
          std::vector< test::Composite> range{ value, value, value, value};
 
-         auto writer = serviceframework::archive::binary::writer( buffer);
+         auto writer = common::serialize::binary::writer( buffer);
          writer << CASUAL_MAKE_NVP( range);
 
       }
 
       {
-         auto reader = serviceframework::archive::binary::reader( buffer);
+         auto reader = common::serialize::binary::reader( buffer);
 
          std::vector< test::Composite> range;
          reader >> CASUAL_MAKE_NVP( range);

@@ -7,6 +7,7 @@
 #pragma once
 
 #include "common/traits.h"
+#include "common/stream.h"
 
 #include <utility>
 #include <type_traits>
@@ -20,7 +21,7 @@ namespace casual
       {
          namespace named
          {
-            template <typename T, typename R>
+            template< typename T, typename R>
             class Value;
 
 
@@ -102,5 +103,23 @@ namespace casual
 
          } // named
       } // serialize
+
+      namespace stream
+      {
+         //! Specialization for serial
+         template< typename T, typename R>
+         struct has_formatter< serialize::named::Value< T, R>, void>
+            : std::true_type
+         {
+            struct formatter
+            {
+               template< typename C>
+               void operator () ( std::ostream& out, C&& value) const
+               {
+                  common::stream::write( out, value.name(), ": ", value.value());
+               }
+            };
+         };
+      } // stream
    } // common
 } // casual

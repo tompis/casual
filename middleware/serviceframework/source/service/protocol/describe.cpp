@@ -5,18 +5,17 @@
 //!
 
 
-#include "serviceframework/archive/service.h"
+#include "serviceframework/service/protocol/describe.h"
 
-#include "serviceframework/platform.h"
-
+#include "common/platform.h"
 
 namespace casual
 {
    namespace serviceframework
    {
-      namespace archive
+      namespace service
       {
-         namespace service
+         namespace protocol
          {
             namespace describe
             {
@@ -32,11 +31,9 @@ namespace casual
 
                            using types_t = std::vector< serviceframework::service::Model::Type>;
 
-                           Writer( types_t& types) : m_stack{ &types}
-                           {
-                           }
+                           Writer( types_t& types) : m_stack{ &types} {}
 
-                           platform::size::type container_start( const platform::size::type size, const char* name)
+                           common::platform::size::type container_start( common::platform::size::type size, const char* name)
                            {
                               auto& current = *m_stack.back();
 
@@ -44,7 +41,7 @@ namespace casual
 
                               m_stack.push_back( &current.back().attribues);
 
-                                 return 1;
+                              return 1;
                            }
 
                            void container_end( const char*)
@@ -53,7 +50,7 @@ namespace casual
                            }
 
                            
-                           void serialtype_start( const char* name)
+                           void composite_start( const char* name)
                            {
                               auto& current = *m_stack.back();
 
@@ -62,7 +59,7 @@ namespace casual
                               m_stack.push_back( &current.back().attribues);
                            }
 
-                           void serialtype_end( const char*)
+                           void composite_end( const char*)
                            {
                               m_stack.pop_back();
                            }
@@ -81,9 +78,9 @@ namespace casual
 
                         struct Prepare
                         {
-                           bool serialtype_start( const char*) { return true;}
+                           bool composite_start( const char*) { return true;}
 
-                           std::tuple< platform::size::type, bool> container_start( platform::size::type size, const char*)
+                           std::tuple< common::platform::size::type, bool> container_start( common::platform::size::type size, const char*)
                            {
                               if( size == 0)
                               {
@@ -94,7 +91,7 @@ namespace casual
                            }
 
                            void container_end( const char*) { /*no op*/}
-                           void serialtype_end( const char*) { /*no op*/}
+                           void composite_end( const char*) { /*no op*/}
 
                            template< typename T>
                            bool read( T& value, const char*)
@@ -109,15 +106,15 @@ namespace casual
                } // local
 
                
-               archive::Reader prepare() { return archive::Reader::emplace< local::implementation::Prepare>();}
+               common::serialize::Reader prepare() { return common::serialize::Reader::emplace< local::implementation::Prepare>();}
                
-               archive::Writer writer( std::vector< serviceframework::service::Model::Type>& types)
+               common::serialize::Writer writer( std::vector< serviceframework::service::Model::Type>& types)
                {
-                  return archive::Writer::emplace< local::implementation::Writer>( types);
+                  return common::serialize::Writer::emplace< local::implementation::Writer>( types);
                }
 
             } // describe
-         } // service
-      } // archive
+         } // protocol
+      } // service
    } // serviceframework
 } // casual

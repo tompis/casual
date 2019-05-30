@@ -9,8 +9,7 @@
 
 
 
-#include "serviceframework/namevaluepair.h"
-#include "serviceframework/platform.h"
+#include "common/serialize/macro.h"
 
 #include <string>
 #include <vector>
@@ -33,8 +32,8 @@ namespace casual
 
             CASUAL_CONST_CORRECT_SERIALIZE
             (
-               archive & CASUAL_MAKE_NVP( key);
-               archive & CASUAL_MAKE_NVP( value);
+               CASUAL_SERIALIZE( key);
+               CASUAL_SERIALIZE( value);
             )
 
             friend bool operator == ( const Variable& lhs, const Variable& rhs);
@@ -53,8 +52,8 @@ namespace casual
 
          CASUAL_CONST_CORRECT_SERIALIZE
          (
-            archive & CASUAL_MAKE_NVP( files);
-            archive & CASUAL_MAKE_NVP( variables);
+            CASUAL_SERIALIZE( files);
+            CASUAL_SERIALIZE( variables);
          )
 
          friend bool operator == ( const Environment& lhs, const Environment& rhs);

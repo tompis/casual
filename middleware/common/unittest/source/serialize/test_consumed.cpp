@@ -7,12 +7,12 @@
 
 #include "common/unittest.h"
 
-#include "serviceframework/archive/create.h"
+#include "common/serialize/create.h"
 
 
 namespace casual
 {
-   namespace serviceframework
+   namespace common
    {
       struct archive_maker : public ::testing::TestWithParam<const char*> 
       {
@@ -30,7 +30,7 @@ namespace casual
          std::stringstream stream;
 
          {
-            auto archive = archive::create::writer::from( this->param(), stream);
+            auto archive = serialize::create::writer::from( this->param(), stream);
             int int_value = 42;
 
             archive << CASUAL_MAKE_NVP( int_value);
@@ -38,7 +38,7 @@ namespace casual
 
 
          EXPECT_NO_THROW({
-            auto archive = archive::create::reader::consumed::from( this->param(), stream);
+            auto archive = serialize::create::reader::consumed::from( this->param(), stream);
          });
       }
 
@@ -49,14 +49,14 @@ namespace casual
          std::stringstream stream;
 
          {
-            auto archive = archive::create::writer::from( this->param(), stream);
+            auto archive = serialize::create::writer::from( this->param(), stream);
             int int_value = 42;
 
             archive << CASUAL_MAKE_NVP( int_value);
          }
 
          EXPECT_THROW({
-            auto archive = archive::create::reader::consumed::from( this->param(), stream);
+            auto archive = serialize::create::reader::consumed::from( this->param(), stream);
             archive.validate();
          }, common::exception::casual::invalid::Configuration) << "stream: " << stream.str();
       }
@@ -68,14 +68,14 @@ namespace casual
          std::stringstream stream;
 
          {
-            auto archive = archive::create::writer::from( this->param(), stream);
+            auto archive = serialize::create::writer::from( this->param(), stream);
             std::vector< int> sequence{ 42, 43};
 
             archive << CASUAL_MAKE_NVP( sequence);
          }
 
          EXPECT_THROW({
-            auto archive = archive::create::reader::consumed::from(  this->param(), stream);
+            auto archive = serialize::create::reader::consumed::from(  this->param(), stream);
             archive.validate();
          }, common::exception::casual::invalid::Configuration) << "stream: " << stream.str();
       }
@@ -91,9 +91,9 @@ namespace casual
                std::vector< int> sequence;
 
                CASUAL_CONST_CORRECT_SERIALIZE(
-                  archive & CASUAL_MAKE_NVP( my_long);
-                  archive & CASUAL_MAKE_NVP( my_string);
-                  archive & CASUAL_MAKE_NVP( sequence);
+                  CASUAL_SERIALIZE( my_long);
+                  CASUAL_SERIALIZE( my_string);
+                  CASUAL_SERIALIZE( sequence);
                )
             };
          } // <unnamed>
@@ -106,13 +106,13 @@ namespace casual
          std::stringstream stream;
          
          {
-            auto archive = archive::create::writer::from( this->param(), stream);
+            auto archive = serialize::create::writer::from( this->param(), stream);
             local::Composite composite;
             archive << CASUAL_MAKE_NVP( composite);
          }
 
          EXPECT_THROW({
-            auto archive = archive::create::reader::consumed::from(  this->param(), stream);
+            auto archive = serialize::create::reader::consumed::from(  this->param(), stream);
             archive.validate();
          }, common::exception::casual::invalid::Configuration);
       }
@@ -128,13 +128,13 @@ namespace casual
          std::stringstream stream;
 
          {
-            auto archive = archive::create::writer::from( this->param(), stream);
+            auto archive = serialize::create::writer::from( this->param(), stream);
             auto& sequence = expected;
 
             archive << CASUAL_MAKE_NVP( sequence);
          }
 
-         auto archive = archive::create::reader::consumed::from( this->param(), stream);
+         auto archive = serialize::create::reader::consumed::from( this->param(), stream);
 
          std::vector< int> sequence;
 
@@ -156,7 +156,7 @@ namespace casual
          std::stringstream stream;
 
          {
-            auto archive = archive::create::writer::from( this->param(), stream);
+            auto archive = serialize::create::writer::from( this->param(), stream);
             local::Composite composite;
             composite.my_long = 42;
             composite.my_string = "foo";
@@ -166,7 +166,7 @@ namespace casual
          }
 
 
-         auto archive = archive::create::reader::consumed::from( this->param(), stream);
+         auto archive = serialize::create::reader::consumed::from( this->param(), stream);
 
          local::Composite composite;
 
@@ -194,9 +194,9 @@ namespace casual
                std::vector< local::Composite> sequence;
 
                CASUAL_CONST_CORRECT_SERIALIZE(
-                  archive & CASUAL_MAKE_NVP( my_long);
-                  archive & CASUAL_MAKE_NVP( composite);
-                  archive & CASUAL_MAKE_NVP( sequence);
+                  CASUAL_SERIALIZE( my_long);
+                  CASUAL_SERIALIZE( composite);
+                  CASUAL_SERIALIZE( sequence);
                )
             };
          } // <unnamed>
@@ -209,7 +209,7 @@ namespace casual
          std::stringstream stream;
 
          {
-            auto archive = archive::create::writer::from( this->param(), stream);
+            auto archive = serialize::create::writer::from( this->param(), stream);
             local::Nested nested;
             nested.my_long = 42;
             nested.composite.my_long = 43;
@@ -221,7 +221,7 @@ namespace casual
          }
 
 
-         auto archive = archive::create::reader::consumed::from( this->param(), stream);
+         auto archive = serialize::create::reader::consumed::from( this->param(), stream);
 
          local::Nested nested;
 
@@ -254,9 +254,9 @@ namespace casual
                      bool active = false;
 
                      CASUAL_CONST_CORRECT_SERIALIZE(
-                        archive & CASUAL_MAKE_NVP( value1);
-                        archive & CASUAL_MAKE_NVP( value2);
-                        archive & CASUAL_MAKE_NVP( active);
+                        CASUAL_SERIALIZE( value1);
+                        CASUAL_SERIALIZE( value2);
+                        CASUAL_SERIALIZE( active);
                      )
                   };
 
@@ -268,11 +268,11 @@ namespace casual
                   std::vector< long> plain_sequence = { 3, 43, 4, 543, 5, 34, 345, 3};
 
                   CASUAL_CONST_CORRECT_SERIALIZE(
-                     archive & CASUAL_MAKE_NVP( name);
-                     archive & CASUAL_MAKE_NVP( age);
-                     archive & CASUAL_MAKE_NVP( composit);
-                     archive & CASUAL_MAKE_NVP( nested);
-                     archive & CASUAL_MAKE_NVP( plain_sequence);
+                     CASUAL_SERIALIZE( name);
+                     CASUAL_SERIALIZE( age);
+                     CASUAL_SERIALIZE( composit);
+                     CASUAL_SERIALIZE( nested);
+                     CASUAL_SERIALIZE( plain_sequence);
                   )
                };
                
@@ -286,7 +286,7 @@ namespace casual
                   
                   CASUAL_CONST_CORRECT_SERIALIZE(
                      structure::Composite::serialize( archive);
-                     archive & CASUAL_MAKE_NVP( extra_name);
+                     CASUAL_SERIALIZE( extra_name);
                   )
                };
                
@@ -303,19 +303,19 @@ namespace casual
          
          // input
          {
-            auto archive = archive::create::writer::from( this->param(), stream);
+            auto archive = serialize::create::writer::from( this->param(), stream);
             local::input::Composite composite;
             archive << CASUAL_MAKE_NVP( composite);
          }
 
          EXPECT_THROW(
          {
-            auto archive = archive::create::reader::consumed::from( this->param(), stream);
+            auto archive = serialize::create::reader::consumed::from( this->param(), stream);
             local::structure::Composite composite;
             archive >> CASUAL_MAKE_NVP( composite);
             archive.validate();
 
          }, common::exception::casual::invalid::Configuration);
       }
-   } // serviceframework
+   } // common
 } // casual

@@ -22,7 +22,7 @@
 #include "configuration/environment.h"
 
 
-#include "serviceframework/namevaluepair.h"
+#include "common/serialize/macro.h"
 #include "serviceframework/archive/archive.h"
 
 #include <unordered_map>
@@ -112,11 +112,11 @@ namespace casual
                //!
                CASUAL_CONST_CORRECT_SERIALIZE
                (
-                  archive & CASUAL_MAKE_NVP( id);
-                  archive & CASUAL_MAKE_NVP( name);
-                  archive & CASUAL_MAKE_NVP( note);
-                  archive & CASUAL_MAKE_NVP( dependencies);
-                  archive & CASUAL_MAKE_NVP( resources);
+                  CASUAL_SERIALIZE( id);
+                  CASUAL_SERIALIZE( name);
+                  CASUAL_SERIALIZE( note);
+                  CASUAL_SERIALIZE( dependencies);
+                  CASUAL_SERIALIZE( resources);
                )
             };
 
@@ -155,16 +155,16 @@ namespace casual
                //!
                CASUAL_CONST_CORRECT_SERIALIZE
                (
-                  archive & CASUAL_MAKE_NVP( id);
-                  archive & CASUAL_MAKE_NVP( alias);
-                  archive & CASUAL_MAKE_NVP( path);
-                  archive & CASUAL_MAKE_NVP( arguments);
-                  archive & CASUAL_MAKE_NVP( note);
+                  CASUAL_SERIALIZE( id);
+                  CASUAL_SERIALIZE( alias);
+                  CASUAL_SERIALIZE( path);
+                  CASUAL_SERIALIZE( arguments);
+                  CASUAL_SERIALIZE( note);
 
-                  archive & CASUAL_MAKE_NVP( memberships);
+                  CASUAL_SERIALIZE( memberships);
                   archive & serviceframework::name::value::pair::make(  "environment_variables", environment.variables);
-                  archive & CASUAL_MAKE_NVP( restart);
-                  archive & CASUAL_MAKE_NVP( restarts);
+                  CASUAL_SERIALIZE( restart);
+                  CASUAL_SERIALIZE( restarts);
                )
             };
 
@@ -310,11 +310,11 @@ namespace casual
                {
                   Process::serialize( archive);
 
-                  archive & CASUAL_MAKE_NVP( resources);
-                  archive & CASUAL_MAKE_NVP( restrictions);
+                  CASUAL_SERIALIZE( resources);
+                  CASUAL_SERIALIZE( restrictions);
 
                   auto instances_count = instances.size();
-                  archive & CASUAL_MAKE_NVP( instances_count);
+                  CASUAL_SERIALIZE( instances_count);
                   instances.resize( instances_count);
                }
 
@@ -323,11 +323,11 @@ namespace casual
                {
                   Process::serialize( archive);
 
-                  archive & CASUAL_MAKE_NVP( resources);
-                  archive & CASUAL_MAKE_NVP( restrictions);
+                  CASUAL_SERIALIZE( resources);
+                  CASUAL_SERIALIZE( restrictions);
 
                   auto instances_count = instances.size();
-                  archive & CASUAL_MAKE_NVP( instances_count);
+                  CASUAL_SERIALIZE( instances_count);
                }
             };
 
@@ -414,11 +414,11 @@ namespace casual
                //!
                CASUAL_CONST_CORRECT_SERIALIZE
                (
-                  archive & CASUAL_MAKE_NVP( master);
-                  archive & CASUAL_MAKE_NVP( transaction);
-                  archive & CASUAL_MAKE_NVP( queue);
-                  archive & CASUAL_MAKE_NVP( global);
-                  archive & CASUAL_MAKE_NVP( gateway);
+                  CASUAL_SERIALIZE( master);
+                  CASUAL_SERIALIZE( transaction);
+                  CASUAL_SERIALIZE( queue);
+                  CASUAL_SERIALIZE( global);
+                  CASUAL_SERIALIZE( gateway);
                )
 
             } group_id;
@@ -509,13 +509,13 @@ namespace casual
             //!
             CASUAL_CONST_CORRECT_SERIALIZE
             (
-               archive & CASUAL_MAKE_NVP( manager_id);
-               archive & CASUAL_MAKE_NVP( groups);
-               archive & CASUAL_MAKE_NVP( servers);
-               archive & CASUAL_MAKE_NVP( executables);
-               archive & CASUAL_MAKE_NVP( group_id);
-               archive & CASUAL_MAKE_NVP( environment);
-               archive & CASUAL_MAKE_NVP( configuration);
+               CASUAL_SERIALIZE( manager_id);
+               CASUAL_SERIALIZE( groups);
+               CASUAL_SERIALIZE( servers);
+               CASUAL_SERIALIZE( executables);
+               CASUAL_SERIALIZE( group_id);
+               CASUAL_SERIALIZE( environment);
+               CASUAL_SERIALIZE( configuration);
             )
 
             bool mandatory_prepare = true;

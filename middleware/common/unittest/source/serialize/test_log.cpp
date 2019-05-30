@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-#include "serviceframework/archive/log.h"
+#include "common/serialize/log.h"
 
 
 #include <sstream>
@@ -19,7 +19,7 @@ namespace casual
    {
       std::ostringstream out;
       {
-         auto archive = serviceframework::archive::log::writer( out);
+         auto archive = common::serialize::log::writer( out);
          long value = 10;
          archive << CASUAL_MAKE_NVP( value);
       }
@@ -50,7 +50,7 @@ namespace casual
    {
       std::ostringstream out;
       {
-         auto archive = serviceframework::archive::log::writer( out);
+         auto archive = common::serialize::log::writer( out);
          local::Composite composite;
          archive << CASUAL_MAKE_NVP( composite);
       }

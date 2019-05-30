@@ -114,12 +114,12 @@ proxy:
       template< typename A>
       void serialize( A& archive)
       {
-         archive & CASUAL_MAKE_NVP( name);
-         archive & CASUAL_MAKE_NVP( documentation);
-         archive & CASUAL_MAKE_NVP( language);
+         CASUAL_SERIALIZE( name);
+         CASUAL_SERIALIZE( documentation);
+         CASUAL_SERIALIZE( language);
          archive & serviceframework::name::value::pair::make( "namespace", name_space);
-         archive & CASUAL_MAKE_NVP( output_headers);
-         archive & CASUAL_MAKE_NVP( output_source);
+         CASUAL_SERIALIZE( output_headers);
+         CASUAL_SERIALIZE( output_source);
 
       }
    };
@@ -132,8 +132,8 @@ proxy:
       template< typename A>
       void serialize( A& archive)
       {
-         archive & CASUAL_MAKE_NVP( name);
-         archive & CASUAL_MAKE_NVP( type);
+         CASUAL_SERIALIZE( name);
+         CASUAL_SERIALIZE( type);
       }
    };
 
@@ -149,10 +149,10 @@ proxy:
       template< typename A>
       void serialize( A& archive)
       {
-         archive & CASUAL_MAKE_NVP( name);
-         archive & CASUAL_MAKE_NVP( documentation);
+         CASUAL_SERIALIZE( name);
+         CASUAL_SERIALIZE( documentation);
          archive & serviceframework::name::value::pair::make( "return", return_type);
-         archive & CASUAL_MAKE_NVP( arguments);
+         CASUAL_SERIALIZE( arguments);
       }
 
    };
@@ -167,7 +167,7 @@ proxy:
       {
          Module::serialize( archive);
 
-         archive & CASUAL_MAKE_NVP( services);
+         CASUAL_SERIALIZE( services);
       }
    };
 
@@ -180,7 +180,7 @@ proxy:
       template< typename A>
       void serialize( A& archive)
       {
-         archive & CASUAL_MAKE_NVP( server);
+         CASUAL_SERIALIZE( server);
       }
 
 
@@ -198,8 +198,8 @@ proxy:
       template< typename A>
       void serialize( A& archive)
       {
-         archive & CASUAL_MAKE_NVP( name);
-         archive & CASUAL_MAKE_NVP( reference);
+         CASUAL_SERIALIZE( name);
+         CASUAL_SERIALIZE( reference);
       }
 
 
@@ -214,7 +214,7 @@ proxy:
       void serialize( A& archive)
       {
          Module::serialize( archive);
-         archive & CASUAL_MAKE_NVP( functions);
+         CASUAL_SERIALIZE( functions);
       }
 
    };

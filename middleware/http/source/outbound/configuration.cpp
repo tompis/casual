@@ -15,8 +15,8 @@
 
 #include "common/algorithm.h"
 
-#include "serviceframework/archive/create.h"
-#include "serviceframework/platform.h"
+#include "common/serialize/create.h"
+#include "common/platform.h"
 
 namespace casual
 {
@@ -41,7 +41,7 @@ namespace casual
                      //
                      Model http;
                      common::file::Input file{ name};
-                     auto reader = serviceframework::archive::create::reader::consumed::from( file.extension(), file);
+                     auto reader = common::serialize::create::reader::consumed::from( file.extension(), file);
                      
                      reader >> CASUAL_MAKE_NVP( http);
                      reader.validate();

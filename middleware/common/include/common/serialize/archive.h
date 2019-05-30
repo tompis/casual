@@ -11,15 +11,9 @@
 #include "common/serialize/named/value.h"
 #include "common/serialize/traits.h"
 #include "common/serialize/customize.h"
-
-#include "common/exception/casual.h"
-#include "common/string.h"
 #include "common/platform.h"
-#include "common/pimpl.h"
-
 
 #include <utility>
-
 
 namespace casual
 {
@@ -102,7 +96,7 @@ namespace casual
                void container_end( const char* name) override { m_protocol.container_end( name);}
 
                bool composite_start( const char* name) override { return m_protocol.composite_start( name);}
-               void composite_end(  const char* name) override { m_protocol.omposite_end(  name);}
+               void composite_end(  const char* name) override { m_protocol.composite_end(  name);}
 
                bool read( bool& value, const char* name) override { return m_protocol.read( value, name);}
                bool read( char& value, const char* name) override { return m_protocol.read( value, name);}
@@ -141,158 +135,37 @@ namespace casual
             std::unique_ptr< concept> m_protocol;
 
          };
-
-
-
-         template< typename NVP>
-         Reader& operator >> ( Reader& archive, NVP&& nvp);
-
-
-
-         template< typename T>
-         std::enable_if_t< ! traits::has::serialize< T, Reader>::value, bool>
-         serialize( Reader& archive, T& value, const char* const name)
+         
+         namespace detail
          {
-            return customize::value::read( archive, value, name);
-         }
-
-         template< typename T>
-         std::enable_if_t< traits::has::serialize< T, Reader>::value, bool>
-         serialize( Reader& archive, T& value, const char* const name)
-         {
-            if( archive.composite_start( name))
+            template< typename T>
+            std::enable_if_t< ! traits::has::serialize< traits::remove_cvref_t< T>, Reader>::value>
+            serialize( Reader& archive, T& value, const char* const name)
             {
+               customize::value::read( archive, value, name);
+            }
+
+            template< typename T>
+            std::enable_if_t< traits::has::serialize< traits::remove_cvref_t< T>, Reader>::value>
+            serialize( Reader& archive, T& value, const char* const name)
+            {
+               archive.composite_start( name);
                value.serialize( archive);
                archive.composite_end(  name);
-               return true;
-            }
-            return false;
-         }
-
-         namespace detail
-         {
-            template< platform::size::type index>
-            struct tuple_read
-            {
-               template< typename T>
-               static void serialize( Reader& archive, T& value)
-               {
-                  archive >> named::value::make( std::get< std::tuple_size< T>::value - index>( value), nullptr);
-                  tuple_read< index - 1>::serialize( archive, value);
-               }
-            };
-
-            template<>
-            struct tuple_read< 0>
-            {
-               template< typename T>
-               static void serialize( Reader&, T&) {}
-            };
-
-            template< typename T>
-            void serialize_tuple( Reader& archive, T& value, const char* const name)
-            {
-               const auto expected_size = std::tuple_size< T>::value;
-               const auto context = archive.container_start( expected_size, name);
-
-               if( std::get< 1>( context))
-               {
-                  auto size = std::get< 0>( context);
-
-                  if( expected_size != size)
-                  {
-                     throw exception::casual::invalid::Node{ string::compose( "got unexpected size: ", size, " - expected: ", expected_size)};
-                  }
-                  tuple_read< std::tuple_size< T>::value>::serialize( archive, value);
-
-                  archive.container_end( name);
-               }
-            }
+            } 
          } // detail
 
-         template< typename... T>
-         void serialize( Reader& archive, std::tuple< T...>& value, const char* const name)
+         template< typename NV>
+         Reader& operator >> ( Reader& archive, NV&& named)
          {
-            detail::serialize_tuple( archive, value, name);
-         }
-
-         template< typename K, typename V>
-         void serialize( Reader& archive, std::pair< K, V>& value, const char* const name)
-         {
-            detail::serialize_tuple( archive, value, name);
-         }
-
-
-         template< typename T>
-         std::enable_if_t< 
-            traits::container::is_sequence< T>::value 
-            && ! traits::container::is_string< T>::value
-            && ! std::is_same< platform::binary::type, T>::value, bool>
-         serialize( Reader& archive, T& container, const char* const name)
-         {
-            auto properties = archive.container_start( 0, name);
-
-            if( std::get< 1>( properties))
-            {
-               container.resize( std::get< 0>( properties));
-
-               for( auto& element : container)
-               {
-                  archive >> named::value::make( nullptr, element);
-               }
-               archive.container_end( name);
-
-               return true;
-            }
-            return false;
-         }
-
-         namespace detail
-         {
-            template< typename T>
-            struct value { using type = T;};
-
-            template< typename K, typename V>
-            struct value< std::pair< K, V>> { using type = std::pair< typename std::remove_cv< K>::type, V>;};
-
-         } // detail
-
-         template< typename T>
-         std::enable_if_t< traits::container::is_associative< T >::value, bool>
-         serialize( Reader& archive, T& container, const char* const name)
-         {
-            auto properties = archive.container_start( 0, name);
-
-            if( std::get< 1>( properties))
-            {
-               auto count = std::get< 0>( properties);
-
-               while( count-- > 0)
-               {
-                  typename detail::value< typename T::value_type>::type element;
-                  archive >> named::value::make( element, nullptr);
-
-                  container.insert( std::move( element));
-               }
-
-               archive.container_end( name);
-               return true;
-            }
-            return false;
-         }
-
-
-         template< typename NVP>
-         Reader& operator & ( Reader& archive, NVP&& nvp)
-         {
-            return archive >> std::forward< NVP>( nvp);
-         }
-
-         template< typename NVP>
-         Reader& operator >> ( Reader& archive, NVP&& nvp)
-         {
-            serialize( archive, nvp.value(), nvp.name());
+            detail::serialize( archive, named.value(), named.name());
             return archive;
+         }
+
+         template< typename NV>
+         Reader& operator & ( Reader& archive, NV&& named)
+         {
+            return operator >> ( archive, std::forward< NV>( named));
          }
 
 
@@ -368,7 +241,7 @@ namespace casual
                void container_end( const char* name) override { m_protocol.container_end( name);}
 
                void composite_start( const char* name) override { m_protocol.composite_start( name);}
-               void composite_end(  const char* name) override { m_protocol.omposite_end(  name);}
+               void composite_end(  const char* name) override { m_protocol.composite_end(  name);}
 
                void write( bool value, const char* name) override { m_protocol.write( value, name);}
                void write( char value, const char* name) override { m_protocol.write( value, name);}
@@ -384,19 +257,13 @@ namespace casual
 
             private:
                template< typename T>
-               using has_flush = decltype( std::declval< T&>().flush());
-
-               template< typename T>
-               static auto selective_flush( T& protocol) -> 
-                  std::enable_if_t< common::traits::detect::is_detected< has_flush, T>::value>
+               static auto selective_flush( T& protocol) -> std::enable_if_t< common::traits::has::flush< T>::value>
                {
                   protocol.flush();
                }
+               
                template< typename T>
-               static auto selective_flush( T& protocol) -> 
-                  std::enable_if_t< ! common::traits::detect::is_detected< has_flush, T>::value>
-               {
-               }
+               static auto selective_flush( T& protocol) -> std::enable_if_t< ! common::traits::has::flush< T>::value> {}
 
                protocol_type m_protocol;
             };
@@ -422,7 +289,7 @@ namespace casual
             {
                archive.composite_start( name);
                value.serialize( archive);
-               archive.composite_end(  name);
+               archive.composite_end( name);
             } 
          } // detail
 

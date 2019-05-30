@@ -90,7 +90,7 @@ casual_common_objectfiles = [
     
     Compile( 'source/message/type.cpp'),
     Compile( 'source/message/handle.cpp'),
-    Compile( 'source/message/service.cpp'),
+    #Compile( 'source/message/service.cpp'),
     Compile( 'source/message/server.cpp'),
     Compile( 'source/message/queue.cpp'),
     Compile( 'source/message/transaction.cpp'),
@@ -235,9 +235,7 @@ target_simple_process = LinkExecutable( 'bin/simple_process',
     )	
 	
    
-#
 # unittest
-#
 unittest_objectfiles = [
     Compile( 'unittest/source/test_conformance.cpp'),  
     
@@ -307,7 +305,18 @@ unittest_objectfiles = [
     Compile( 'unittest/source/serialize/test_traits.cpp'),
     Compile( 'unittest/source/serialize/test_macro.cpp'),
     Compile( 'unittest/source/serialize/test_line.cpp'),
+    Compile( 'unittest/source/serialize/test_archive.cpp'),
+    Compile( 'unittest/source/serialize/test_consumed.cpp'),
+    Compile( 'unittest/source/serialize/test_create.cpp'),
+    Compile( 'unittest/source/serialize/test_ini.cpp'),
+    Compile( 'unittest/source/serialize/test_json.cpp'),
+    Compile( 'unittest/source/serialize/test_log.cpp'),
+    Compile( 'unittest/source/serialize/test_xml.cpp'),
+    Compile( 'unittest/source/serialize/test_yaml.cpp'),
+    Compile( 'unittest/source/serialize/test_relaxed_write_read.cpp'),
+    Compile( 'unittest/source/serialize/test_write_read.cpp'),
     Compile( 'unittest/source/serialize/native/test_binary.cpp'),
+    
 ]
 
 

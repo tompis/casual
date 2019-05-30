@@ -63,14 +63,11 @@ namespace casual
                {
                   if( local::describe( parameter))
                   {
-                     common::log::line( log::sf, "casual-service-describe protocol");
+                     common::log::line( log::debug, "casual-service-describe protocol");
 
-                     //
                      // service-describe protocol
-                     //
                      return protocol::implementation::Describe( found->second( std::move( parameter)));
                   }
-
 
                   return found->second( std::move( parameter));
                }

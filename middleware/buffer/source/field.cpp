@@ -21,10 +21,11 @@
 #include "common/transcode.h"
 #include "common/execute.h"
 
+#include "common/serialize/create.h"
 
 
-#include "serviceframework/namevaluepair.h"
-#include "serviceframework/archive/create.h"
+
+//#include "common/serialize/create.h"
 
 #include <cstring>
 
@@ -79,9 +80,7 @@ namespace casual
                template<typename... A>
                Buffer( A&&... arguments) : common::buffer::Buffer( std::forward<A>( arguments)...)
                {
-                  //
                   // Create an index upon creation
-                  //
 
                   const auto begin = payload.memory.begin();
                   const auto end = payload.memory.end();
@@ -140,21 +139,15 @@ namespace casual
                   return payload.memory.data();
                }
 
-               //!
                //! Implement Buffer::transport
-               //!
                size_type transport( const common::platform::binary::size::type user_size) const
                {
-                  //
                   // Just ignore user-size all together
-                  //
 
                   return utilized();
                }
 
-               //!
                //! Implement Buffer::reserved
-               //!
                size_type reserved() const
                {
                   return capacity();
@@ -162,10 +155,7 @@ namespace casual
 
             };
 
-
-            //
             // Might be named Pool as well
-            //
             class Allocator : public common::buffer::pool::basic_pool<Buffer>
             {
             public:
@@ -174,9 +164,7 @@ namespace casual
 
                static const types_type& types()
                {
-                  //
                   // The types this pool can manage
-                  //
                   static const types_type result{ common::buffer::type::combine( CASUAL_FIELD)};
                   return result;
                }
@@ -1333,16 +1321,13 @@ namespace casual
                      item_type id; // relative id
                      std::string name;
                      std::string type;
-                     //std::string comment;
-
-                     template< typename A>
-                     void serialize( A& archive)
+                     
+                     CASUAL_CONST_CORRECT_SERIALIZE(
                      {
-                        archive & CASUAL_MAKE_NVP( id);
-                        archive & CASUAL_MAKE_NVP( name);
-                        archive & CASUAL_MAKE_NVP( type);
-                        //archive & CASUAL_MAKE_NVP( comment);
-                     }
+                        CASUAL_SERIALIZE( id);
+                        CASUAL_SERIALIZE( name);
+                        CASUAL_SERIALIZE( type);
+                     })
                   };
 
                   struct group
@@ -1350,12 +1335,11 @@ namespace casual
                      item_type base = 0;
                      std::vector< field> fields;
 
-                     template< typename A>
-                     void serialize( A& archive)
+                     CASUAL_CONST_CORRECT_SERIALIZE(
                      {
-                        archive & CASUAL_MAKE_NVP( base);
-                        archive & CASUAL_MAKE_NVP( fields);
-                     }
+                        CASUAL_SERIALIZE( base);
+                        CASUAL_SERIALIZE( fields);
+                     })
                   };
 
 
@@ -1370,7 +1354,7 @@ namespace casual
                      decltype(fetch_groups()) groups;
 
                      common::file::Input file{ common::environment::variable::get( "CASUAL_FIELD_TABLE")};
-                     auto archive = serviceframework::archive::create::reader::relaxed::from( file.extension(), file);
+                     auto archive = common::serialize::create::reader::relaxed::from( file.extension(), file);
                      
                      archive >> CASUAL_MAKE_NVP( groups);
 
@@ -1496,39 +1480,38 @@ namespace casual
                   {
                      const auto name = "name";
 
-                     archive << serviceframework::name::value::pair::make( name, id_to_name().at( id));
+                     archive << common::serialize::named::value::make( id_to_name().at( id), name);
 
                      const auto value = "value";
 
-                     using serviceframework::name::value::pair::make;
+                     using common::serialize::named::value::make;
 
                      const auto data = occurrence + data_offset;
                      const auto size = occurrence + size_offset;
 
-
                      switch( id / CASUAL_FIELD_TYPE_BASE)
                      {
                      case CASUAL_FIELD_SHORT:
-                        archive << make( value, decode<short>( data));
+                        archive << make( decode<short>( data), value);
                         break;
                      case CASUAL_FIELD_LONG:
-                        archive << make( value, decode<long>( data));
+                        archive << make( decode<long>( data), value);
                         break;
                      case CASUAL_FIELD_CHAR:
-                        archive << make( value, *(data));
+                        archive << make( *(data), value);
                         break;
                      case CASUAL_FIELD_FLOAT:
-                        archive << make( value, decode<float>( data));
+                        archive << make( decode<float>( data), value);
                         break;
                      case CASUAL_FIELD_DOUBLE:
-                        archive << make( value, decode<double>( data));
+                        archive << make( decode<double>( data), value);
                         break;
                      case CASUAL_FIELD_STRING:
-                        archive << make( value, std::string( data));
+                        archive << make( std::string( data), value);
                         break;
                      case CASUAL_FIELD_BINARY:
                      default:
-                        archive << make( value, std::vector<char>( data, data + decode<size_type>( size)));
+                        archive << make( std::vector<char>( data, data + decode<size_type>( size)), value);
                         break;
                      }
                   }
@@ -1545,8 +1528,6 @@ namespace casual
                      archive >> CASUAL_MAKE_NVP( name);
 
                      casual_field_id_of_name( name.c_str(), &m_id);
-
-                     using serviceframework::name::value::pair::make;
 
                      switch( m_id / CASUAL_FIELD_TYPE_BASE)
                      {
@@ -1570,7 +1551,7 @@ namespace casual
                         break;
                      case CASUAL_FIELD_BINARY:
                      default:
-                        archive >> serviceframework::name::value::pair::make( "value", m_value);
+                        archive >> common::serialize::named::value::make( m_value, "value");
                         break;
                      }
                   }
@@ -1611,7 +1592,7 @@ namespace casual
                   void assign( A& archive)
                   {
                      m_value.resize( sizeof( T));
-                     archive >> serviceframework::name::value::pair::make( "value", *reinterpret_cast< T*>( m_value.data()));
+                     archive >> common::serialize::named::value::make( *reinterpret_cast< T*>( m_value.data()), "value");
                   }
 
                   template< typename A>
@@ -1677,7 +1658,7 @@ namespace casual
 
                   common::log::line( verbose::log, "buffer.payload.type: ", buffer.payload.type, " - protocol: ", protocol);
 
-                  auto archive = serviceframework::archive::create::writer::from( protocol, stream);
+                  auto archive = common::serialize::create::writer::from( protocol, stream);
 
                   std::vector< write> fields;
 
@@ -1698,7 +1679,7 @@ namespace casual
 
                   log::line( verbose::log, "protocol: ", protocol);
 
-                  auto archive = serviceframework::archive::create::reader::relaxed::from( protocol, stream);
+                  auto archive = common::serialize::create::reader::relaxed::from( protocol, stream);
 
                   std::vector< read> fields;
                   archive >> CASUAL_MAKE_NVP( fields);

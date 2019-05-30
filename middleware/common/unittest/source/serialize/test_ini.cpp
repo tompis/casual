@@ -9,7 +9,7 @@
 #include <gtest/gtest.h>
 
 
-#include "serviceframework/archive/ini.h"
+#include "common/serialize/ini.h"
 
 #include <sstream>
 #include <locale>
@@ -20,7 +20,7 @@
 
 namespace casual
 {
-   namespace serviceframework
+   namespace common
    {
       namespace
       {
@@ -29,14 +29,14 @@ namespace casual
             template<typename T>
             void value_to_string( T&& value, std::string& string)
             {
-               auto writer = archive::ini::writer( string);
+               auto writer = serialize::ini::writer( string);
                writer << CASUAL_MAKE_NVP( value);
             }
 
             template<typename T>
             void string_to_value( const std::string& string, T& value)
             {
-               auto reader = archive::ini::strict::reader( string);
+               auto reader = serialize::ini::strict::reader( string);
                reader >> CASUAL_MAKE_NVP( value);
             }
 
@@ -96,8 +96,8 @@ namespace casual
 
                CASUAL_CONST_CORRECT_SERIALIZE
                (
-                  archive & CASUAL_MAKE_NVP( integer);
-                  archive & CASUAL_MAKE_NVP( string);
+                  CASUAL_SERIALIZE( integer);
+                  CASUAL_SERIALIZE( string);
                )
             };
 
@@ -110,7 +110,7 @@ namespace casual
 
                   CASUAL_CONST_CORRECT_SERIALIZE
                   (
-                     archive & CASUAL_MAKE_NVP( huge);
+                     CASUAL_SERIALIZE( huge);
                   )
 
                };
@@ -121,8 +121,8 @@ namespace casual
 
                CASUAL_CONST_CORRECT_SERIALIZE
                (
-                  archive & CASUAL_MAKE_NVP( first_inner);
-                  archive & CASUAL_MAKE_NVP( other_inner);
+                  CASUAL_SERIALIZE( first_inner);
+                  CASUAL_SERIALIZE( other_inner);
                )
             };
 
@@ -133,10 +133,10 @@ namespace casual
 
             CASUAL_CONST_CORRECT_SERIALIZE
             (
-               archive & CASUAL_MAKE_NVP( boolean);
-               archive & CASUAL_MAKE_NVP( first);
-               archive & CASUAL_MAKE_NVP( tiny);
-               archive & CASUAL_MAKE_NVP( others);
+               CASUAL_SERIALIZE( boolean);
+               CASUAL_SERIALIZE( first);
+               CASUAL_SERIALIZE( tiny);
+               CASUAL_SERIALIZE( others);
             )
 
          };
@@ -205,8 +205,8 @@ namespace casual
          template<typename A>
          void serialize( A& archive)
          {
-            archive & CASUAL_MAKE_NVP( boolean);
-            archive & CASUAL_MAKE_NVP( integer);
+            CASUAL_SERIALIZE( boolean);
+            CASUAL_SERIALIZE( integer);
          }
       };
 
@@ -221,5 +221,5 @@ namespace casual
          std::cout << ini << '\n';
       }
    */
-   } // serviceframework
+   } // common
 } // casual

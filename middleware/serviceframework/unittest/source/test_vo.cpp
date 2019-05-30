@@ -29,16 +29,16 @@ namespace casual
             std::string m_string;
             short m_short = 0;
             long long m_longlong = 0;
-            serviceframework::platform::time::point::type m_time;
+            common::platform::time::point::type m_time;
 
             template< typename A>
             void serialize( A& archive)
             {
-               archive & CASUAL_MAKE_NVP( m_long);
-               archive & CASUAL_MAKE_NVP( m_string);
-               archive & CASUAL_MAKE_NVP( m_short);
-               archive & CASUAL_MAKE_NVP( m_longlong);
-               archive & CASUAL_MAKE_NVP( m_time);
+               CASUAL_SERIALIZE( m_long);
+               CASUAL_SERIALIZE( m_string);
+               CASUAL_SERIALIZE( m_short);
+               CASUAL_SERIALIZE( m_longlong);
+               CASUAL_SERIALIZE( m_time);
             }
          };
 
@@ -63,7 +63,7 @@ namespace casual
          }
 
 
-         void Simple::serialize( serviceframework::archive::Reader& reader)
+         void Simple::serialize( common::serialize::Reader& reader)
          {
             m_pimpl->serialize( reader);
          }
@@ -85,7 +85,7 @@ namespace casual
 
 
 
-         void Simple::serialize( serviceframework::archive::Writer& writer) const
+         void Simple::serialize( common::serialize::Writer& writer) const
          {
             m_pimpl->serialize( writer);
          }

@@ -53,7 +53,7 @@ namespace casual
                         vo::Entry vo;
                         vo.setService( row.get< std::string>(0));
                         vo.setParentService( row.get< std::string>( 1));
-                        serviceframework::platform::Uuid callId( row.get< std::string>( 2));
+                        common::platform::Uuid callId( row.get< std::string>( 2));
                         vo.setCallId( callId);
                         //vo.setTransactionId( local::getValue( *row, "transactionid"));
 

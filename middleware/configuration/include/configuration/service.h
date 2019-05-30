@@ -7,10 +7,8 @@
 
 #pragma once
 
-
-
-#include "serviceframework/namevaluepair.h"
-#include "serviceframework/platform.h"
+#include "common/serialize/macro.h"
+#include "common/platform.h"
 
 namespace casual
 {
@@ -23,11 +21,11 @@ namespace casual
          {
             struct Default
             {
-               serviceframework::optional< std::string> timeout;
+               common::optional< std::string> timeout;
 
                CASUAL_CONST_CORRECT_SERIALIZE
                (
-                  archive & CASUAL_MAKE_NVP( timeout);
+                  CASUAL_SERIALIZE( timeout);
                )
 
             };
@@ -41,20 +39,18 @@ namespace casual
             Service( std::function< void(Service&)> foreign);
 
             std::string name;
-            serviceframework::optional< std::vector< std::string>> routes;
+            common::optional< std::vector< std::string>> routes;
 
             CASUAL_CONST_CORRECT_SERIALIZE
             (
                service::Default::serialize( archive);
-               archive & CASUAL_MAKE_NVP( name);
-               archive & CASUAL_MAKE_NVP( routes);
+               CASUAL_SERIALIZE( name);
+               CASUAL_SERIALIZE( routes);
             )
 
             friend bool operator == ( const Service& lhs, const Service& rhs);
 
-            //!
             //! Will assign any unassigned values in lhs
-            //!
             friend Service& operator += ( Service& lhs, const service::Default& rhs);
          };
 

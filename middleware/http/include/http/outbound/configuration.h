@@ -11,7 +11,7 @@
 #pragma once
 
 
-#include "serviceframework/namevaluepair.h"
+#include "common/serialize/macro.h"
 #include "common/optional.h"
 
 #include <string>
@@ -39,8 +39,8 @@ namespace casual
 
 
                CASUAL_CONST_CORRECT_SERIALIZE(
-                  archive & CASUAL_MAKE_NVP( name);
-                  archive & CASUAL_MAKE_NVP( value);
+                  CASUAL_SERIALIZE( name);
+                  CASUAL_SERIALIZE( value);
                )
                friend std::ostream& operator << ( std::ostream& out, const Header& value);
             };
@@ -57,10 +57,10 @@ namespace casual
                std::vector< Header> headers;
 
                CASUAL_CONST_CORRECT_SERIALIZE(
-                  archive & CASUAL_MAKE_NVP( name);
-                  archive & CASUAL_MAKE_NVP( url);
-                  archive & CASUAL_MAKE_NVP( headers);
-                  archive & CASUAL_MAKE_NVP( discard_transaction);
+                  CASUAL_SERIALIZE( name);
+                  CASUAL_SERIALIZE( url);
+                  CASUAL_SERIALIZE( headers);
+                  CASUAL_SERIALIZE( discard_transaction);
                )
                friend std::ostream& operator << ( std::ostream& out, const Service& value);
             };
@@ -73,14 +73,14 @@ namespace casual
                   bool discard_transaction = false;
 
                   CASUAL_CONST_CORRECT_SERIALIZE(
-                     archive & CASUAL_MAKE_NVP( headers);
-                     archive & CASUAL_MAKE_NVP( discard_transaction);
+                     CASUAL_SERIALIZE( headers);
+                     CASUAL_SERIALIZE( discard_transaction);
                   )
 
                } service;
 
                CASUAL_CONST_CORRECT_SERIALIZE(
-                  archive & CASUAL_MAKE_NVP( service);
+                  CASUAL_SERIALIZE( service);
                )
 
                friend Default operator + ( Default lhs, Default rhs);
@@ -97,7 +97,7 @@ namespace casual
 
                CASUAL_CONST_CORRECT_SERIALIZE(
                   archive & serviceframework::name::value::pair::make( "default", casual_default);
-                  archive & CASUAL_MAKE_NVP( services);
+                  CASUAL_SERIALIZE( services);
                )
 
                friend Model operator + ( Model lhs, Model rhs);

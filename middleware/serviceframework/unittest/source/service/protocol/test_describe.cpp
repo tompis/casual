@@ -7,9 +7,9 @@
 
 #include <gtest/gtest.h>
 
-#include "serviceframework/archive/service.h"
+#include "serviceframework/service/protocol/describe.h"
 #include "serviceframework/service/protocol.h"
-#include "serviceframework/log.h"
+#include "common/serialize/line.h"
 
 #include <map>
 #include <vector>
@@ -29,10 +29,9 @@ namespace casual
 
       TEST( serviceframework_service_archive, basic_serialization)
       {
-
          service::Model model;
 
-         archive::service::describe::Wrapper writer{ model.arguments.input};
+         service::protocol::describe::Wrapper writer{ model.arguments.input};
 
          std::string some_string;
          long some_long = 0;
@@ -52,7 +51,7 @@ namespace casual
 
          service::Model model;
 
-         archive::service::describe::Wrapper writer{ model.arguments.input};
+         service::protocol::describe::Wrapper writer{ model.arguments.input};
 
          std::vector< std::string> some_strings;
          std::vector< long> some_longs;
@@ -80,18 +79,18 @@ namespace casual
             struct Composite
             {
                std::string some_string;
-               platform::binary::type some_binary;
+               common::platform::binary::type some_binary;
                long some_long = 0;
                bool some_bool = true;
                double some_double = 0.0;
 
                CASUAL_CONST_CORRECT_SERIALIZE(
                {
-                  archive & CASUAL_MAKE_NVP( some_string);
-                  archive & CASUAL_MAKE_NVP( some_binary);
-                  archive & CASUAL_MAKE_NVP( some_long);
-                  archive & CASUAL_MAKE_NVP( some_bool);
-                  archive & CASUAL_MAKE_NVP( some_double);
+                  CASUAL_SERIALIZE( some_string);
+                  CASUAL_SERIALIZE( some_binary);
+                  CASUAL_SERIALIZE( some_long);
+                  CASUAL_SERIALIZE( some_bool);
+                  CASUAL_SERIALIZE( some_double);
                })
 
 
@@ -119,10 +118,6 @@ namespace casual
 
             } // composit
 
-
-
-
-
          } // <unnamed>
       } // local
 
@@ -131,7 +126,7 @@ namespace casual
       {
 
          service::Model model;
-         archive::service::describe::Wrapper writer{ model.arguments.input};
+         service::protocol::describe::Wrapper writer{ model.arguments.input};
 
          local::Composite some_composite;
 
@@ -155,8 +150,8 @@ namespace casual
 
                CASUAL_CONST_CORRECT_SERIALIZE(
                {
-                  archive & CASUAL_MAKE_NVP( some_longs);
-                  archive & CASUAL_MAKE_NVP( some_composites);
+                  CASUAL_SERIALIZE( some_longs);
+                  CASUAL_SERIALIZE( some_composites);
                })
             };
 
@@ -167,7 +162,7 @@ namespace casual
       {
 
          service::Model model;
-         archive::service::describe::Wrapper writer{ model.arguments.input};
+         service::protocol::describe::Wrapper writer{ model.arguments.input};
 
          std::map< local::Composite, local::NestedComposite> complex;
          writer << CASUAL_MAKE_NVP( complex);
@@ -182,7 +177,7 @@ namespace casual
 
             EXPECT_TRUE( map.role.empty());
             EXPECT_TRUE( map.category == service::model::type::Category::container);
-            ASSERT_TRUE( map.attribues.size() == 2) << CASUAL_MAKE_NVP( model);
+            ASSERT_TRUE( map.attribues.size() == 2) << "model: " << model;
 
             {
                auto& first = map.attribues.at( 0);
@@ -191,7 +186,7 @@ namespace casual
 
             {
                auto& second = map.attribues.at( 1);
-               ASSERT_TRUE( second.attribues.size() == 2) << CASUAL_MAKE_NVP( model);
+               ASSERT_TRUE( second.attribues.size() == 2) << "model: " << model;
 
                {
                   auto& some_longs = second.attribues.at( 0);
@@ -210,7 +205,7 @@ namespace casual
 
                   EXPECT_TRUE( some_composites.category == service::model::type::Category::container);
                   EXPECT_TRUE( some_composites.role == "some_composites");
-                  ASSERT_TRUE( some_composites.attribues.size() == 1) << CASUAL_MAKE_NVP( some_composites);
+                  ASSERT_TRUE( some_composites.attribues.size() == 1) << "some_composites: " << some_composites;
 
 
                   local::composit::validate( some_composites.attribues.at( 0));

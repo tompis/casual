@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "serviceframework/namevaluepair.h"
-#include "serviceframework/platform.h"
+#include "common/serialize/macro.h"
+#include "common/platform.h"
 
 namespace casual
 {
@@ -24,15 +24,15 @@ namespace casual
             std::string name;
             std::string note;
 
-            serviceframework::optional< std::vector< std::string>> resources;
-            serviceframework::optional< std::vector< std::string>> dependencies;
+            common::optional< std::vector< std::string>> resources;
+            common::optional< std::vector< std::string>> dependencies;
 
             CASUAL_CONST_CORRECT_SERIALIZE
             (
-               archive & CASUAL_MAKE_NVP( name);
-               archive & CASUAL_MAKE_NVP( note);
-               archive & CASUAL_MAKE_NVP( resources);
-               archive & CASUAL_MAKE_NVP( dependencies);
+               CASUAL_SERIALIZE( name);
+               CASUAL_SERIALIZE( note);
+               CASUAL_SERIALIZE( resources);
+               CASUAL_SERIALIZE( dependencies);
             )
 
             friend bool operator == ( const Group& lhs, const Group& rhs);

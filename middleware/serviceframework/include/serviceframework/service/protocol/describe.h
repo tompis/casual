@@ -9,30 +9,24 @@
 
 
 #include "serviceframework/service/model.h"
-#include "serviceframework/archive/archive.h"
 
-
+#include "common/serialize/archive.h"
 
 namespace casual
 {
    namespace serviceframework
    {
-      namespace archive
+      namespace service
       {
-         namespace service
+         namespace protocol
          {
             namespace describe
             {
 
+               common::serialize::Reader prepare();
+               common::serialize::Writer writer( std::vector< serviceframework::service::Model::Type>& types);
 
-
-               archive::Reader prepare();
-               archive::Writer writer( std::vector< serviceframework::service::Model::Type>& types);
-
-
-               //!
                //! To help with unittesting and such.
-               //!
                struct Wrapper
                {
                   Wrapper( std::vector< serviceframework::service::Model::Type>& types) 
@@ -53,15 +47,14 @@ namespace casual
                      return *this << std::forward< T>( value);
                   }
                private:
-                  archive::Reader m_prepare;
-                  archive::Writer m_writer;
+                  common::serialize::Reader m_prepare;
+                  common::serialize::Writer m_writer;
                   
                };
 
             } // describe
-
-         } // service
-      } // archive
+         } // protocol
+      } // service
    } // serviceframework
 } // casual
 

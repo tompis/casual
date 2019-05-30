@@ -28,7 +28,7 @@
 #include "common/communication/instance.h"
 
 #include "serviceframework/service/protocol/call.h"
-#include "serviceframework/namevaluepair.h"
+#include "common/serialize/macro.h"
 #include "serviceframework/log.h"
 
 

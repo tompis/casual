@@ -7,9 +7,10 @@
 
 #include "configuration/domain.h"
 
+#include "common/file.h"
+#include "common/serialize/macro.h"
+#include "common/serialize/create.h"
 
-#include "serviceframework/namevaluepair.h"
-#include "serviceframework/archive/create.h"
 
 #include <fstream>
 
@@ -311,7 +312,7 @@ namespace casual
          void write( const domain::Manager& domain, const std::string& name)
          {
             common::file::Output file{ name};
-            auto archive = serviceframework::archive::create::writer::from( file.extension(), file);
+            auto archive = common::serialize::create::writer::from( file.extension(), file);
             archive << CASUAL_MAKE_NVP( domain);
          }
 

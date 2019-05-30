@@ -162,7 +162,7 @@ namespace casual
 
 namespace std
 {
-   // extended stream operator for std... This is not legal if I understand it correct,
+   // extended stream operator for std... This is not conformant if I understand it correct,
    // but I find it hard to see what damage it could do, since it is restricted to the 
    // customization point 'casual::common::log::has_formatter', so we roll with it...
    template< typename T> 

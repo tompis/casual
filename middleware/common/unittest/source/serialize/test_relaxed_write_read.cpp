@@ -9,11 +9,11 @@
 #include <gtest/gtest.h>
 
 
-#include "serviceframework/namevaluepair.h"
-#include "serviceframework/archive/json.h"
-#include "serviceframework/archive/yaml.h"
-#include "serviceframework/archive/xml.h"
-#include "serviceframework/log.h"
+#include "common/serialize/macro.h"
+#include "common/serialize/json.h"
+#include "common/serialize/yaml.h"
+#include "common/serialize/xml.h"
+#include "common/serialize/line.h"
 
 #include "common/log.h"
 
@@ -26,9 +26,8 @@
 
 namespace casual
 {
-   namespace serviceframework
+   namespace common
    {
-
       namespace holder
       {
          struct json
@@ -40,14 +39,14 @@ namespace casual
                std::string data;
 
                {
-                  auto writer = archive::json::writer( data);
-                  writer << name::value::pair::make( "value", from);
+                  auto writer = serialize::json::writer( data);
+                  writer << serialize::named::value::make( from, "value");
                }
 
                To result;
                {
-                  auto reader = archive::json::relaxed::reader( data);
-                  reader >> name::value::pair::make( "value", result);
+                  auto reader = serialize::json::relaxed::reader( data);
+                  reader >> serialize::named::value::make( result, "value");
                }
                return result;
             }
@@ -61,14 +60,14 @@ namespace casual
                std::string yaml;
 
                {
-                  auto writer = archive::yaml::writer( yaml);
-                  writer << name::value::pair::make( "value", from);
+                  auto writer = serialize::yaml::writer( yaml);
+                  writer << serialize::named::value::make( from, "value");
                }
 
                To result;
                {
-                  auto reader = archive::yaml::relaxed::reader( yaml);
-                  reader >> name::value::pair::make( "value", result);
+                  auto reader = serialize::yaml::relaxed::reader( yaml);
+                  reader >> serialize::named::value::make( result, "value");
                }
                return result;
             }
@@ -83,14 +82,14 @@ namespace casual
                std::string xml;
 
                {
-                  auto writer = archive::xml::writer( xml);
-                  writer << name::value::pair::make( "value", from);
+                  auto writer = serialize::xml::writer( xml);
+                  writer << serialize::named::value::make( from, "value");
                }
 
                To result;
                {
-                  auto reader = archive::xml::relaxed::reader( xml);
-                  reader >> name::value::pair::make( "value", result);
+                  auto reader = serialize::xml::relaxed::reader( xml);
+                  reader >> serialize::named::value::make( result, "value");
                }
                return result;
             }
@@ -130,8 +129,8 @@ namespace casual
                      std::string some_string;
 
                      CASUAL_CONST_CORRECT_SERIALIZE(
-                        archive & CASUAL_MAKE_NVP( some_long);
-                        archive & CASUAL_MAKE_NVP( some_string);
+                        CASUAL_SERIALIZE( some_long);
+                        CASUAL_SERIALIZE( some_string);
                      )
                   };
 
@@ -140,7 +139,7 @@ namespace casual
                      std::string some_string;
 
                      CASUAL_CONST_CORRECT_SERIALIZE(
-                         archive & CASUAL_MAKE_NVP( some_string);
+                         CASUAL_SERIALIZE( some_string);
                      )
                   };
                } // simple
@@ -155,9 +154,9 @@ namespace casual
                      std::vector< simple::Total> some_set;
 
                      CASUAL_CONST_CORRECT_SERIALIZE(
-                        archive & CASUAL_MAKE_NVP( some_long);
-                        archive & CASUAL_MAKE_NVP( some_string);
-                        archive & CASUAL_MAKE_NVP( some_set);
+                        CASUAL_SERIALIZE( some_long);
+                        CASUAL_SERIALIZE( some_string);
+                        CASUAL_SERIALIZE( some_set);
                      )
                   };
 
@@ -168,8 +167,8 @@ namespace casual
                      std::vector< simple::Reduced> some_set;
 
                      CASUAL_CONST_CORRECT_SERIALIZE(
-                         archive & CASUAL_MAKE_NVP( some_string);
-                         archive & CASUAL_MAKE_NVP( some_set);
+                         CASUAL_SERIALIZE( some_string);
+                         CASUAL_SERIALIZE( some_set);
                      )
                   };
 
@@ -187,8 +186,8 @@ namespace casual
                   optional< T> optional_value;
 
                   CASUAL_CONST_CORRECT_SERIALIZE(
-                      archive & CASUAL_MAKE_NVP( dummy_value);
-                      archive & CASUAL_MAKE_NVP( optional_value);
+                      CASUAL_SERIALIZE( dummy_value);
+                      CASUAL_SERIALIZE( optional_value);
                   )
                };
 
@@ -202,8 +201,8 @@ namespace casual
       {
          auto result = TestFixture::template write_read< local::vo::simple::Total>( local::vo::simple::Reduced{ "test test"});
 
-         EXPECT_TRUE( result.some_string == "test test") << CASUAL_MAKE_NVP( result);
-         EXPECT_TRUE( result.some_long == 42) << CASUAL_MAKE_NVP( result);
+         EXPECT_TRUE( result.some_string == "test test") << "result: " << result;
+         EXPECT_TRUE( result.some_long == 42) << "result: " << result;
       }
 
 
@@ -274,7 +273,6 @@ namespace casual
       }
 
 
-   } // serviceframework
-
-}
+   } // common
+} // casual
 

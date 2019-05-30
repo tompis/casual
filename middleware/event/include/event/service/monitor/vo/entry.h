@@ -81,16 +81,16 @@ namespace casual
                   void setService( std::string value);
 
 
-                  serviceframework::platform::Uuid getCallId() const;
-                  void setCallId( serviceframework::platform::Uuid value);
+                  common::platform::Uuid getCallId() const;
+                  void setCallId( common::platform::Uuid value);
 
 
-                  serviceframework::platform::time::point::type getStart() const;
-                  void setStart( serviceframework::platform::time::point::type value);
+                  common::platform::time::point::type getStart() const;
+                  void setStart( common::platform::time::point::type value);
 
 
-                  serviceframework::platform::time::point::type getEnd() const;
-                  void setEnd( serviceframework::platform::time::point::type value);
+                  common::platform::time::point::type getEnd() const;
+                  void setEnd( common::platform::time::point::type value);
 
 
 
