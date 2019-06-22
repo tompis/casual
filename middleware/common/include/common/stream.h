@@ -22,7 +22,7 @@ namespace casual
       {
          template< typename T, typename Enable = void>
          struct has_formatter : std::false_type{};
-
+         
          //! Specialization for iterables, to log ranges
          template< typename C> 
          struct has_formatter< C, std::enable_if_t< 
@@ -95,26 +95,6 @@ namespace casual
             };
          };
 
-         //! Specialization for stuff that serialize::line::Writer can take care of
-         template< typename C> 
-         struct has_formatter< C, std::enable_if_t< 
-            traits::is::binary::like< C>::value 
-            || traits::is::tuple< C>::value 
-            || serialize::traits::has::serialize< C, serialize::line::Writer>::value
-            || serialize::traits::has::forward::serialize< C, serialize::line::Writer>::value
-            || serialize::traits::is::named::value< C>::value
-            >> : std::true_type
-         {
-            struct formatter
-            {
-               template< typename V>
-               void operator () ( std::ostream& out, V&& value) const
-               {
-                  serialize::line::Writer{ out} << std::forward< V>( value);
-               }
-            };
-         };
-
          namespace detail
          {
             template< typename S>
@@ -140,30 +120,54 @@ namespace casual
             detail::part( stream, std::forward< Ts>( ts)...);
             return stream;
          }
-/*!
 
          namespace detail
          {
             namespace ostream
             {
+               // just a helper to get rid of syntax
+               template< typename T> 
+               auto formatter( std::ostream& out, T&& value) 
+                  -> decltype( typename stream::has_formatter< traits::remove_cvref_t< T>>::formatter{}( out, std::forward< T>( value)))
+               {
+                  typename stream::has_formatter< traits::remove_cvref_t< T>>::formatter{}( out, std::forward< T>( value));
+               }
+
+               // lowest priority, take all that doesn't have a formatter, but can be serialized with serialize::line::Writer
                template< typename T> 
                auto indirection( std::ostream& out, T&& value, traits::priority::tag< 0>) 
-                  -> decltype( std::declval< serialize::line::Writer&>() << std::declval< T&>(), void())
+                  -> decltype( std::declval< serialize::line::Writer&>() << std::forward< T>( value), void())
                {
                   casual::common::serialize::line::Writer archive{ out};
                   archive << std::forward< T>( value);
                }
 
+               // higher priority, takes all that have a defined formatter
                template< typename T> 
                auto indirection( std::ostream& out, T&& value, traits::priority::tag< 1>) 
-                  -> decltype( typename stream::has_formatter< traits::remove_cvref_t< T>>::formatter{}( out, std::forward< T>( value)))
+                  -> decltype( (void)formatter( out, std::forward< T>( value)), void())
                {
-                  typename stream::has_formatter< traits::remove_cvref_t< T>>::formatter{}( out, std::forward< T>( value));
-               } 
+                  formatter( out, std::forward< T>( value));
+               }
+
+               namespace traits
+               {
+                  namespace has
+                  {
+                     namespace detail
+                     {
+                        template< typename T>
+                        using indirection = decltype( ostream::indirection( std::declval< std::ostream&>(), std::declval< T>(), common::traits::priority::tag< 1>{}));
+                     } // detail
+
+                     template< typename T>
+                     using indirection = common::traits::detect::is_detected< detail::indirection, T>;
+
+                  } // has
+               } // traits
 
             } // ostream
-         } // detail
-       */   
+         } // detail 
       } // stream
    } // common
 } // casual
@@ -176,14 +180,14 @@ namespace std
    
    template< typename T> 
    enable_if_t< 
-      casual::common::stream::has_formatter< casual::common::traits::remove_cvref_t< T>>::value
+      casual::common::stream::detail::ostream::traits::has::indirection< casual::common::traits::remove_cvref_t< T>>::value
       && ! casual::common::traits::has::ostream_stream_operator< casual::common::traits::remove_cvref_t< T>>::value
       , 
       ostream&>
    operator << ( ostream& out, T&& value)
    {
       using namespace casual::common;
-      typename stream::has_formatter< traits::remove_cvref_t< T>>::formatter{}( out, std::forward< T>( value));
+      stream::detail::ostream::indirection( out, std::forward< T>( value), traits::priority::tag< 1>{});
       return out;
    }
 } // std

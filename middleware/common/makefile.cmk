@@ -243,20 +243,14 @@ unittest_objectfiles = [
     Compile( 'unittest/source/message/test_coordinate.cpp'),
     Compile( 'unittest/source/message/test_pending.cpp'),
     
-    
-    #Compile( 'unittest/source/server/test_context.cpp'),
     Compile( 'unittest/source/server/test_service.cpp'),
     Compile( 'unittest/source/server/test_arguments.cpp'),
     
     Compile( 'unittest/source/service/test_header.cpp'),
-    #Compile( 'unittest/source/service/conversation/test_context.cpp'),
-
-    #Compile( 'unittest/source/test_mockup.cpp'),
     
     Compile( 'unittest/source/transaction/test_id.cpp'),
     Compile( 'unittest/source/transaction/test_context.cpp'),
    
-    
     Compile( 'unittest/source/event/test_dispatch.cpp'),
     Compile( 'unittest/source/event/test_listen.cpp'),
     

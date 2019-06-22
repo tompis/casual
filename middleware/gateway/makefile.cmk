@@ -29,6 +29,7 @@ LibraryPaths([
 
 install_lib = []
 install_bin = []
+install_example_bin = []
 install_headers = []
 
 
@@ -123,13 +124,17 @@ protocol_objects = [
     Compile( 'source/documentation/protocol/example.cpp')
 ]
 
-tartet = LinkExecutable( "bin/casual-gateway-markdown-protocol",
+
+
+target = LinkExecutable( "bin/casual-gateway-markdown-protocol",
     [
         Compile( 'source/documentation/protocol/markdown.cpp')
     ] + protocol_objects,
     [
         'casual-common'
     ])
+
+install_example_bin.append( target)
 
 target = LinkExecutable( "bin/casual-gateway-binary-protocol",
     [
@@ -139,8 +144,10 @@ target = LinkExecutable( "bin/casual-gateway-binary-protocol",
         'casual-common'
     ])
 
-install_bin.append( target)
+install_example_bin.append( target)
 
+
+Install( install_example_bin,'$(CASUAL_HOME)/example/bin')
 Install( install_bin,'$(CASUAL_HOME)/bin')
 Install( install_lib,'$(CASUAL_HOME)/lib')
 Install( install_headers,'$(CASUAL_HOME)/include')

@@ -34,7 +34,11 @@ namespace casual
                   template< typename M, typename E>
                   auto file( M&& message, const std::string& base, E&& extension)
                   {
-                     return std::ofstream{ common::string::compose( base, '.', common::message::type( message), '.', extension), std::ios::binary | std::ios::trunc};
+                     return std::ofstream{ common::string::compose( 
+                        base,
+                        '.', common::message::gateway::domain::protocol::Version::version_1,
+                        '.', common::message::type( message), 
+                        '.', extension), std::ios::binary | std::ios::trunc};
                   }
 
 
@@ -96,7 +100,14 @@ namespace casual
 
                      {
                         using namespace casual::common::argument;
-                        Parse{ "binary dump examples for interdomain protocol",
+                        Parse{ R"(binary dump examples for interdomain protocol
+
+generated files will have the format:
+
+bin-dump:    [<base-path>/]<message-name>.<protocol-version>.<message-type-id>.bin
+descriptive: [<base-path>/]<message-name>.<protocol-version>.<message-type-id>.<format>
+
+)",
                            Option( std::tie( basename), { "-b", "--base"}, "base path for the generated files"),
                            Option( std::tie( format), common::serialize::create::writer::complete::format(), { "--format"}, "format for optional descriptive generated representation")
                         }( argc, argv);

@@ -26,7 +26,6 @@ lib_serviceframework = LinkLibrary( 'bin/casual-serviceframework',
         Compile( 'source/service/protocol/implementation.cpp'),
         Compile( 'source/service/protocol/describe.cpp'),
         Compile( 'source/service/call.cpp'),
-        #Compile( 'source/platform.cpp'),
         Compile( 'source/log.cpp'),
         
     ],
@@ -35,9 +34,7 @@ lib_serviceframework = LinkLibrary( 'bin/casual-serviceframework',
 install_lib.append( lib_serviceframework)
 
 install_headers += [ 
-      ( 'include/serviceframework/log.h', 'serviceframework'),
-      ( 'include/serviceframework/archive/log.h', 'serviceframework/archive'),
-      ( 'include/serviceframework/namevaluepair.h', 'serviceframework'),
+      ( 'include/serviceframework/service/protocol/call.h', 'serviceframework/service/protocol')
 ]
 
 #
@@ -45,13 +42,9 @@ install_headers += [
 #
 
 LinkUnittest( 'bin/test-casual-serviceframework',
-	[
-        Compile( 'unittest/source/test_namevaluepair.cpp'),
-        Compile( 'unittest/source/test_vo.cpp'),
-        
+	[   
         Compile( 'unittest/source/service/test_protocol.cpp'),
         Compile( 'unittest/source/service/protocol/test_describe.cpp'),
-        
     ],
 	[ lib_serviceframework, 'casual-xatmi', 'casual-common', 'casual-mockup', 'casual-unittest'])
 

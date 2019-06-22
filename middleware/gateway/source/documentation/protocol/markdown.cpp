@@ -315,25 +315,6 @@ namespace casual
          }
       } // documentation
    } // gateway
-/*
-   namespace common
-   {
-      namespace serialize
-      {
-         namespace traits
-         {
-            namespace is
-            {
-               namespace network
-               {
-                  template<>
-                  struct normalizing< gateway::documentation::protocol::local::Printer>: std::true_type {};
-               } // network
-            } // is
-         } // traits
-      } // marshal
-   } // common
-   */
 
    namespace gateway
    {
@@ -503,7 +484,7 @@ namespace casual
                   local::message_type( out, message) << "\n\n";
 
                   local::format::type( out, message, {
-                           { "execution", "uuid of the current execution path"},
+                           { "execution", "uuid of the current execution context (breadcrumb)"},
                            { "xid.formatID", "xid format type. if 0 no more information of the xid is transported"},
                            { "xid.gtrid_length", "length of the transaction gtrid part"},
                            { "xid.bqual_length", "length of the transaction branch part"},
@@ -521,7 +502,7 @@ namespace casual
                   local::message_type( out, message) << "\n\n";
 
                   local::format::type( out, message, {
-                           { "execution", "uuid of the current execution path"},
+                           { "execution", "uuid of the current execution context (breadcrumb)"},
                            { "xid.formatID", "xid format type. if 0 no more information of the xid is transported"},
                            { "xid.gtrid_length", "length of the transaction gtrid part"},
                            { "xid.bqual_length", "length of the transaction branch part"},
@@ -535,9 +516,9 @@ namespace casual
                void transaction( std::ostream& out)
                {
                   out << R"(
-   ## Transaction messages
+## Transaction messages
 
-   ### Resource prepare
+### Resource prepare
 
    )";
                   {
@@ -545,9 +526,9 @@ namespace casual
                      using message_type = common::message::transaction::resource::prepare::Request;
 
                      out << R"(
-   #### message::transaction::resource::prepare::Request
+#### message::transaction::resource::prepare::Request
 
-   Sent to and received from other domains when one domain wants to prepare a transaction. 
+Sent to and received from other domains when one domain wants to prepare a transaction. 
 
    )";
                      transaction_request( out, message_type{});
@@ -557,16 +538,16 @@ namespace casual
                      using message_type = common::message::transaction::resource::prepare::Reply;
 
                      out << R"(
-   #### message::transaction::resource::prepare::Reply
+#### message::transaction::resource::prepare::Reply
 
-   Sent to and received from other domains when one domain wants to prepare a transaction. 
+Sent to and received from other domains when one domain wants to prepare a transaction. 
 
    )";
                      transaction_reply( out, message_type{});
                   }
 
                   out << R"(
-   ### Resource commit
+### Resource commit
 
    )";
 
@@ -574,9 +555,9 @@ namespace casual
                      using message_type = common::message::transaction::resource::commit::Request;
 
                      out << R"(
-   #### message::transaction::resource::commit::Request
+#### message::transaction::resource::commit::Request
 
-   Sent to and received from other domains when one domain wants to commit an already prepared transaction.
+Sent to and received from other domains when one domain wants to commit an already prepared transaction.
 
    )";
                      transaction_request( out, message_type{});
@@ -586,32 +567,32 @@ namespace casual
                      using message_type = common::message::transaction::resource::commit::Reply;
 
                      out << R"(
-   #### message::transaction::resource::commit::Reply
+#### message::transaction::resource::commit::Reply
 
-   Reply to a commit request. 
+Reply to a commit request. 
 
-   )";
+)";
                      transaction_reply( out, message_type{});
                   }
 
 
 
                   out << R"(
-   ### Resource rollback
+### Resource rollback
 
-   )";
+)";
 
 
                   {
                      using message_type = common::message::transaction::resource::rollback::Request;
 
                      out << R"(
-   #### message::transaction::resource::rollback::Request
+#### message::transaction::resource::rollback::Request
 
-   Sent to and received from other domains when one domain wants to rollback an already prepared transaction.
-   That is, when one or more resources has failed to prepare.
+Sent to and received from other domains when one domain wants to rollback an already prepared transaction.
+That is, when one or more resources has failed to prepare.
 
-   )";
+)";
                      transaction_request( out, message_type{});
                   }
 
@@ -619,11 +600,11 @@ namespace casual
                      using message_type =  common::message::transaction::resource::rollback::Reply;
 
                      out << R"(
-   #### message::transaction::resource::rollback::Reply
+#### message::transaction::resource::rollback::Reply
 
-   Reply to a rollback request. 
+Reply to a rollback request. 
 
-   )";
+)";
                      transaction_reply( out, message_type{});
                   }
 
@@ -634,20 +615,20 @@ namespace casual
                void service_call( std::ostream& out)
                {
                   out << R"(
-   ## Service messages
+## Service messages
 
-   ### Service call 
+### Service call 
 
-   )";
+)";
                   {
                      using message_type = common::message::service::call::callee::Request;
 
                      out << R"(
-   #### message::service::call::Request
+#### message::service::call::Request
 
-   Sent to and received from other domains when one domain wants call a service in the other domain
+Sent to and received from other domains when one domain wants call a service in the other domain
 
-   )";
+)";
                      local::message_type( out, message_type{}) << "\n\n";
 
                      message_type request;
@@ -658,7 +639,7 @@ namespace casual
                      request.buffer.memory = local::binary::value( 1024);
 
                      local::format::type( out, request, {
-                              { "execution", "uuid of the current execution path"},
+                              { "execution", "uuid of the current execution context (breadcrumb)"},
                               { "service.name.size", "service name size"},
                               { "service.name.data", "byte array with service name"},
                               { "service.timeout", "timeout of the service in use (in microseconds)"},
@@ -684,11 +665,11 @@ namespace casual
                      using message_type = common::message::service::call::Reply;
 
                      out << R"(
-   #### message::service::call::Reply
+#### message::service::call::Reply
 
-   Reply to call request
+Reply to call request
 
-   )";
+)";
                      local::message_type( out, message_type{}) << "\n\n";
 
                      message_type message;
@@ -698,7 +679,7 @@ namespace casual
                      message.buffer.memory = local::binary::value( 1024);
 
                      local::format::type( out, message, {
-                              { "execution", "uuid of the current execution path"},
+                              { "execution", "uuid of the current execution context (breadcrumb)"},
 
                               { "code.result", "XATMI result/error code, 0 represent OK"},
                               { "code.user", "XATMI user supplied code"},
@@ -724,21 +705,21 @@ namespace casual
                void domain_connect( std::ostream& out)
                {
                   out << R"(
-   ## domain connect messages
+## domain connect messages
 
-   messages that is used to set up a connection
+messages that is used to set up a connection
 
-   )";     
+)";     
 
                   {
                      using message_type = common::message::gateway::domain::connect::Request;
                      
                      out << R"(
-   ### common::message::gateway::domain::connect::Request
+### common::message::gateway::domain::connect::Request
       
-   Connection requests from another domain that wants to connect
+Connection requests from another domain that wants to connect
       
-      )";
+)";
       
                         local::message_type( out, message_type{}) << "\n\n";
       
@@ -747,7 +728,7 @@ namespace casual
                         message.domain.name = "domain-A";
 
                         local::format::type( out, message, {
-                           { "execution", "uuid of the current execution path"},
+                           { "execution", "uuid of the current execution context (breadcrumb)"},
                            { "domain.id", "uuid of the outbound domain"},
                            { "domain.name.size", "size of the outbound domain name"},
                            { "domain.name.data", "dynamic byte array with the outbound domain name"},
@@ -761,11 +742,11 @@ namespace casual
                      using message_type = common::message::gateway::domain::connect::Reply;
                      
                      out << R"(
-   ### common::message::gateway::domain::connect::Reply
+### common::message::gateway::domain::connect::Reply
       
-   Connection reply
+Connection reply
       
-      )";
+)";
       
                         local::message_type( out, message_type{}) << "\n\n";
       
@@ -774,7 +755,7 @@ namespace casual
                         message.domain.name = "domain-A";
 
                         local::format::type( out, message, {
-                           { "execution", "uuid of the current execution path"},
+                           { "execution", "uuid of the current execution context (breadcrumb)"},
                            { "domain.id", "uuid of the inbound domain"},
                            { "domain.name.size", "size of the inbound domain name"},
                            { "domain.name.data", "dynamic byte array with the inbound domain name"},
@@ -788,21 +769,21 @@ namespace casual
                void domain_discovery( std::ostream& out)
                {
                   out << R"(
-   ## Discovery messages
+## Discovery messages
 
-   ### domain discovery 
+### domain discovery 
 
-   )";
+)";
 
                   {
                      using message_type = common::message::gateway::domain::discover::Request;
 
                      out << R"(
-   #### message::gateway::domain::discover::Request
+#### message::gateway::domain::discover::Request
 
-   Sent to and received from other domains when one domain wants discover information abut the other.
+Sent to and received from other domains when one domain wants discover information abut the other.
 
-   )";
+)";
 
                      local::message_type( out, message_type{}) << "\n\n";
 
@@ -813,7 +794,7 @@ namespace casual
                      message.queues.push_back( local::string::value( 128));
 
                      local::format::type( out, message, {
-                              { "execution", "uuid of the current execution path"},
+                              { "execution", "uuid of the current execution context (breadcrumb)"},
                               { "domain.id", "uuid of the caller domain"},
                               { "domain.name.size", "size of the caller domain name"},
                               { "domain.name.data", "dynamic byte array with the caller domain name"},
@@ -833,18 +814,18 @@ namespace casual
                      using message_type = common::message::gateway::domain::discover::Reply;
 
                      out << R"(
-   #### message::gateway::domain::discover::Reply
+#### message::gateway::domain::discover::Reply
 
-   Sent to and received from other domains when one domain wants discover information abut the other.
+Sent to and received from other domains when one domain wants discover information abut the other.
 
-   )";
+)";
 
                      local::message_type( out, message_type{}) << "\n\n";
                      
                      auto message = protocol::example::message< message_type>();
 
                      local::format::type( out, message, {
-                              { "execution", "uuid of the current execution path"},
+                              { "execution", "uuid of the current execution context (breadcrumb)"},
                               // { "version", "the chosen version - 0 if no compatible version was possible"},
                               { "domain.id", "uuid of the caller domain"},
                               { "domain.name.size", "size of the caller domain name"},
@@ -868,21 +849,21 @@ namespace casual
                void queue( std::ostream& out)
                {
                   out << R"(
-   ## queue messages
+## queue messages
 
-   ### enqueue 
+### enqueue 
 
-   )";
+)";
 
                   {
                      using message_type = common::message::queue::enqueue::Request;
 
                      out << R"(
-   #### message::queue::enqueue::Request
+#### message::queue::enqueue::Request
 
-   Represent enqueue request.
+Represent enqueue request.
 
-   )";
+)";
 
                      local::message_type( out, message_type{}) << "\n\n";
 
@@ -895,7 +876,7 @@ namespace casual
 
 
                      local::format::type( out, message, {
-                              { "execution", "uuid of the current execution path"},
+                              { "execution", "uuid of the current execution context (breadcrumb)"},
                               { "name.size", "size of queue name"},
                               { "name.data", "data of queue name"},
                               { "xid.formatID", "xid format type. if 0 no more information of the xid is transported"},
@@ -919,18 +900,18 @@ namespace casual
                      using message_type = common::message::queue::enqueue::Reply;
 
                      out << R"(
-   #### message::queue::enqueue::Reply
+#### message::queue::enqueue::Reply
 
-   Represent enqueue reply.
+Represent enqueue reply.
 
-   )";
+)";
 
                      local::message_type( out, message_type{}) << "\n\n";
 
                      message_type message;
 
                      local::format::type( out, message, {
-                              { "execution", "uuid of the current execution path"},
+                              { "execution", "uuid of the current execution context (breadcrumb)"},
                               { "id", "id of the enqueued message"},
                            });
                   }
@@ -940,13 +921,13 @@ namespace casual
                      using message_type = common::message::queue::dequeue::Request;
 
                      out << R"(
-   ### dequeue 
+### dequeue 
 
-   #### message::queue::dequeue::Request
+#### message::queue::dequeue::Request
 
-   Represent dequeue request.
+Represent dequeue request.
 
-   )";
+)";
 
                      local::message_type( out, message_type{}) << "\n\n";
 
@@ -957,7 +938,7 @@ namespace casual
 
 
                      local::format::type( out, message, {
-                              { "execution", "uuid of the current execution path"},
+                              { "execution", "uuid of the current execution context (breadcrumb)"},
                               { "name.size", "size of the queue name"},
                               { "name.data", "data of the queue name"},
                               { "xid.formatID", "xid format type. if 0 no more information of the xid is transported"},
@@ -975,11 +956,11 @@ namespace casual
                      using message_type = common::message::queue::dequeue::Reply;
 
                      out << R"(
-   #### message::queue::dequeue::Reply
+#### message::queue::dequeue::Reply
 
-   Represent dequeue reply.
+Represent dequeue reply.
 
-   )";
+)";
 
                      local::message_type( out, message_type{}) << "\n\n";
 
@@ -992,7 +973,7 @@ namespace casual
                      message.message.at( 0).payload = local::binary::value( 1024); 
 
                      local::format::type( out, message, {
-                              { "execution", "uuid of the current execution path"},
+                              { "execution", "uuid of the current execution context (breadcrumb)"},
                               { "message.size", "number of messages dequeued"},
                               { "message.element.id", "id of the message"},
                               { "message.element.properties.size", "length of message properties"},
@@ -1013,21 +994,21 @@ namespace casual
                void conversation( std::ostream& out)
                {
                   out << R"(
-   ## conversation messages
+## conversation messages
 
-   ### connect 
+### connect 
 
-   )";
+)";
 
                   {
                      using message_type = common::message::conversation::connect::callee::Request;
 
                      out << R"(
-   #### message::conversation::connect::Request
+#### message::conversation::connect::Request
 
-   Sent to establish a conversation
+Sent to establish a conversation
 
-   )";
+)";
 
                      local::message_type( out, message_type{}) << "\n\n";
 
@@ -1041,7 +1022,7 @@ namespace casual
                      message.recording.nodes.resize( 1);
 
                      local::format::type( out, message, {
-                              { "execution", "uuid of the current execution path"},
+                              { "execution", "uuid of the current execution context (breadcrumb)"},
                               { "service.name.size", "size of the service name"},
                               { "service.name.data", "data of the service name"},
                               { "service.timeout", "timeout (in ns"},
@@ -1065,11 +1046,11 @@ namespace casual
                      using message_type = common::message::conversation::connect::Reply;
 
                      out << R"(
-   #### message::conversation::connect::Reply
+#### message::conversation::connect::Reply
 
-   Reply for a conversation
+Reply for a conversation
 
-   )";
+)";
 
                      local::message_type( out, message_type{}) << "\n\n";
 
@@ -1080,7 +1061,7 @@ namespace casual
    
 
                      local::format::type( out, message, {
-                              { "execution", "uuid of the current execution path"},
+                              { "execution", "uuid of the current execution context (breadcrumb)"},
                               { "route.nodes.size", "size of the established route"},
                               { "route.nodes.element.address", "'address' of a 'node' in the route"},
                               { "recording.nodes.size", "size of the recording of 'passed nodes'"},
@@ -1093,13 +1074,13 @@ namespace casual
                      using message_type = common::message::conversation::callee::Send;
 
                      out << R"(
-   ### send
+### send
 
-   #### message::conversation::Send
+#### message::conversation::Send
 
-   Represent a message sent 'over' an established connection
+Represent a message sent 'over' an established connection
 
-   )";
+)";
 
                      local::message_type( out, message_type{}) << "\n\n";
 
@@ -1110,7 +1091,7 @@ namespace casual
                      message.buffer.memory = local::binary::value( 1024); 
 
                      local::format::type( out, message, {
-                              { "execution", "uuid of the current execution path"},
+                              { "execution", "uuid of the current execution context (breadcrumb)"},
                               { "route.nodes.size", "size of the established route"},
                               { "route.nodes.element.address", "'address' of a 'node' in the route"},
                               { "events", "events"},
@@ -1126,13 +1107,13 @@ namespace casual
                      using message_type = common::message::conversation::Disconnect;
 
                      out << R"(
-   ### disconnect
+### disconnect
 
-   #### message::conversation::Disconnect
+#### message::conversation::Disconnect
 
-   Sent to abruptly disconnect the conversation
+Sent to abruptly disconnect the conversation
 
-   )";
+)";
 
                      local::message_type( out, message_type{}) << "\n\n";
 
@@ -1141,7 +1122,7 @@ namespace casual
                      message.route.nodes.resize( 1);
 
                      local::format::type( out, message, {
-                              { "execution", "uuid of the current execution path"},
+                              { "execution", "uuid of the current execution context (breadcrumb)"},
                               { "route.nodes.size", "size of the established route"},
                               { "route.nodes.element.address", "'address' of a 'node' in the route"},
                               { "events", "events"},

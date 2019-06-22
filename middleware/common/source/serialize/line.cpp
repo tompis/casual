@@ -26,7 +26,7 @@ namespace casual
             std::ostream& Writer::maybe_name( std::ostream& stream, const char* name)
             {
                if( name)
-                  stream << std::quoted( name)  << ": ";
+                  stream << name << ": ";
 
                return stream;
             }
@@ -71,7 +71,6 @@ namespace casual
                   m_stream << "\"binary size: " << value.size() << '"';
                else
                {
-                  m_stream << "0x"; 
                   transcode::hex::encode( m_stream, value);
                }
             }
