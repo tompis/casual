@@ -6,12 +6,9 @@
 
 #pragma once
 
-#include "common/serialize/archive.h"
-#include "common/serialize/traits.h"
+#include "common/serialize/value.h"
 
-#include "common/log/stream.h"
-
-#include <iosfwd>
+#include <ostream>
 
 namespace casual
 {
@@ -21,32 +18,65 @@ namespace casual
       {
          namespace line
          {
-            //! serialize serializable objects to one line json-like format
-            Writer writer( std::ostream& out);
-
-         } // log
-      } // serialize
-
-      namespace stream
-      {
-         //! Specialization for serial
-         template< typename C> 
-         struct has_formatter< C, std::enable_if_t< 
-            serialize::traits::has::serialize< C, serialize::Writer>::value
-            && ! traits::has::ostream_stream_operator< C>::value
-            >> : std::true_type
-         {
-            struct formatter
+            namespace detail
             {
-               template< typename V>
-               void operator () ( std::ostream& out, V&& value) const
+               constexpr auto first = "";
+               //constexpr auto init = "";
+               constexpr auto scope = ", ";
+
+            } // detail
+
+            struct Writer
+            {
+               using need_named = void;
+
+               Writer( std::ostream& stream) : m_stream( stream) {}
+
+               platform::size::type container_start( const platform::size::type size, const char* name);
+               void container_end( const char*);
+
+               void composite_start( const char* name);
+               void composite_end( const char*);
+
+               template<typename T>
+               void write( const T& value, const char* name)
                {
-                  auto archive = serialize::line::writer( out);
-                  archive << serialize::named::value::make( std::forward< V>( value), nullptr);
+                  in_scope();
+                  maybe_name( m_stream, name) << value;
                }
+
+               void write( bool value, const char* name);
+               void write( view::immutable::Binary value, const char* name);
+               void write( const platform::binary::type& value, const char* name);
+               void write( const std::string& value, const char* name);
+
+
+               template< typename T>
+               Writer& operator << ( T&& value)
+               {
+                  serialize::value::write( *this, std::forward< T>( value), nullptr);
+                  return *this;
+               }
+
+               template< typename T>
+               Writer& operator & ( T&& value)
+               {
+                  return *this << std::forward< T>( value);
+               }
+
+            private:
+
+               static std::ostream& maybe_name( std::ostream& stream, const char* name);
+
+               void begin_scope();
+               void in_scope();
+
+               std::ostream& m_stream;
+               const char* m_prefix = detail::first;
             };
-         };
-      } // stream
+
+         } // line
+      } // serialize
    } // common
 } // casual
 

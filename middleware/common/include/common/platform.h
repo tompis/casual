@@ -92,79 +92,61 @@ namespace casual
 
             namespace transaction
             {
-               //!
                //! Max number of transaction state updates that will be done
                //! before (forced) persistence store of the updates, could be
                //! stored before though
-               //!
                constexpr size::type persistence = 100;
 
-               //!
                //! Number of xid:s we fetch from the xa-resource
                //! in a batch
-               //!
                constexpr size::type recover = 8;
 
             } // transaction
-            
 
-            //!
             //! Max number of statistics updates that will be done
             //! before persistence store of the updates...
-            //!
             constexpr size::type statistics = 1000;
 
-
-            //!
             //! Max number of ipc messages consumed from the queue to cache
             //! (application memory) during a 'flush'
-            //!
             constexpr size::type flush = 20;
 
             namespace gateway
             {
-               //!
                //! Max number of batched metrics before force
                //! send to service-manager
-               //!
                constexpr size::type metrics = 20;
             } // gateway
 
             namespace domain
             {
-               //!
                //! Max number of consumed messages before trying to send
                //! pending messages. 
-               //!
                constexpr size::type pending = 100;
-
             } // domain
 
             namespace queue
             {
-               //!
                //! Max number of pending updates before 
                //! a persistent write
-               //!
                constexpr size::type persitent = 100;
             } // queue
 
             namespace service
             {
-               //!
                //! Max number of consumed messages before trying to send
                //! pending messages. 
-               //!
                constexpr size::type pending = 100;
 
                namespace forward
                {
-                  //!
                   //! Max number of consumed messages before trying to send
                   //! pending messages. 
-                  //!
                   constexpr size::type pending = 100;
                } // forward
+
+               //! max number of 'cached' metrics.
+               constexpr size::type metrics = 100;
             } // service
 
             namespace http
@@ -181,11 +163,12 @@ namespace casual
 
          } // batch
 
-
-
-         //
          // Some os-specific if-defs?
-         //
+
+         namespace directory
+         {
+            constexpr auto temporary = "/tmp";
+         } // directory
 
          namespace character
          {
@@ -212,9 +195,7 @@ namespace casual
             {
 
 #ifdef __APPLE__
-               //
                // OSX has very tight limits on IPC
-               //
                constexpr size::type size = 1024 * 1;
 #else
                constexpr size::type size = 1024 * 8;
@@ -354,6 +335,18 @@ namespace casual
          namespace binary
          {
             using type = std::vector< char>;
+            using pointer = decltype( std::declval< binary::type>().data());
+
+            namespace value
+            {
+               using type = std::remove_reference_t< decltype( std::declval< binary::type>().at( 0))>;
+
+            } // value
+
+            namespace immutable
+            {
+               using pointer = decltype( std::declval< const binary::type>().data());
+            } // immutable
 
             namespace size
             {
@@ -368,17 +361,17 @@ namespace casual
          {
             namespace raw
             {
-               using type = char*;
+               using type = binary::pointer;
 
                namespace size
                {
-                  using type = platform::size::type;;
+                  using type = platform::size::type;
                } // size
 
 
                namespace immutable
                {
-                  using type = const char*;
+                  using type = binary::immutable::pointer;
                } // immutable
 
                inline type external( immutable::type buffer)

@@ -397,7 +397,16 @@ namespace casual
                            value = *m_data_stack.back();
                         }
 
-                        void read( std::vector<char>& value)
+                        void read( view::Binary value)
+                        {
+                           auto binary = common::transcode::base64::decode( *m_data_stack.back());
+                           if( range::size( binary) != range::size( value))
+                              throw exception::casual::invalid::Node{ "binary size missmatch"};
+
+                           algorithm::copy( binary, std::begin( value));
+                        }
+
+                        void read( platform::binary::type& value)
                         {
                            // Binary data might be double-decoded (in the end)
                            value = common::transcode::base64::decode( *m_data_stack.back());
@@ -554,10 +563,15 @@ namespace casual
                            return std::string{ value};
                         }
 
-                        std::string encode( const std::vector<char>& value) const
+                        std::string encode( view::immutable::Binary value) const
                         {
                            // Binary data might be double-encoded
                            return common::transcode::base64::encode( value);
+                        }
+
+                        std::string encode( const platform::binary::type& value) const
+                        {
+                           return encode( view::binary::make( value));
                         }
 
                         using name = const char;

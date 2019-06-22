@@ -52,41 +52,46 @@ namespace casual
                      namespace configure
                      {
                         void services(
-                              const std::vector< server::Service>& services,
-                              const message::domain::configuration::server::Reply& configuration)
+                           std::vector< server::Service> services,
+                           message::domain::configuration::server::Reply::Service configuration)
                         {
                            Trace trace{ "common::server::local::configure::services"};
 
-                           std::vector< message::service::advertise::Service> advertise;
+                           auto equal_service_name = []( auto& lhs, auto& rhs){ return lhs.name == rhs.name;};
 
+                           // if this server has restrictions, we intersect.
+                           if( ! configuration.restrictions.empty())
+                              algorithm::trim( services, std::get< 0>( algorithm::intersection( services, configuration.restrictions)));
 
-                           for( auto& service : services)
+                           // split the ones that has routes, and those who have not
+                           auto split = algorithm::intersection( services, configuration.routes, equal_service_name);
+
+                           // transform the non-routes directly (the complement of the intersection)
+                           auto advertise = algorithm::transform( std::get< 1>( split), []( auto& service)
+                           {
+                              return message::service::advertise::Service{ service.name, service.category, service.transaction};
+                           });
+                           
+                           auto handle_route = [&]( auto& service)
                            {
                               auto physical = server::context().physical( service.name);
+                              assert( physical);
 
-                              if( physical && ( configuration.restrictions.empty() || algorithm::find( configuration.restrictions, service.name)))
+                              auto route = algorithm::find_if( configuration.routes, [&]( auto& route){ return route.name == service.name;});
+
+                              auto transform_route = [physical,&service]( auto& route)
                               {
-                                 auto found = algorithm::find_if( configuration.routes, [&service]( const message::domain::configuration::server::Reply::Service& s){
-                                    return s.name == service.name;
-                                 });
+                                 // bind the physical service to the configured route.
+                                 server::Context::instance().state().services.emplace( route, *physical);
+                                 return message::service::advertise::Service{ route, service.category, service.transaction};
+                              };
 
-                                 if( found)
-                                 {
-                                    algorithm::for_each( found->routes, [physical,&advertise,&service]( const std::string& name){
+                              algorithm::transform( route->routes, advertise, transform_route);
+                           };
 
-                                       advertise.emplace_back( name, service.category, service.transaction);
-
-                                       server::Context::instance().state().services.emplace( name, *physical);
-
-                                    });
-
-                                 }
-                                 else
-                                 {
-                                    advertise.emplace_back( service.name, service.category, service.transaction);
-                                 }
-                              }
-                           }
+                           // handle the configured routes, if any.
+                           auto& routes = std::get< 0>( split);
+                           algorithm::for_each( routes, handle_route);
 
                            local::advertise( std::move( advertise));
                         }
@@ -116,12 +121,11 @@ namespace casual
                      // Ask domain-manager for our configuration
                      auto configuration = policy::local::configuration();
 
-                     // Let the broker know about our services...
-                     policy::local::configure::services( arguments.services, configuration);
-
                      // configure resources, if any.
                      transaction::Context::instance().configure( arguments.resources, std::move( configuration.resources));
 
+                     // Let the service-manager know about our services...
+                     policy::local::configure::services( arguments.services, std::move( configuration.service));
                   }
 
                   void Default::reply( strong::ipc::id id, message::service::call::Reply& message)
@@ -133,7 +137,7 @@ namespace casual
                      communication::ipc::blocking::send( id, message);
                   }
 
-                  void Default::reply( strong::ipc::id id, message::conversation::caller::Send& message)
+                  void Default::reply( strong::ipc::id id, message::conversation::callee::Send& message)
                   {
                      Trace trace{ "server::handle::policy::Default::conversation::reply"};
 
@@ -143,14 +147,13 @@ namespace casual
                      communication::ipc::blocking::send( node.address, message);
                   }
 
-                  void Default::ack()
+                  void Default::ack( const message::service::call::ACK& message)
                   {
                      Trace trace{ "server::handle::policy::Default::ack"};
 
-                     message::service::call::ACK ack;
-                     ack.process = process::handle();
+                     log::line( verbose::log, "reply: ", message);
 
-                     communication::ipc::blocking::send( communication::instance::outbound::service::manager::device(), ack);
+                     communication::ipc::blocking::send( communication::instance::outbound::service::manager::device(), message);
                   }
 
                   void Default::statistics( strong::ipc::id id,  message::event::service::Call& event)
@@ -169,70 +172,13 @@ namespace casual
                      }
                   }
 
-                  namespace local
-                  {
-                     namespace
-                     {
-                        template< typename M>
-                        void transaction( M& message, const server::Service& service, const platform::time::point::type& now)
-                        {
-                           Trace trace{ "server::handle::policy::local::transaction"};
-
-                           log::line( log::debug, "message: ", message, ", service: ", service);
-
-                           // We keep track of callers transaction (can be null-trid).
-                           transaction::context().caller = message.trid;
-
-                           switch( service.transaction)
-                           {
-                              case service::transaction::Type::automatic:
-                              {
-                                 if( message.trid)
-                                 {
-                                    transaction::Context::instance().join( message.trid);
-                                 }
-                                 else
-                                 {
-                                    transaction::Context::instance().start( now);
-                                 }
-                                 break;
-                              }
-                              case service::transaction::Type::join:
-                              {
-                                 transaction::Context::instance().join( message.trid);
-                                 break;
-                              }
-                              case service::transaction::Type::atomic:
-                              {
-                                 transaction::Context::instance().start( now);
-                                 break;
-                              }
-                              case service::transaction::Type::none:
-                              default:
-                              {
-                                 // We don't start or join any transactions
-                                 // (technically we join a null-trid)
-                                 transaction::Context::instance().join( transaction::ID{ process::handle()});
-                                 break;
-                              }
-
-                           }
-
-                           // Set 'global deadline'
-                           transaction::Context::instance().current().timout.set( now, message.service.timeout);
-
-                        }
-
-                     } // <unnamed>
-                  } // local
-
                   void Default::transaction(
                         const common::transaction::ID& trid,
                         const server::Service& service,
                         const common::platform::time::unit& timeout,
                         const platform::time::point::type& now)
                   {
-                     Trace trace{ "server::handle::policy::local::transaction"};
+                     Trace trace{ "server::handle::policy::Default::transaction"};
 
                      log::line( log::debug, "trid: ", trid, " - service: ", service);
 
@@ -244,13 +190,18 @@ namespace casual
                         case service::transaction::Type::automatic:
                         {
                            if( trid)
-                           {
                               transaction::Context::instance().join( trid);
-                           }
                            else
-                           {
                               transaction::Context::instance().start( now);
-                           }
+
+                           break;
+                        }
+                        case service::transaction::Type::branch:
+                        {
+                           if( trid)
+                              transaction::Context::instance().branch( trid);
+                           else
+                              transaction::Context::instance().start( now);
                            break;
                         }
                         case service::transaction::Type::join:
@@ -263,15 +214,18 @@ namespace casual
                            transaction::Context::instance().start( now);
                            break;
                         }
-                        case service::transaction::Type::none:
                         default:
+                        {
+                           log::line( log::category::error, "unknown transaction semantics for service: ", service);
+                           // fallthrough
+                        }
+                        case service::transaction::Type::none:
                         {
                            // We don't start or join any transactions
                            // (technically we join a null-trid)
                            transaction::Context::instance().join( transaction::ID{ process::handle()});
                            break;
                         }
-
                      }
 
                      // Set 'global deadline'
@@ -361,12 +315,9 @@ namespace casual
                      communication::ipc::blocking::send( id, message, m_error_handler);
                   }
 
-                  void Admin::ack()
+                  void Admin::ack( const message::service::call::ACK& message)
                   {
-                     message::service::call::ACK ack;
-                     ack.process = common::process::handle();
-
-                     communication::ipc::blocking::send( communication::instance::outbound::service::manager::device(), ack, m_error_handler);
+                     communication::ipc::blocking::send( communication::instance::outbound::service::manager::device(), message, m_error_handler);
                   }
 
 

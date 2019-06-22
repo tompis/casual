@@ -328,6 +328,17 @@ namespace casual
                         { value = common::transcode::utf8::decode( check::read( m_stack.back(), &rapidjson::Value::IsString, &rapidjson::Value::GetString)); }
                         void read( platform::binary::type& value) const
                         { value = common::transcode::base64::decode( check::read( m_stack.back(), &rapidjson::Value::IsString, &rapidjson::Value::GetString)); }
+
+                        void read( view::Binary value) const
+                        { 
+                           auto binary = common::transcode::base64::decode( 
+                              check::read( m_stack.back(), &rapidjson::Value::IsString, &rapidjson::Value::GetString));
+                           
+                           if( range::size( binary) != range::size( value))
+                              throw exception::casual::invalid::Node{ "binary size missmatch"};
+
+                           algorithm::copy( binary, std::begin( value));
+                        }
                      
                         policy::canonical::Representation canonical()
                         {
@@ -363,7 +374,6 @@ namespace casual
                         platform::size::type container_start( platform::size::type size, const char* const name)
                         {
                            start( name);
-
                            m_stack.back()->SetArray();
 
                            return size;
@@ -374,18 +384,15 @@ namespace casual
                            end( name);
                         }
 
-
                         void composite_start( const char* const name)
                         {
                            start( name);
-
                            m_stack.back()->SetObject();
                         }
                         void composite_end(  const char* const name)
                         {
                            end( name);
                         }
-
 
                         void start( const char* const name)
                         {
@@ -431,8 +438,9 @@ namespace casual
                         void write( const long long value) { m_stack.back()->SetInt64( value); }
                         void write( const float value) { m_stack.back()->SetDouble( value); }
                         void write( const double value) { m_stack.back()->SetDouble( value); }
-                        void write( const std::string& value) { m_stack.back()->SetString( common::transcode::utf8::encode( value), m_allocator); }
-                        void write( const platform::binary::type& value) { m_stack.back()->SetString( common::transcode::base64::encode( value), m_allocator); }
+                        void write( const std::string& value) { m_stack.back()->SetString( common::transcode::utf8::encode( value), m_allocator);}
+                        void write( const platform::binary::type& value) { m_stack.back()->SetString( common::transcode::base64::encode( value), m_allocator);}
+                        void write( view::immutable::Binary value) { m_stack.back()->SetString( common::transcode::base64::encode( value), m_allocator);}
 
                         const rapidjson::Document& document() const { return m_document;}
 

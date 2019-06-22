@@ -47,9 +47,7 @@ namespace casual
 
                      void operator () ()
                      {
-                        //
                         // Make sure we unsubscribe for events
-                        //
                         auto unsubscribe = execute::scope( [](){
                            message::event::subscription::End message;
                            message.process = process::handle();
@@ -177,9 +175,7 @@ namespace casual
                            std::cerr << terminal::color::red << "fatal";
                            std::cerr << " failed to boot domain\n";
 
-                           //
                            // Check if we got some error events
-                           //
                            common::message::dispatch::pump(
                                  event_handler,
                                  common::communication::ipc::inbound::device(),
@@ -215,7 +211,7 @@ namespace casual
                   admin::vo::State state()
                   {
                      serviceframework::service::protocol::binary::Call call;
-                     auto reply = call( admin::service::name::state());
+                     auto reply = call( admin::service::name::state);
 
                      admin::vo::State serviceReply;
 
@@ -225,12 +221,12 @@ namespace casual
                   }
 
 
-                  std::vector< admin::vo::scale::Instances> scale_instances( const std::vector< admin::vo::scale::Instances>& instances)
+                  auto scale_instances( const std::vector< admin::vo::scale::Instances>& instances)
                   {
                      serviceframework::service::protocol::binary::Call call;
                      call << CASUAL_MAKE_NVP( instances);
 
-                     auto reply = call( admin::service::name::scale::instances());
+                     auto reply = call( admin::service::name::scale::instances);
 
                      std::vector< admin::vo::scale::Instances> serviceReply;
 
@@ -298,10 +294,7 @@ namespace casual
 
                   void shutdown()
                   {
-
-                     //
                      // subscribe for events
-                     //
                      {
                         message::event::subscription::Begin message;
                         message.process = process::handle();
@@ -313,10 +306,27 @@ namespace casual
 
                      event::Handler events{ get_alias_mapping()};
 
-                     serviceframework::service::protocol::binary::Call{}( admin::service::name::shutdown());
+                     serviceframework::service::protocol::binary::Call{}( admin::service::name::shutdown);
 
                      events();
                   }
+
+                  namespace set
+                  {
+                     auto environment( const admin::vo::set::Environment& environment)
+                     {
+                        serviceframework::service::protocol::binary::Call call;
+                        call << CASUAL_MAKE_NVP( environment);
+
+                        auto reply = call( admin::service::name::set::environment);
+
+                        std::vector< std::string> serviceReply;
+
+                        reply >> CASUAL_MAKE_NVP( serviceReply);
+
+                        return serviceReply;
+                     }
+                  } // set
                } // call
 
                namespace format
@@ -440,19 +450,68 @@ namespace casual
                   }
                 
 
-                  auto scale_instances_completion = []( auto values, bool help){
+                  auto scale_instances_completion = []( auto values, bool help) -> std::vector< std::string>
+                  {
                      if( help)
-                     {
-                        return std::vector< std::string>{ "<alias> <#>"};
-                     }
+                        return { "<alias> <#>"};
                      
                      if( values.size() % 2 == 0)
-                     {
                         return fetch_aliases();
-                     }
                      else
-                        return std::vector< std::string>{ "<value>"};
+                        return { "<value>"};
                   };
+
+                  namespace set
+                  {
+                     namespace environment
+                     {
+                        void call( const std::string& name, const std::string& value, std::vector< std::string> aliases)
+                        {
+                           admin::vo::set::Environment environment;
+                           environment.variables.variables.push_back( configuration::environment::Variable{ name, value});
+                           environment.aliases = std::move( aliases);
+
+                           call::set::environment( environment);
+                        }
+
+                        auto complete = []( auto values, bool help) -> std::vector< std::string>
+                        {
+                           if( help)
+                              return { "<variable> <value> [<alias>].*"};
+
+                           auto list_environment = []()
+                           {
+                              auto current = common::environment::variable::native::current();
+
+                              auto transform_name = []( auto& variable)
+                              {
+                                 auto name = variable.name();
+                                 return std::string( std::begin( name), std::end( name));
+                              };
+
+                              return algorithm::transform( current, transform_name);
+                           };
+
+                           switch( values.size())
+                           {
+                              case 0: return list_environment();
+                              case 1: return { "<value>"};
+                              default: return fetch_aliases();
+                           }
+                        };
+
+                        constexpr auto description = R"(set an environment variable for explicit aliases
+                        
+if 0 aliases are provided, the environment virable will be set 
+for all servers and executables 
+                        )";
+
+                     } // environment
+                  } // set
+
+
+
+
 
                   void boot( const std::vector< std::string>& files)
                   {
@@ -468,7 +527,7 @@ namespace casual
                   {
                      void configuration()
                      {
-                        serviceframework::service::protocol::binary::Call{}( admin::service::name::configuration::persist());
+                        serviceframework::service::protocol::binary::Call{}( admin::service::name::configuration::persist);
                      }
                   } // persist
 
@@ -487,23 +546,25 @@ namespace casual
 
          namespace admin 
          {
+            
             struct cli::Implementation
             {
-               common::argument::Group options()
+               argument::Group options()
                {
                   auto complete_state = []( auto values, bool){
                      return std::vector< std::string>{ "json", "yaml", "xml", "ini"};
                   };
 
-                  return common::argument::Group{ [](){}, { "domain"}, "local casual domain related administration",
-                     common::argument::Option( &local::action::list_servers, { "-ls", "--list-servers"}, "list all servers"),
-                     common::argument::Option( &local::action::list_executable, { "-le", "--list-executables"}, "list all executables"),
-                     common::argument::Option( &local::action::list_instances, { "-li", "--list-instances"}, "list all instances"),
-                     common::argument::Option( &local::action::scale_instances, local::action::scale_instances_completion, { "-si", "--scale-instances"}, "<alias> <#> scale executable instances"),
-                     common::argument::Option( &local::action::shutdown, { "-s", "--shutdown"}, "shutdown the domain"),
-                     common::argument::Option( &local::action::boot, { "-b", "--boot"}, "boot domain"),
-                     common::argument::Option( &local::action::persist::configuration, { "-p", "--persist-state"}, "persist current state"),
-                     common::argument::Option( &local::action::state, complete_state, { "--state"}, "domain state")
+                  return argument::Group{ [](){}, { "domain"}, "local casual domain related administration",
+                     argument::Option( &local::action::list_servers, { "-ls", "--list-servers"}, "list all servers"),
+                     argument::Option( &local::action::list_executable, { "-le", "--list-executables"}, "list all executables"),
+                     argument::Option( &local::action::list_instances, { "-li", "--list-instances"}, "list all instances"),
+                     argument::Option( &local::action::scale_instances, local::action::scale_instances_completion, { "-si", "--scale-instances"}, "<alias> <#> scale executable instances"),
+                     argument::Option( &local::action::shutdown, { "-s", "--shutdown"}, "shutdown the domain"),
+                     argument::Option( &local::action::boot, { "-b", "--boot"}, "boot domain -"),
+                     argument::Option( &local::action::set::environment::call, local::action::set::environment::complete, { "--set-environment"}, local::action::set::environment::description)( argument::cardinality::any{}),
+                     argument::Option( &local::action::persist::configuration, { "-p", "--persist-state"}, "persist current state"),
+                     argument::Option( &local::action::state, complete_state, { "--state"}, "domain state")
                   };
                }
             };

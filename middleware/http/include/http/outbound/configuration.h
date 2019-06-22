@@ -14,6 +14,7 @@
 #include "common/serialize/macro.h"
 #include "common/optional.h"
 
+
 #include <string>
 #include <vector>
 #include <functional>
@@ -96,7 +97,7 @@ namespace casual
                std::vector< Service> services;
 
                CASUAL_CONST_CORRECT_SERIALIZE(
-                  archive & serviceframework::name::value::pair::make( "default", casual_default);
+                  CASUAL_SERIALIZE_NAME( casual_default, "default");
                   CASUAL_SERIALIZE( services);
                )
 

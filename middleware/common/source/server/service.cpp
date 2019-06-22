@@ -34,15 +34,6 @@ namespace casual
             return function( std::move( argument));
          }
 
-         std::ostream& operator << ( std::ostream& out, const Service& service)
-         {
-            return out << "{ name: " << service.name
-                  << ", category: " << service.category
-                  << ", transaction: " << service.transaction
-                  << ", compare: " << service.compare
-                  << '}';
-         }
-
          bool operator == ( const Service& lhs, const Service& rhs)
          {
             return lhs == rhs.compare;
@@ -61,6 +52,10 @@ namespace casual
             return ! ( lhs == rhs);
          }
 
+         bool operator == ( const Service& lhs, const std::string& rhs)
+         {
+            return lhs.name == rhs;
+         }
 
          namespace xatmi
          {
@@ -77,18 +72,14 @@ namespace casual
 
                         TPSVCINFO result;
 
-                        //
                         // Before we call the user function we have to add the buffer to the "buffer-pool"
-                        //
                         algorithm::copy_max( argument.service.name, range::make( result.name));
 
                         result.len = argument.payload.memory.size();
                         result.cd = argument.descriptor;
                         result.flags = argument.flags.underlaying();
 
-                        //
                         // This is the only place where we use adopt
-                        //
                         result.data = buffer::pool::Holder::instance().adopt( std::move( argument.payload));
 
                         return result;
@@ -138,20 +129,16 @@ namespace casual
                      {
                         auto& state = server::context().state();
 
-                        //
                         // Set destination for the coming jump...
                         // we can't wrap the jump in some abstraction since it's
                         // UB (http://en.cppreference.com/w/cpp/utility/program/setjmp)
-                        //
                         switch( ::setjmp( state.jump.environment))
                         {
                            case state::Jump::Location::c_no_jump:
                            {
                               invoke( argument);
 
-                              //
                               // User service returned, not by tpreturn.
-                              //
                               throw exception::xatmi::service::Error( "service: " + argument.service.name + " did not call tpreturn");
                            }
                            case state::Jump::Location::c_forward:
@@ -177,9 +164,7 @@ namespace casual
 
                      void invoke( service::invoke::Parameter& argument)
                      {
-                        //
                         // Also takes care of buffer to pool
-                        //
                         TPSVCINFO information = transform::information( argument);
 
                         try

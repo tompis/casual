@@ -11,7 +11,7 @@
 #include "common/communication/ipc.h"
 #include "common/message/domain.h"
 #include "common/message/service.h"
-#include "common/mockup/ipc.h"
+#include "common/unittest/eventually/send.h"
 
 #include <random>
 #include <thread>
@@ -58,7 +58,7 @@ namespace casual
                         }
                         ipc::message::Transport transport;
                         transport.message.header.type = type;
-                        transport.message.header.complete_size = payload.size();
+                        transport.message.header.size = payload.size();
                         transport.message.header.count = std::distance( current, last);
                         transport.message.header.offset = std::distance( std::begin( payload), current);
 
@@ -176,7 +176,7 @@ namespace casual
 
             auto send_message = unittest::random::message( ipc::message::transport::max_payload_size());
 
-            mockup::ipc::eventually::send( ipc::inbound::ipc(), send_message);
+            unittest::eventually::send( ipc::inbound::ipc(), send_message);
 
             unittest::Message receive_message;
             {
@@ -205,7 +205,7 @@ namespace casual
             common::unittest::Trace trace;
 
             auto send_message = unittest::random::message( 2 * ipc::message::transport::max_payload_size());
-            mockup::ipc::eventually::send( ipc::inbound::ipc(), send_message);
+            unittest::eventually::send( ipc::inbound::ipc(), send_message);
 
 
             unittest::Message receive_message;
@@ -242,13 +242,11 @@ namespace casual
 
             auto send_message = unittest::random::message( 10 * ipc::message::transport::max_payload_size());
 
-            mockup::ipc::eventually::send( ipc::inbound::ipc(), send_message);
-
+            unittest::eventually::send( ipc::inbound::ipc(), send_message);
 
             unittest::Message receive_message;
             ipc::blocking::receive( ipc::inbound::device(), receive_message);
             EXPECT_TRUE( ( algorithm::equal( receive_message.payload, send_message.payload)));
-
          }
 
          TEST( casual_common_communication_ipc, send_receive__1__message_size_1103__expect_correct_assembly)
@@ -257,7 +255,7 @@ namespace casual
 
             auto send_message = unittest::random::message( 1103);
 
-            mockup::ipc::eventually::send( ipc::inbound::ipc(), send_message);
+            unittest::eventually::send( ipc::inbound::ipc(), send_message);
 
 
             unittest::Message receive_message;
@@ -279,7 +277,7 @@ namespace casual
 
             for( int count = 10; count > 0; --count)
             {
-               correlations.push_back( mockup::ipc::eventually::send( ipc::inbound::ipc(), send_message));
+               correlations.push_back( unittest::eventually::send( ipc::inbound::ipc(), send_message));
             }
 
 
@@ -303,7 +301,7 @@ namespace casual
             {
                message.correlation = uuid::make();
                message.execution = uuid::make();
-               message.transaction.trid = transaction::ID::create( process::handle());
+               message.transaction.trid = transaction::id::create( process::handle());
                message.transaction.state = common::message::service::Transaction::State::rollback;
                message.buffer.type = ".binary";
                message.code.result = common::code::xatmi::ok;
@@ -311,7 +309,7 @@ namespace casual
                message.buffer.memory = unittest::random::binary( 1200);
             }
 
-            const auto correlation = mockup::ipc::eventually::send( ipc::inbound::ipc(), message);
+            const auto correlation = unittest::eventually::send( ipc::inbound::ipc(), message);
 
             common::message::service::call::Reply receive_message;
             ipc::blocking::receive( ipc::inbound::device(), receive_message, correlation);
@@ -328,20 +326,16 @@ namespace casual
          {
             namespace
             {
-               struct Message : common::message::basic_message< common::message::Type::mockup_disconnect>
+               struct Message : unittest::Message
                {
-                  Message() = default;
-                  Message( platform::size::type size) 
-                     : payload( common::unittest::random::binary( size)) {}
+                  using unittest::Message::Message;
                   
                   platform::size::type index = 0;
-                  platform::binary::type payload;
 
                   CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     base_type::serialize( archive);
+                     unittest::Message::serialize( archive);
                      CASUAL_SERIALIZE( index);
-                     CASUAL_SERIALIZE( payload);
                   })
                };
 
@@ -364,7 +358,7 @@ namespace casual
                   {
                      ipc::blocking::receive( ipc::inbound::device(), message);
                      EXPECT_TRUE( message.index == index);
-                     EXPECT_TRUE( message.payload == origin.payload);
+                     EXPECT_TRUE( message.payload == origin.payload) << "\nmessage: " << message << "\norigin: " << origin;
                   }
 
                   sender.join();

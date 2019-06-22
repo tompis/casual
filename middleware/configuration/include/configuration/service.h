@@ -9,6 +9,7 @@
 
 #include "common/serialize/macro.h"
 #include "common/platform.h"
+#include "common/optional.h"
 
 namespace casual
 {
@@ -16,45 +17,33 @@ namespace casual
    {
       namespace service
       {
-
-         namespace service
+         struct Default
          {
-            struct Default
-            {
-               common::optional< std::string> timeout;
-
-               CASUAL_CONST_CORRECT_SERIALIZE
-               (
-                  CASUAL_SERIALIZE( timeout);
-               )
-
-            };
-         } // service
-
-
-         struct Service : service::Default
-         {
-
-            Service();
-            Service( std::function< void(Service&)> foreign);
-
-            std::string name;
-            common::optional< std::vector< std::string>> routes;
+            std::string timeout = "0s";
 
             CASUAL_CONST_CORRECT_SERIALIZE
             (
-               service::Default::serialize( archive);
-               CASUAL_SERIALIZE( name);
-               CASUAL_SERIALIZE( routes);
+               CASUAL_SERIALIZE( CASUAL_MAKE_NVP( timeout));
             )
-
-            friend bool operator == ( const Service& lhs, const Service& rhs);
-
-            //! Will assign any unassigned values in lhs
-            friend Service& operator += ( Service& lhs, const service::Default& rhs);
          };
 
       } // service
+      struct Service
+      {
+         std::string name;
+         common::optional< std::string> timeout;
+         common::optional< std::vector< std::string>> routes;
+
+         CASUAL_CONST_CORRECT_SERIALIZE
+         (
+            CASUAL_SERIALIZE( name);
+            CASUAL_SERIALIZE( timeout);
+            CASUAL_SERIALIZE( routes);
+         )
+
+         Service& operator += ( const service::Default& rhs);
+         friend bool operator == ( const Service& lhs, const Service& rhs);
+      };
    } // configuration
 } // casual
 

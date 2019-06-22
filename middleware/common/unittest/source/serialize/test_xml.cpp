@@ -9,6 +9,7 @@
 
 
 #include "common/serialize/xml.h"
+#include "common/exception/casual.h"
 
 #include <sstream>
 

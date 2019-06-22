@@ -13,6 +13,8 @@
 #include "common/flag/service/conversation.h"
 
 
+#include <cassert>
+
 namespace casual
 {
    namespace common
@@ -32,7 +34,6 @@ namespace casual
                {
                   CASUAL_SERIALIZE( address);
                })
-               friend std::ostream& operator << ( std::ostream& out, const Node& value);
             };
 
             struct Route
@@ -41,6 +42,8 @@ namespace casual
 
                inline Node next()
                {
+                  assert( ! nodes.empty());
+
                   auto node = std::move( nodes.back());
                   nodes.pop_back();
                   return node;
@@ -50,8 +53,6 @@ namespace casual
                {
                   CASUAL_SERIALIZE( nodes);
                })
-
-               friend std::ostream& operator << ( std::ostream& out, const Route& value);
             };
 
             namespace connect
@@ -69,8 +70,6 @@ namespace casual
                      CASUAL_SERIALIZE( recording);
                      CASUAL_SERIALIZE( flags);
                   })
-
-                  friend std::ostream& operator << ( std::ostream& out, const basic_request& value);
                };
 
                namespace caller
@@ -91,16 +90,15 @@ namespace casual
                {
                   Route route;
                   Route recording;
-                  code::xatmi status;
+                  service::Code code;
 
                   CASUAL_CONST_CORRECT_SERIALIZE(
                   {
                      reply_base::serialize( archive);
                      CASUAL_SERIALIZE( route);
                      CASUAL_SERIALIZE( recording);
-                     CASUAL_SERIALIZE( status);
+                     CASUAL_SERIALIZE( code);
                   })
-                  friend std::ostream& operator << ( std::ostream& out, const Reply& value);
                };
 
             } // connect
@@ -113,7 +111,7 @@ namespace casual
                flag::service::conversation::send::Flags flags;
                flag::service::conversation::Events events;
                service::Transaction transaction;
-               code::xatmi status = code::xatmi::ok;
+               service::Code code;
 
                CASUAL_CONST_CORRECT_SERIALIZE(
                {
@@ -121,9 +119,9 @@ namespace casual
                   CASUAL_SERIALIZE( route);
                   CASUAL_SERIALIZE( flags);
                   CASUAL_SERIALIZE( events);
-                  CASUAL_SERIALIZE( status);
+                  CASUAL_SERIALIZE( transaction);
+                  CASUAL_SERIALIZE( code);
                })
-               friend std::ostream& operator << ( std::ostream& out, const basic_send& value);
             };
 
             namespace caller
@@ -150,8 +148,6 @@ namespace casual
                   CASUAL_SERIALIZE( route);
                   CASUAL_SERIALIZE( events);
                })
-
-               friend std::ostream& operator << ( std::ostream& out, const Disconnect& value);
             };
 
 

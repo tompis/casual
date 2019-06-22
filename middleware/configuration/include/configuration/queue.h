@@ -11,6 +11,7 @@
 
 #include "common/serialize/macro.h"
 #include "common/platform.h"
+#include "common/optional.h"
 
 #include <string>
 #include <vector>
@@ -26,7 +27,7 @@ namespace casual
          {
             struct Default
             {
-               common::optional< common::platform::size::type> retries;
+               common::platform::size::type retries = 0;
 
                CASUAL_CONST_CORRECT_SERIALIZE
                (
@@ -35,30 +36,26 @@ namespace casual
             };
          } // queue
 
-         struct Queue : queue::Default
+         struct Queue
          {
-            Queue();
-            Queue( std::function<void( Queue&)> foreign);
-
             std::string name;
+            common::optional< common::platform::size::type> retries;
             std::string note;
 
             CASUAL_CONST_CORRECT_SERIALIZE
             (
-               queue::Default::serialize( archive);
                CASUAL_SERIALIZE( name);
+               CASUAL_SERIALIZE( retries);
                CASUAL_SERIALIZE( note);
             )
 
+            Queue& operator += ( const queue::Default& value);
             friend bool operator < ( const Queue& lhs, const Queue& rhs);
             friend bool operator == ( const Queue& lhs, const Queue& rhs);
          };
 
          struct Group
          {
-            Group();
-            Group( std::function<void( Group&)> foreign);
-
             std::string name;
             common::optional< std::string> queuebase;
             std::string note;
@@ -95,8 +92,6 @@ namespace casual
 
          struct Manager
          {
-            Manager();
-
             manager::Default manager_default;
             std::vector< Group> groups;
 
@@ -113,7 +108,6 @@ namespace casual
             Manager& operator += ( Manager&& rhs);
             friend Manager operator + ( const Manager& lhs, const Manager& rhs);
          };
-
 
          namespace unittest
          {

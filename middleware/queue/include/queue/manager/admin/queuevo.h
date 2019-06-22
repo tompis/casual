@@ -8,11 +8,9 @@
 #pragma once
 
 
-
 #include "common/serialize/macro.h"
 #include "common/platform.h"
 #include "common/domain.h"
-
 
 
 namespace casual
@@ -126,9 +124,7 @@ namespace casual
 
             struct Message
             {
-
-
-               common::platform::Uuid id;
+               common::Uuid id;
                common::strong::queue::id queue;
                common::strong::queue::id origin;
                common::platform::binary::type trid;
@@ -141,7 +137,6 @@ namespace casual
                common::platform::time::point::type timestamp;
 
                size_type size;
-
 
                CASUAL_CONST_CORRECT_SERIALIZE(
                {
@@ -157,10 +152,7 @@ namespace casual
                   CASUAL_SERIALIZE( timestamp);
                   CASUAL_SERIALIZE( size);
                })
-
             };
-
-
 
             struct State
             {

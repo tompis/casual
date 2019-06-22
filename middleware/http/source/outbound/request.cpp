@@ -14,6 +14,7 @@
 #include "common/transcode.h"
 
 #include "common/memory.h"
+#include "common/environment.h"
 #include "common/communication/ipc.h"
 #include "common/message/handle.h"
 
@@ -82,9 +83,7 @@ namespace casual
                            {
                               Trace trace{ "http::outbound::request::local::send::transcode::payload transcode_base64"};
 
-                              platform::binary::type buffer;
-                              std::swap( buffer, payload.memory);
-
+                              auto buffer = std::exchange( payload.memory, {});
                               common::transcode::base64::encode( buffer, payload.memory);
 
                               return std::move( payload);
@@ -224,6 +223,14 @@ namespace casual
 
                      } // callback
                   } // receive
+
+                  
+                  namespace log
+                  {
+                     auto verbose = common::environment::variable::get( "CASUAL_CURL_VERBOSE", 0) == 1;
+                  } // log
+                  
+
                } // <unnamed>
             } // local
 
@@ -340,14 +347,24 @@ namespace casual
                request.state().correlation = message.correlation;
                request.state().execution = message.execution;
                request.state().service = std::move( message.service.name);
+               request.state().parent = std::move( message.parent);
                request.state().start = now;
 
                auto& easy = request.easy();
 
+               // clear error buffer
+               curl::error::buffer().fill( '\0');
                curl::easy::set::option( easy, CURLOPT_ERRORBUFFER, curl::error::buffer().data());
+               
                curl::easy::set::option( easy, CURLOPT_URL, node.url.data());
                curl::easy::set::option( easy, CURLOPT_FOLLOWLOCATION, 1L);
                curl::easy::set::option( easy, CURLOPT_FAILONERROR, 1L);
+
+               // connection stuff
+               {
+                  // TODO: we probably don't want to do this...
+                  curl::easy::set::option( easy, CURLOPT_FRESH_CONNECT, 1L);
+               }
                
                // always POST? probably...
                curl::easy::set::option( easy, CURLOPT_POST, 1L);
@@ -374,6 +391,10 @@ namespace casual
                   curl::easy::set::option( easy, CURLOPT_HEADERDATA, &request.state());
                }
 
+               if( local::log::verbose)
+                  curl::easy::set::option( easy, CURLOPT_VERBOSE, 1);
+
+
                log::line( http::verbose::log, "request: ", request);
 
                return request;
@@ -382,9 +403,9 @@ namespace casual
 
             namespace code
             {
-               common::message::service::call::Reply::Code transform( const common::service::header::Fields& header, curl::type::code::easy code) noexcept
+               common::message::service::Code transform( const state::pending::Request& request, curl::type::code::easy code) noexcept
                {
-                  common::message::service::call::Reply::Code result;
+                  common::message::service::Code result;
 
                   using common::code::xatmi;
                   using curl::type::code::easy;
@@ -395,7 +416,9 @@ namespace casual
                         // the call went ok from curls point of view, lets check 
                         // from casuals point of view.
 
+                        auto& header = request.state().header.reply;
                         {
+                           
                            auto value = header.find( http::header::name::result::code);
                            if( value)
                               result.result = http::header::value::result::code( *value);
@@ -408,9 +431,15 @@ namespace casual
                         }
                         break;
                      }
-                     default: 
+                     default:
+                     {
+                        log::line( common::log::category::error, "curl error: ", curl_easy_strerror( code));
+                        log::line( common::log::category::verbose::error, "request: ", request);
+
                         result.result = xatmi::service_error;
                         break;
+
+                     }
                      
                   }
                   return result;

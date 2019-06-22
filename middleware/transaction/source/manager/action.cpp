@@ -15,6 +15,9 @@
 #include "common/server/handle/call.h"
 #include "common/event/send.h"
 #include "common/communication/instance.h"
+#include "common/exception/casual.h"
+
+#include "domain/pending/message/send.h"
 
 
 #include "serviceframework/log.h"
@@ -32,17 +35,69 @@ namespace casual
       {
          namespace action
          {
-            void configure( State& state)
+            State state( manager::Settings settings)
             {
-               Trace trace( "configure");
+               State state{ common::environment::string( std::move( settings.log))};
 
-               common::message::domain::configuration::Request request;
-               request.process = process::handle();
+               // fetch configuration from domain-manager
+               auto configuration = []()
+               {
+                  common::message::domain::configuration::Request request;
+                  request.process = process::handle();
+                  return communication::ipc::call( communication::instance::outbound::domain::manager::device(), request);
+               }();
 
-               auto configuration = communication::ipc::call( communication::instance::outbound::domain::manager::device(), request);
+               {
+                  Trace trace{ "transaction manager xa-switch configuration"};
 
-               // configure state
-               state::configure( state, configuration);
+                  auto resources = configuration::resource::property::get();
+
+                  for( auto& resource : resources)
+                  {
+                     auto result = state.resource_properties.emplace( resource.key, std::move( resource));
+                     if( ! result.second)
+                        throw common::exception::casual::invalid::Configuration( "multiple keys in resource config: " + result.first->first);
+                  }
+               }
+
+               // configure resources
+               {
+                  Trace trace{ "transaction manager resource configuration"};
+
+                  auto transform_resource = []( const auto& r)
+                  {
+                     state::resource::Proxy proxy{ state::resource::Proxy::generate_id{}};
+
+                     proxy.name = common::coalesce( r.name, ".rm-" + std::to_string( proxy.id.value()));
+                     proxy.concurency = r.instances;
+                     proxy.key = r.key;
+                     proxy.openinfo = r.openinfo;
+                     proxy.closeinfo = r.closeinfo;
+                     proxy.note = r.note;
+
+                     return proxy;
+                  };
+
+                  auto validate = [&state]( const auto& r) 
+                  {
+                     if( ! common::algorithm::find( state.resource_properties, r.key))
+                     {
+                        log::line( log::category::error, "failed to correlate resource key '", r.key, "' - action: skip resource");
+
+                        common::event::error::send( "failed to correlate resource key '" + r.key + "'");
+                        return false;
+                     }
+                     return true;
+                  };
+
+                  common::algorithm::transform_if(
+                     configuration.domain.transaction.resources,
+                     state.resources,
+                     transform_resource,
+                     validate);
+               }
+
+               return state;
             }
 
 
@@ -53,8 +108,8 @@ namespace casual
                   Trace trace( "resource::Instances::operator()");
 
                   log::line( log, "update instances for resource: ", proxy);
-
-                  auto count = static_cast< long>( proxy.concurency - proxy.instances.size());
+               
+                  auto count = proxy.concurency - range::size( proxy.instances);
 
                   if( count > 0)
                   {
@@ -115,16 +170,12 @@ namespace casual
                            {
                               log::line( log, "shutdown instance: ", instance);
 
-
                               instance.state( state::resource::Proxy::Instance::State::shutdown);
 
                               if( ! ipc::device().non_blocking_send( instance.process.ipc, message::shutdown::Request{}))
                               {
-                                 // We couldn't send shutdown for some reason, we put the message in 'persistent-replies' and
-                                 // hope to send it later...
-                                 log::line( log::category::warning, "failed to send shutdown to instance: ", instance, " - action: try send it later");
-
-                                 m_state.persistent.replies.emplace_back( instance.process.ipc, message::shutdown::Request{});
+                                 // We couldn't send shutdown for some reason, we send it to pending
+                                 casual::domain::pending::message::send( instance.process, message::shutdown::Request{});
                               }
                               break;
                            }
@@ -133,7 +184,7 @@ namespace casual
                   }
                }
 
-               std::vector< admin::resource::Proxy> insances( State& state, std::vector< admin::update::Instances> instances)
+               std::vector< admin::resource::Proxy> instances( State& state, std::vector< admin::scale::Instances> instances)
                {
                   std::vector< admin::resource::Proxy> result;
 
@@ -142,7 +193,7 @@ namespace casual
                   {
                      try
                      {
-                        auto& resource = state.get_resource( directive.id);
+                        auto& resource = state.get_resource( directive.name);
                         resource.concurency = directive.instances;
 
                         Instances{ state}( resource);
@@ -184,7 +235,6 @@ namespace casual
                } // local
 
 
-
                bool request( State& state, state::pending::Request& message)
                {
                   Trace trace{ "transaction::action::resource::request"};
@@ -195,7 +245,6 @@ namespace casual
 
                      if( found )
                      {
-
                         if( ! local::instance::request( message.message, *found))
                         {
                            log::line( log, "failed to send resource request - type: ", message.message.type, " to: ", found->process);
@@ -219,41 +268,7 @@ namespace casual
 
             } // resource
 
-
-            namespace persistent
-            {
-
-               bool Send::operator () ( state::pending::Reply& message) const
-               {
-                  try
-                  {
-                     if( ! ipc::device().non_blocking_push( message.target, message.message))
-                     {
-                        log::line( log, "failed to send reply - type: ", message.message.type, " to: ", message.target);
-                        return false;
-                     }
-                  }
-                  catch( const exception::system::communication::Unavailable&)
-                  {
-                     log::line( log::category::error, "failed to send reply - target: ", message.target, ", message: ", message.message, " - TODO: rollback transaction?");
-                     //
-                     // ipc-queue has been removed...
-                     // TODO attention: deduce from message.message.type what we should do
-                     //  We should rollback if we are in a prepare stage?
-                     //
-                  }
-                  return true;
-               }
-
-               bool Send::operator () ( state::pending::Request& message) const
-               {
-                  return resource::request( m_state, message);
-               }
-
-            } // pending
-
          } // action
-               
       } // manager   
    } //transaction
 } // casual

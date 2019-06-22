@@ -18,7 +18,6 @@
 
 namespace casual
 {
-
    namespace common
    {
       namespace transaction
@@ -41,13 +40,13 @@ namespace casual
             } // <unnamed>
          } // local
 
-         Resource::Resource( resource::Link link, id_type id, std::string openinfo, std::string closeinfo)
+         Resource::Resource( resource::Link link, strong::resource::id id, std::string openinfo, std::string closeinfo)
             : m_key( std::move( link.key)), m_xa( link.xa), m_id(std::move( id)), m_openinfo( std::move( openinfo)), m_closeinfo( std::move( closeinfo))
          {
             if( ! m_xa)
                throw common::exception::system::invalid::Argument( "xa-switch is null");
 
-            log::line( log::category::transaction, "associated resource: ", *this, " name: '" , m_xa->name, "' version: ", m_xa->version);
+            log::line( log::category::transaction, "associated resource: ", *this);
          }
 
 
@@ -60,9 +59,7 @@ namespace casual
 
             if( result == code::duplicate_xid)
             {
-               //
                // Transaction is already associated with this thread of control, we try to join instead
-               //
                log::line( log::category::transaction, result, " - action: try to join instead");
 
                flags |= Flag::join;
@@ -201,7 +198,10 @@ namespace casual
                << ", id: " << resource.m_id 
                << ", openinfo: " << resource.m_openinfo
                << ", closeinfo: " << resource.m_closeinfo 
-               << "}";
+               << ", xa: { name: " << resource.m_xa->name
+               << ", flags: " << resource.m_xa->flags
+               << ", version: " << resource.m_xa->version
+               << "}}";
          }
 
 

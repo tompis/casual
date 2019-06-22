@@ -107,15 +107,11 @@ namespace casual
                using std::swap;
                swap( m_value, other.m_value);
             }
- 
-            CASUAL_CONST_CORRECT_SERIALIZE(
-            {
-               CASUAL_SERIALIZE( m_value);
-            })
+
+            // forward serialization
+            CASUAL_FORWARD_SERIALIZE( m_value)
 
             value_type& underlaying() noexcept { return m_value;}
-
-            inline friend std::ostream& operator << ( std::ostream& out, const basic_id& value) { return out << value.m_value;}
 
          protected:
             value_type m_value;

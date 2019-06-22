@@ -28,8 +28,6 @@
 #include "serviceframework/log.h"
 
 
-#include <xatmi.h>
-
 // std
 #include <fstream>
 #include <algorithm>
@@ -119,15 +117,10 @@ namespace casual
          } // <unnamed>
       } // local
 
-
-
       Manager::Manager( manager::Settings&& settings) : m_state{ local::configure::state( std::move( settings))}
       {
          Trace trace{ "service::Manager::Manager ctor"};
-
       }
-
-
 
       Manager::~Manager()
       {
@@ -135,9 +128,7 @@ namespace casual
          {
             Trace trace{ "service::Manager::Manager dtor"};
 
-            //
             // Terminate
-            //
             process::terminate( m_state.forward);
          }
          catch( ...)
@@ -158,63 +149,25 @@ namespace casual
 
                   log::line( log, "prepare message-pump handlers");
 
-
                   auto handler = manager::handler( state);
 
-
-                  //
                   // Connect to domain
-                  //
                   communication::instance::connect( communication::instance::identity::service::manager);
-
 
                   log::line( log, "start message pump");
 
-
-                  while( true)
+                  auto empty_callback = [&]()
                   {
-                     if( state.pending.replies.empty())
-                     {
-                        handler( manager::ipc::device().blocking_next());
-                     }
-                     else
-                     {
-                        signal::handle();
-                        signal::thread::scope::Block block;
+                     // the input socket is empty, we can't know if there ever gonna be any more 
+                     // messages to read, we need to send metric, if any...
+                     if( state.metric && state.events.active< common::message::event::service::Calls>())
+                        manager::handle::metric::send( state);
+                  };
 
-                        // Send pending replies
-                        {
-
-                           log::line( verbose::log, "pending replies: ", state.pending.replies);
-
-                           auto replies = std::exchange( state.pending.replies, {});
-
-                           auto remain = std::get< 1>( common::algorithm::partition(
-                                 replies,
-                                 common::message::pending::sender(
-                                       communication::ipc::policy::non::Blocking{},
-                                       manager::ipc::device().error_handler())));
-
-                           algorithm::move( remain, state.pending.replies);
-                        }
-
-                        // Take care of service dispatch
-                        {
-                           //
-                           // If we've got pending that is 'never' sent, we still want to
-                           // do a lot of service stuff. Hence, if we got into an 'error state'
-                           // we'll still function...
-                           //
-                           // TODO: Should we have some sort of TTL for the pending?
-                           //
-                           auto count = common::platform::batch::service::pending;
-
-                           while( handler( manager::ipc::device().non_blocking_next()) && count-- > 0)
-                              ;
-                        }
-
-                     }
-                  }
+                  common::message::dispatch::empty::pump( 
+                     handler, 
+                     manager::ipc::device(), 
+                     empty_callback);
                }
 
             } // message

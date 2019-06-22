@@ -6,29 +6,22 @@
 
 
 #include "configuration/service.h"
+#include "common/algorithm.h"
 
 
 namespace casual
 {
    namespace configuration
    {
-      namespace service
+      Service& Service::operator += ( const service::Default& rhs)
       {
+         timeout = common::coalesce( timeout, rhs.timeout);
+         return *this;
+      }
 
-         Service::Service() = default;
-         Service::Service( std::function< void(Service&)> foreign) { foreign( *this);}
-
-         bool operator == ( const Service& lhs, const Service& rhs)
-         {
-            return lhs.name == rhs.name;
-         }
-
-         Service& operator += ( Service& lhs, const service::Default& rhs)
-         {
-            lhs.timeout = common::coalesce( lhs.timeout, rhs.timeout);
-            return lhs;
-         }
-
-      } // service
+      bool operator == ( const Service& lhs, const Service& rhs)
+      {
+         return lhs.name == rhs.name;
+      }
    } // configuration
 } // casual

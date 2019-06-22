@@ -12,6 +12,7 @@
 #include "queue/api/message.h"
 
 #include "common/platform.h"
+#include "common/uuid.h"
 
 
 namespace casual
@@ -20,7 +21,7 @@ namespace casual
    {
       inline namespace v1  {
 
-      common::platform::Uuid enqueue( const std::string& queue, const Message& message);
+      common::Uuid enqueue( const std::string& queue, const Message& message);
 
       std::vector< Message> dequeue( const std::string& queue);
       std::vector< Message> dequeue( const std::string& queue, const Selector& selector);
@@ -32,10 +33,8 @@ namespace casual
 
          namespace available
          {
-            //!
             //! If requested queue is not found (advertised), we will wait until it's
             //! available, and then block.
-            //!
             //! @{
             Message dequeue( const std::string& queue);
             Message dequeue( const std::string& queue, const Selector& selector);
@@ -55,7 +54,7 @@ namespace casual
       namespace xatmi
       {
 
-         common::platform::Uuid enqueue( const std::string& queue, const Message& message);
+         common::Uuid enqueue( const std::string& queue, const Message& message);
 
          std::vector< Message> dequeue( const std::string& queue);
          std::vector< Message> dequeue( const std::string& queue, const Selector& selector);

@@ -42,18 +42,13 @@ namespace casual
 
          namespace handle
          {
-            using dispatch_type = common::communication::ipc::dispatch::Handler;
-
-            namespace implementation
+            namespace persist
             {
-               struct Interface
-               {
-                  virtual bool prepare( State& state, common::message::transaction::resource::prepare::Reply& message, Transaction& transaction) const = 0;
-                  virtual bool commit( State& state, common::message::transaction::resource::commit::Reply& message, Transaction& transaction) const = 0;
-                  virtual bool rollback( State& state, common::message::transaction::resource::rollback::Reply& message, Transaction& transaction) const = 0;
-               };
-            } // implementation
+               //! persist and send pending replies, if any
+               void send( State& state);
+            } // persist
 
+            using dispatch_type = common::communication::ipc::dispatch::Handler;
 
             namespace process
             {
@@ -83,7 +78,7 @@ namespace casual
                {
                   using Base::Base;
 
-                  void operator () ( common::message::transaction::resource::Involved& message);
+                  void operator () ( common::message::transaction::resource::involved::Request& message);
                };
 
                namespace reply

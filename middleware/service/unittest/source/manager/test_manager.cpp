@@ -11,19 +11,21 @@
 
 #include "service/manager/admin/server.h"
 #include "service/manager/admin/managervo.h"
+#include "service/unittest/advertise.h"
 
 #include "common/message/domain.h"
 #include "common/message/event.h"
 #include "common/message/service.h"
 
-#include "common/mockup/ipc.h"
-#include "common/mockup/domain.h"
-#include "common/mockup/process.h"
 #include "common/service/lookup.h"
 #include "common/exception/xatmi.h"
 #include "common/communication/instance.h"
+#include "common/event/listen.h"
 
 #include "serviceframework/service/protocol/call.h"
+#include "serviceframework/log.h"
+
+#include "domain/manager/unittest/process.h"
 
 namespace casual
 {
@@ -33,27 +35,24 @@ namespace casual
       {
          namespace
          {
-            struct Manager
+
+            constexpr auto configuration = R"(
+domain:
+   name: service-domain
+
+   servers:
+      - path: "./bin/casual-service-manager"
+        arguments: [ "--forward", "./bin/casual-service-forward"]
+)";
+
+            struct Domain
             {
-               Manager() : process{ "./bin/casual-service-manager", { "--forward", "./bin/casual-service-forward"}}
+               domain::manager::unittest::Process domain{ { local::configuration}};
+
+               auto forward() const
                {
-                  // Wait for manager to get online
-                  EXPECT_TRUE( process.handle() != common::process::handle());
+                  return common::communication::instance::fetch::handle( common::communication::instance::identity::forward::cache);
                }
-
-               ~Manager()
-               = default;
-
-               common::mockup::Process process;
-
-            };
-
-            struct Domain : common::mockup::domain::Manager
-            {
-               using common::mockup::domain::Manager::Manager;
-
-               local::Manager service;
-               common::mockup::domain::transaction::Manager tm;
             };
 
             namespace call
@@ -150,7 +149,7 @@ namespace casual
 
          local::Domain domain;
 
-         common::mockup::domain::echo::Server server{ { { "service1"}, { "service2"}}};
+         service::unittest::advertise( { "service1", "service2"});
 
          auto state = local::call::state();
 
@@ -160,31 +159,28 @@ namespace casual
             auto service = local::service::find( state, "service1");
             ASSERT_TRUE( service);
             ASSERT_TRUE( service->instances.sequential.size() == 1);
-            EXPECT_TRUE( service->instances.sequential.at( 0).pid == server.process().pid);
+            EXPECT_TRUE( service->instances.sequential.at( 0).pid == common::process::id());
          }
          {
             auto service = local::service::find( state, "service2");
             ASSERT_TRUE( service);
             ASSERT_TRUE( service->instances.sequential.size() == 1);
-            EXPECT_TRUE( service->instances.sequential.at( 0).pid == server.process().pid);
+            EXPECT_TRUE( service->instances.sequential.at( 0).pid == common::process::id());
          }
       }
 
-      TEST( service_manager, advertise_2_services_for_1_server__expect__2_local_instances)
+      TEST( service_manager, advertise_2_services_for_1_server)
       {
          common::unittest::Trace trace;
 
          local::Domain domain;
 
-         common::mockup::domain::echo::Server server{ { { "service1"}, { "service2"}}};
+         service::unittest::advertise( { "service1", "service2"});
 
          auto state = local::call::state();
 
-         ASSERT_TRUE( state.instances.sequential.size() == 2);
-         ASSERT_TRUE( state.instances.concurrent.empty());
-
          {
-            auto instance = local::instance::find( state, server.process().pid);
+            auto instance = local::instance::find( state, common::process::id());
             ASSERT_TRUE( instance);
             EXPECT_TRUE( instance->state == manager::admin::instance::SequentialVO::State::idle);
          }
@@ -197,12 +193,13 @@ namespace casual
 
          local::Domain domain;
 
-         common::mockup::domain::echo::Server server{ { { "service1"}, { "service2"}}};
+         service::unittest::advertise( { "service1", "service2"});
+
 
          {
             common::message::domain::process::prepare::shutdown::Request request;
             request.process = common::process::handle();
-            request.processes.push_back( server.process());
+            request.processes.push_back( common::process::handle());
 
             auto reply = common::communication::ipc::call( common::communication::instance::outbound::service::manager::device(), request);
 
@@ -213,11 +210,12 @@ namespace casual
          auto state = local::call::state();
 
          {
-            auto instance = local::instance::find( state, server.process().pid);
+            auto instance = local::instance::find( state, common::process::id());
             ASSERT_TRUE( instance);
             EXPECT_TRUE( instance->state == manager::admin::instance::SequentialVO::State::exiting);
          }
       }
+
 
       TEST( service_manager, advertise_2_services_for_1_server__prepare_shutdown__lookup___expect_absent)
       {
@@ -225,12 +223,12 @@ namespace casual
 
          local::Domain domain;
 
-         common::mockup::domain::echo::Server server{ { { "service1"}, { "service2"}}};
+         service::unittest::advertise( { "service1", "service2"});
 
          {
             common::message::domain::process::prepare::shutdown::Request request;
             request.process = common::process::handle();
-            request.processes.push_back( server.process());
+            request.processes.push_back( common::process::handle());
 
             auto reply = common::communication::ipc::call( common::communication::instance::outbound::service::manager::device(), request);
 
@@ -247,18 +245,18 @@ namespace casual
          }, common::exception::xatmi::service::no::Entry);
       }
 
-      TEST( service_manager, advertise_new_services_current_server)
+      TEST( service_manager, lookup_service__expect_service_to_be_busy)
       {
          common::unittest::Trace trace;
 
          local::Domain domain;
 
-         common::mockup::domain::echo::Server server{ { { "service1"}, { "service2"}}};
+         service::unittest::advertise( { "service1", "service2"});
 
          {
             auto service = common::service::Lookup{ "service1"}();
             EXPECT_TRUE( service.service.name == "service1");
-            EXPECT_TRUE( service.process == server.process());
+            EXPECT_TRUE( service.process == common::process::handle());
             EXPECT_TRUE( service.state == decltype( service)::State::idle);
          }
 
@@ -271,21 +269,17 @@ namespace casual
          }
       }
 
-
       TEST( service_manager, unadvertise_service)
       {
          common::unittest::Trace trace;
 
          local::Domain domain;
 
-         common::mockup::domain::echo::Server server{ { { "service1"}, { "service2"}}};
+         service::unittest::advertise( { "service1", "service2"});
+         service::unittest::unadvertise( { "service2"});
 
-         server.undadvertise( { { "service2"}});
-
-         //
          // echo server has unadvertise this service. The service is
          // still "present" in service-manager with no instances. Hence it's absent
-         //
          EXPECT_THROW({
             auto service = common::service::Lookup{ "service2"}();
          }, common::exception::xatmi::service::no::Entry);
@@ -299,7 +293,7 @@ namespace casual
 
          local::Domain domain;
 
-         common::mockup::domain::echo::Server server{ { { "service1"}, { "service2"}}};
+         service::unittest::advertise( { "service1", "service2"});
 
          EXPECT_THROW({
             auto service = common::service::Lookup{ "non-existent-service"}();
@@ -313,12 +307,12 @@ namespace casual
 
          local::Domain domain;
 
-         common::mockup::domain::echo::Server server{ { { "service1"}, { "service2"}}};
+         service::unittest::advertise( { "service1", "service2"});
 
          {
             auto service = common::service::Lookup{ "service1"}();
             EXPECT_TRUE( service.service.name == "service1");
-            EXPECT_TRUE( service.process == server.process());
+            EXPECT_TRUE( service.process == common::process::handle());
             EXPECT_TRUE( service.state == decltype( service)::State::idle);
          }
 
@@ -333,7 +327,14 @@ namespace casual
 
          {
             // Send Ack
-            server.send_ack();
+            {
+               common::message::service::call::ACK message;
+               message.metric.process = common::process::handle();
+
+               common::communication::ipc::blocking::send( 
+                  common::communication::instance::outbound::service::manager::device(),
+                  message);
+            }
 
             // get next pending reply
             auto service = lookup();
@@ -349,12 +350,14 @@ namespace casual
 
          local::Domain domain;
 
-         common::mockup::domain::echo::Server server{ { "service1"}};
+         service::unittest::advertise( { "service1"});
+
+         auto forward = domain.forward();
 
          {
             auto service = common::service::Lookup{ "service1"}();
             EXPECT_TRUE( service.service.name == "service1");
-            EXPECT_TRUE( service.process == server.process());
+            EXPECT_TRUE( service.process == common::process::handle());
             EXPECT_TRUE( service.state == decltype( service)::State::idle);
          }
 
@@ -364,10 +367,10 @@ namespace casual
             auto service = lookup();
             EXPECT_TRUE( service.service.name == "service1");
 
-            // service-manager will let us think that the service is idle, and send us the queue to the forward-cache
+            // service-manager will let us think that the service is idle, and send us the process-handle to the forward-cache
             EXPECT_TRUE( service.state == decltype( service)::State::idle);
-            EXPECT_TRUE( service.process.ipc);
-            EXPECT_TRUE( service.process.ipc != server.process().ipc);
+            EXPECT_TRUE( service.process);
+            EXPECT_TRUE( service.process == forward);
          }
       }
 
@@ -377,23 +380,22 @@ namespace casual
 
          local::Domain domain;
 
-         common::mockup::domain::echo::Server server{ { { "service1"}, { "service2"}}};
+         service::unittest::advertise( { "service1", "service2"});
 
-         common::Uuid correlation;
-
+         auto correlation = []()
          {
             auto service = common::service::Lookup{ "service1"}();
             EXPECT_TRUE( service.service.name == "service1");
-            EXPECT_TRUE( service.process == server.process());
+            EXPECT_TRUE( service.process == common::process::handle());
             EXPECT_TRUE( service.state == decltype( service)::State::idle);
             EXPECT_TRUE( service.state == decltype( service)::State::idle);
             
-            correlation = service.correlation;
-         }
+            return service.correlation;
+         }();
 
          {
             common::message::event::process::Exit message;
-            message.state.pid = server.process().pid;
+            message.state.pid = common::process::id();
             message.state.reason = common::process::lifetime::Exit::Reason::core;
 
             common::communication::ipc::blocking::send( 
@@ -412,7 +414,61 @@ namespace casual
             EXPECT_TRUE( message.code.result == decltype( message.code.result)::service_error);
             EXPECT_TRUE( message.correlation == correlation);
          }
+      }
 
+
+      TEST( service_manager, service_lookup__send_ack__expect_metric)
+      {
+         common::unittest::Trace trace;
+
+         local::Domain domain;
+
+         service::unittest::advertise( { "service1", "service2"});
+
+         auto start = common::platform::time::clock::type::now();
+         auto end = start + std::chrono::milliseconds{ 2};
+
+         {
+            auto service = common::service::Lookup{ "service1"}();
+            EXPECT_TRUE( service.service.name == "service1");
+            EXPECT_TRUE( service.process == common::process::handle());
+            EXPECT_TRUE( service.state == decltype( service)::State::idle);
+         }
+
+         // subscribe to metric event
+         common::message::event::service::Calls event;
+         common::event::subscribe( common::process::handle(), { event.type()});
+
+         // Send Ack
+         {
+            common::message::service::call::ACK message;
+            message.metric.process = common::process::handle();
+            message.metric.service = "b";
+            message.metric.parent = "a";
+            message.metric.start = start;
+            message.metric.end = end;
+            message.metric.code = common::code::xatmi::service_fail;
+
+            common::communication::ipc::blocking::send( 
+               common::communication::instance::outbound::service::manager::device(),
+               message);
+         }
+
+         // wait for event
+         {
+            common::communication::ipc::blocking::receive( 
+               common::communication::ipc::inbound::device(),
+               event);
+            
+            ASSERT_TRUE( event.metrics.size() == 1);
+            auto& metric = event.metrics.at( 0);
+            EXPECT_TRUE( metric.service == "b");
+            EXPECT_TRUE( metric.parent == "a");
+            EXPECT_TRUE( metric.process == common::process::handle());
+            EXPECT_TRUE( metric.start == start);
+            EXPECT_TRUE( metric.end == end);
+            EXPECT_TRUE( metric.code == common::code::xatmi::service_fail);
+         }
       }
 
    } // service

@@ -10,6 +10,7 @@
 
 #include "common/message/type.h"
 #include "common/message/buffer.h"
+#include "common/message/event.h"
 
 #include "common/transaction/id.h"
 #include "common/service/type.h"
@@ -30,6 +31,19 @@ namespace casual
       {
          namespace service
          {
+
+            struct Code 
+            {
+               code::xatmi result = code::xatmi::ok;
+               long user = 0;
+
+               CASUAL_CONST_CORRECT_SERIALIZE(
+               {
+                  CASUAL_SERIALIZE( result);
+                  CASUAL_SERIALIZE( user);
+               })
+            };
+
             struct Base
             {
                Base() = default;
@@ -68,8 +82,6 @@ namespace casual
                service::Base::serialize( archive);
                CASUAL_SERIALIZE( timeout);
             })
-
-            //friend std::ostream& operator << ( std::ostream& out, const Service& value);
          };
          static_assert( traits::is_movable< Service>::value, "not movable");
 
@@ -78,22 +90,15 @@ namespace casual
          {
             namespace call
             {
-               //!
                //! Represent service information in a 'call context'
-               //!
                struct Service : message::Service
                {
                   using message::Service::Service;
 
-                  std::vector< strong::ipc::id> event_subscribers;
-
                   CASUAL_CONST_CORRECT_SERIALIZE(
                   {
                      message::Service::serialize( archive);
-                     CASUAL_SERIALIZE( event_subscribers);
                   })
-
-                  //friend std::ostream& operator << ( std::ostream& out, const call::Service& value);
                };
                static_assert( traits::is_movable< Service>::value, "not movable");
             } // call
@@ -192,8 +197,6 @@ namespace casual
                         platform::size::type hops = 0)
                         : message::Service( std::move( name), std::move( category), transaction), hops( hops) {}
 
-                     inline Service( std::function<void(Service&)> foreign) { foreign( *this);}
-
                      platform::size::type hops = 0;
 
                      CASUAL_CONST_CORRECT_SERIALIZE(
@@ -242,40 +245,7 @@ namespace casual
                   })
                };
                static_assert( traits::is_movable< Advertise>::value, "not movable");
-
-
- 
-               struct Metric : basic_message< Type::service_concurrent_metrics>
-               {
-                  struct Service
-                  {
-                     Service() = default;
-                     Service( std::string name, common::platform::time::unit duration)
-                      : name( std::move( name)), duration( std::move( duration)) {}
-
-                     std::string name;
-                     common::platform::time::unit duration;
-
-                     CASUAL_CONST_CORRECT_SERIALIZE(
-                     {
-                        CASUAL_SERIALIZE( name);
-                        CASUAL_SERIALIZE( duration);
-                     })
-                  };
-
-                  common::process::Handle process;
-                  std::vector< Service> services;
-
-                  CASUAL_CONST_CORRECT_SERIALIZE(
-                  {
-                     base_type::serialize( archive);
-                     CASUAL_SERIALIZE( process);
-                     CASUAL_SERIALIZE( services);
-                  })
-
-               };
-               static_assert( traits::is_movable< Metric>::value, "not movable");
-               
+              
             } // concurrent   
 
 
@@ -472,18 +442,7 @@ namespace casual
                //! Represent service reply.
                struct Reply :  basic_message< Type::service_reply>
                {
-                  struct Code 
-                  {
-                     code::xatmi result = code::xatmi::ok;
-                     long user = 0;
-
-                     CASUAL_CONST_CORRECT_SERIALIZE(
-                     {
-                        CASUAL_SERIALIZE( result);
-                        CASUAL_SERIALIZE( user);
-                     })
-                  } code;
-
+                  service::Code code;
                   Transaction transaction;
                   common::buffer::Payload buffer;
 
@@ -497,23 +456,21 @@ namespace casual
                };
                static_assert( traits::is_movable< Reply>::value, "not movable");
 
-               //! Represent the reply to the broker when a server is done handling
+               //! Represent the reply to the service-manager when a server is done handling
                //! a service-call and is ready for new calls
                struct ACK : basic_message< Type::service_acknowledge>
                {
-                  ACK() = default;
-                  inline ACK( common::process::Handle process) : process( std::move( process)) {}
-                  
-                  common::process::Handle process;
+                  event::service::Metric metric;
 
                   CASUAL_CONST_CORRECT_SERIALIZE(
                   {
                      base_type::serialize( archive);
-                     CASUAL_SERIALIZE( process);
+                     CASUAL_SERIALIZE( metric);
                   })
                };
                static_assert( traits::is_movable< ACK>::value, "not movable");
 
+               
             } // call
 
 

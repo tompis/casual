@@ -12,9 +12,9 @@
 #include "common/server/handle/call.h"
 #include "common/process.h"
 
-#include "common/mockup/ipc.h"
-#include "common/mockup/domain.h"
-#include "common/mockup/rm.h"
+//#include "common/mockup/ipc.h"
+//#include "common/mockup/domain.h"
+//#include "common/mockup/rm.h"
 
 #include "common/message/domain.h"
 
@@ -232,7 +232,7 @@ namespace casual
             {
                const common::transaction::ID& ongoing()
                {
-                  static auto singleton = common::transaction::ID::create(
+                  static auto singleton = common::transaction::id::create(
                         process::Handle{ strong::process::id( process::handle().pid.value() + 1), process::handle().ipc});
 
                   return singleton;

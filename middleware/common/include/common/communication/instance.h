@@ -67,13 +67,11 @@ namespace casual
 
                process::Handle handle( const Uuid& identity, Directive directive = Directive::wait);
 
-               //!
                //! Fetches the handle for a given pid
                //!
                //! @param pid
                //! @param directive if caller waits for the process to register or not
                //! @return handle to the process
-               //!
                process::Handle handle( strong::process::id pid , Directive directive = Directive::wait);
 
 
@@ -88,13 +86,11 @@ namespace casual
             void connect();
 
 
-            //!
             //! ping a server that owns the @p ipc-id
             //!
             //! @note will block
             //!
             //! @return the process handle
-            //!
             process::Handle ping( strong::ipc::id ipc);
 
             namespace outbound
@@ -115,7 +111,12 @@ namespace casual
                      inline const process::Handle& process() const { return m_process;}
                      inline const ipc::Address& destination() const { return m_connector.destination();}
 
-                     friend std::ostream& operator << ( std::ostream& out, const base_connector& rhs);
+                     CASUAL_CONST_CORRECT_SERIALIZE_WRITE(
+                     {
+                        CASUAL_SERIALIZE_NAME( m_process, "process");
+                        CASUAL_SERIALIZE_NAME( m_connector, "connector");
+                        CASUAL_SERIALIZE_NAME( m_socket, "socket");
+                     })
 
                   protected:
                      inline void reset( process::Handle process)
@@ -135,30 +136,28 @@ namespace casual
                      basic_connector( const Uuid& identity, std::string environment);
                      
                      void reconnect();
-                     
-                     friend std::ostream& operator << ( std::ostream& out, const basic_connector& rhs)
-                     {
-                        return out << "{ destination: " << rhs.m_process.ipc
-                           << ", identity: " << rhs.m_identity
-                           << ", environment: " << rhs.m_environment
-                           << '}';
-                     }
 
+                     //! clear the connector
+                     void clear();
+
+                     CASUAL_CONST_CORRECT_SERIALIZE_WRITE(
+                     {
+                        base_connector::serialize( archive);
+                        CASUAL_SERIALIZE_NAME( m_identity, "identity");
+                        CASUAL_SERIALIZE_NAME( m_environment, "environment");
+                     })
+                     
                   private:
                      Uuid m_identity;
                      std::string m_environment;
                   };
 
-                  //!
                   //! Will wait until the instance is online, could block for ever.
-                  //!
                   using Device = communication::outbound::Device< basic_connector< fetch::Directive::wait>>;
 
                   namespace optional
                   {
-                     //!
                      //! Will fail if the instance is offline.
-                     //!
                      using Device = communication::outbound::Device< basic_connector< fetch::Directive::direct>>;
                   } // optional
                } // detail
@@ -186,15 +185,12 @@ namespace casual
                   {
                      outbound::detail::Device& device();
 
-
                      namespace optional
                      {
-                        //!
                         //! Can be missing. That is, this will not block
                         //! until the device is found (the gateway is online)
                         //!
                         //! @return device to gateway-manager
-                        //!
                         outbound::detail::optional::Device& device();
                      } // optional
                   } // manager
@@ -208,12 +204,10 @@ namespace casual
 
                      namespace optional
                      {
-                        //!
                         //! Can be missing. That is, this will not block
                         //! until the device is found (the queue is online)
                         //!
                         //! @return device to queue-manager
-                        //!
                         outbound::detail::optional::Device& device();
                      } // optional
 
@@ -228,6 +222,7 @@ namespace casual
                      {
                         Connector();
                         void reconnect();
+                        void clear();
                      };
                      using Device = communication::outbound::Device< Connector>;
                      Device& device();
@@ -238,12 +233,19 @@ namespace casual
                         {
                            Connector();
                            void reconnect();
+                           void clear();
                         };
 
                         using Device = communication::outbound::Device< Connector>;
                         Device& device();
                      } // optional
                   } // manager
+
+                  //! resets all outbound instances, hence they will start
+                  //! configure them self from the environment
+                  //! @attention only for unittests
+                  //void reset();
+
                } // domain
             } // outbound
          } // instance

@@ -38,13 +38,6 @@ namespace casual
                      Base::serialize( archive);
                      CASUAL_SERIALIZE( buffer);
                   })
-
-                  friend std::ostream& operator << ( std::ostream& out, const basic_request& value)
-                  {
-                     return out << "{ " << static_cast< const basic_request::base_type&>( value)
-                           << ", buffer: " << value.buffer
-                           << '}';
-                  }
                };
 
             } // caller
@@ -69,13 +62,6 @@ namespace casual
                      Base::serialize( archive);
                      CASUAL_SERIALIZE( buffer);
                   })
-
-                  friend std::ostream& operator << ( std::ostream& out, const basic_request& value)
-                  {
-                     return out << "{ " << static_cast< const basic_request::base_type&>( value)
-                           << ", buffer: " << value.buffer
-                           << '}';
-                  }
                };
 
             } // callee

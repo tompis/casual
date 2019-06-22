@@ -14,6 +14,7 @@
 #include "common/environment.h"
 #include "common/uuid.h"
 #include "common/exception/handle.h"
+#include "common/exception/casual.h"
 
 
 #include <fstream>
@@ -33,35 +34,22 @@ namespace casual
          {
             Trace trace{ "domain::Manager ctor"};
 
-            //
             // Set the process variables so children can communicate with us.
-            //
             common::environment::variable::process::set(
                   common::environment::variable::name::ipc::domain::manager(),
                   common::process::handle());
 
+            // start casual-domain-pending-message
+            m_state.process.pending = handle::start::pending::message();
 
             if( m_state.mandatory_prepare)
-            {
                handle::mandatory::boot::prepare( m_state);
-            }
 
             handle::boot( m_state);
          }
 
          Manager::~Manager()
          {
-            Trace trace{ "domain::Manager dtor"};
-
-            try
-            {
-
-
-            }
-            catch( ...)
-            {
-               exception::handle();
-            }
          }
 
 
@@ -82,41 +70,8 @@ namespace casual
                      {
                         try
                         {
-                           if( state.pending.replies.empty())
-                           {
-                              // We can block
-                              handler( manager::ipc::device().blocking_next());
-                           }
-                           else
-                           {
-                              // Take care of pending replies
-                              {
-                                 signal::thread::scope::Block block;
-
-                                 auto& pending = state.pending.replies;
-
-                                 log::line( log, "pending replies: ", pending);
-
-                                 algorithm::trim( pending, algorithm::remove_if( pending,
-                                       common::message::pending::sender(
-                                             communication::ipc::policy::non::Blocking{})));
-                              }
-
-
-                              {
-                                 //
-                                 // If we've got pending that is 'never' sent, we still want to
-                                 // do a lot of domain stuff. Hence, if we got into an 'error state'
-                                 // we'll still function...
-                                 //
-                                 // TODO: Should we have some sort of TTL for the pending?
-                                 //
-                                 auto count = common::platform::batch::domain::pending;
-
-                                 while( handler( ipc::device().non_blocking_next()) && count-- > 0)
-                                    ;
-                              }
-                           }
+                           // We always block
+                           handler( manager::ipc::device().blocking_next());
                         }
                         catch( const exception::casual::Shutdown&)
                         {

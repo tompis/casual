@@ -51,13 +51,16 @@ namespace casual
          namespace coalesce
          {
             template< typename T>
-            bool empty( T& value) { return value.empty();}
+            auto empty( const T& value) -> std::enable_if_t< traits::has::empty< T>::value, bool>
+            { 
+               return value.empty();
+            }
 
             template< typename T>
-            bool empty( T* value) { return value == nullptr;}
+            bool empty( const T* value) { return value == nullptr;}
 
             template< typename T>
-            bool empty( optional< T>& value) { return ! value.has_value();}
+            bool empty( const optional< T>& value) { return ! value.has_value();}
 
             template< typename T>
             decltype( auto) implementation( T&& value)
@@ -80,14 +83,11 @@ namespace casual
 
       } // detail
 
-
-      //!
       //! Chooses the first argument that is not 'empty'
       //!
       //! @note the return type will be the common type of all types
       //!
       //! @return the first argument that is not 'empty'
-      //!
       template< typename T, typename... Args>
       decltype( auto) coalesce( T&& value,  Args&&... args)
       {
@@ -106,11 +106,9 @@ namespace casual
          }
       } // value
 
-      //!
       //! This is not intended to be a serious attempt at a range-library
       //! Rather an abstraction that helps our use-cases and to get a feel for
       //! what a real range-library could offer. It's a work in progress
-      //!
       namespace algorithm
       {
 
@@ -131,10 +129,8 @@ namespace casual
 
          } // detail
 
-         //!
          //! Rotates the range based on the pivot.
          //! @return a tuple of { [begin( range), pivot), pivot, end( range)]}
-         //!
          template< typename R, typename P>
          auto rotate( R&& range, P&& pivot)
          {
@@ -193,7 +189,7 @@ namespace casual
 
 
          template< typename R, typename OutIter, typename = std::enable_if_t< 
-            common::traits::iterator::is_output< OutIter>::value
+            common::traits::is::output::iterator< OutIter>::value
             && common::traits::is::iterable< R>::value>>
          auto copy( R&& range, OutIter output)
          {
@@ -205,9 +201,34 @@ namespace casual
             template< typename T>
             constexpr auto is_resize_copy = traits::has::resize< T>::value &&
                std::is_default_constructible< traits::remove_cvref_t< traits::iterable::value_t< T>>>::value;
+
+
+            namespace output
+            {
+               template< typename C, std::enable_if_t< traits::has::push_back< C>::value, int> = 0> 
+               auto iterator( C& value)
+               {
+                  return std::back_inserter( value);
+               }
+
+               template< typename I, std::enable_if_t< traits::is::output::iterator< I>::value, int> = 0> 
+               auto iterator( I value)
+               {
+                  return value;
+               }
+
+               template< typename C, std::enable_if_t< 
+                  ! traits::has::push_back< C>::value 
+                  && traits::is::iterable< C>::value, int> = 0> 
+               auto iterator( C& value)
+               {
+                  return std::begin( value);
+               }
+
+            } // output
+
          } // detail
 
-         //!
          //! copy `range` to `output`
          //!
          //! @attention the possible content in `output` is truncated and overwritten
@@ -238,12 +259,10 @@ namespace casual
 
 
 
-         template< typename R, typename OutIter, typename P, typename = std::enable_if_t< 
-            common::traits::iterator::is_output< OutIter>::value
-            && common::traits::is::iterable< R>::value>>
-         auto copy_if( R&& range, OutIter output, P predicate)
+         template< typename R, typename Out, typename P> 
+         auto copy_if( R&& range, Out output, P predicate)
          {
-            return std::copy_if( std::begin( range), std::end( range), output, predicate);
+            return std::copy_if( std::begin( range), std::end( range), detail::output::iterator( output), predicate);
          }
 
       
@@ -261,25 +280,25 @@ namespace casual
             }
          }
 
-         //!
          //! Copies from @p source to @p destination
          //!   size of destination dictates the maximum that will be
          //!   copied
          //!
          //! @param source
          //! @param destination sets the maximum what will be copied
-         //!
          template< typename Range1, typename Range2>
          void copy_max( Range1&& source, Range2&& destination)
          {
             copy_max( source, range::size( destination), std::begin( destination));
          }
 
-         template< typename R, typename C>
-         decltype( auto) move( R&& range, C& container)
+         //! move range to out.
+         //! if out has push_back it will be used, hance append.
+         template< typename R, typename Out>
+         decltype( auto) move( R&& range, Out&& out)
          {
-            std::move( std::begin( range), std::end( range), std::back_inserter( container));
-            return container;
+            std::move( std::begin( range), std::end( range), detail::output::iterator( out));
+            return std::forward< Out>( out);
          }
 
          template< typename R, typename C, typename P>
@@ -316,32 +335,28 @@ namespace casual
             template< typename R, typename O, typename T>
             auto transform( R&& range, O&& output, T transform, range::category::output_iterator)
             {
-               auto last = std::transform( std::begin( range), std::end( range), output, transform);
-               return range::make( last - range::size( range), last);;
+               std::transform( std::begin( range), std::end( range), output, transform);
+               return std::forward< O>( output);
             }
          }
 
-         //!
          //! Transform @p range to @p container, using @p transform
          //!
          //! @param range source range/container
          //! @param container output/holder container
          //!
          //! @return range containing the inserted transformed values, previous values in @p container is excluded.
-         //!
          template< typename R, typename O, typename T>
          decltype( auto) transform( R&& range, O&& output, T&& transform)
          {
             return detail::transform( std::forward< R>( range), std::forward< O>( output), std::forward< T>( transform), range::category::tag_t< O>{} );
          }
 
-         //!
          //! Transform @p range, using @p transform
          //!
          //! @param range source range/container
          //!
          //! @return std::vector with the transformed values
-         //!
          template< typename R, typename T>
          auto transform( R&& range, T transformer)
          {
@@ -354,50 +369,83 @@ namespace casual
             return result;
          }
 
-
-         //!
-         //! Transform @p range into @p container, using @p transform if @p predicate is true
+         //! Transform @p range into @p output, using @p transform if @p predicate is true
          //!
          //! @return container
-         //!
-         template< typename R, typename C, typename T, typename P>
-         C& transform_if( R&& range, C& container, T transformer, P predicate)
+         template< typename R, typename Out, typename T, typename P>
+         decltype( auto) transform_if( R&& range, Out&& output, T transformer, P predicate)
          {
+            auto&& out = detail::output::iterator( output);
+
             for( auto&& value : range)
             {
                if( predicate( value))
-               {
-                  container.push_back( transformer( value));
-               }
+                  *out++ = transformer( value);
             }
-            return container;
+            return std::forward< Out>( output);
          }
 
          template< typename R, typename T, typename P>
          auto transform_if( R&& range, T transformer, P predicate)
          {
             std::vector< std::remove_reference_t< decltype( transformer( *std::begin( range)))>> result;
-            transform_if( range, result, transformer, predicate);
-            return result;
+            return transform_if( range, std::move( result), transformer, predicate);
          }
 
 
-         //!
          //! Applies std::unique on [std::begin( range), std::end( range) )
          //!
          //! @return the unique range
-         //!
+         //! @{
          template< typename R>
          auto unique( R&& range)
          {
             return range::make( std::begin( range), std::unique( std::begin( range), std::end( range)));
          }
 
-         //!
+         template< typename R, typename P>
+         auto unique( R&& range, P predicate)
+         {
+            return range::make( std::begin( range), std::unique( std::begin( range), std::end( range), predicate));
+         }
+         //! @}
+
+         //! @returns the complement of unique, that is all occurrences that is not unique
+         template< typename R, typename P = std::equal_to<>>
+         auto duplicates( R&& range, P predicate = P{})
+         {
+            auto current = std::begin( range);
+            auto last = std::end( range);
+
+            while( current != last)
+            {
+               auto equal_first = std::adjacent_find( current, last, predicate);
+
+               if( current == equal_first)
+               {
+                  // we've got some duplicates
+                  auto compare = current;
+                  auto consume = ++current;
+
+                  // we consume all duplicates
+                  while( consume != last && predicate( *compare, *consume++))
+                     ;
+
+                  // rotate away [current, consume)
+                  last = std::rotate( current, consume, last);
+               }
+               else
+               {
+                  // rotate away [first, equal_first)
+                  last = std::rotate( current, equal_first, last);
+               }
+            }
+            return range::make( std::begin( range), last);
+         }
+
          //! Trims @p container so it matches @p range
          //!
          //! @return range that matches the trimmed @p container
-         //!
          template< typename C, typename R>
          C& trim( C& container, R&& range)
          {
@@ -415,14 +463,12 @@ namespace casual
             return container;
          }
 
-         //!
          //! Erases occurrences from an associative container that
          //! fulfill the predicate
          //!
          //! @param container associative
          //! @param predicate that takes C::mapped_type as parameter and returns bool
          //! @return the container
-         //!
          template< typename C, typename P>
          C& erase_if( C& container, P&& predicate)
          {
@@ -455,9 +501,7 @@ namespace casual
             return range::make( std::begin( range), std::remove( std::begin( range), std::end( range), value));
          }
 
-         //!
          //! Removes the unwanted range from the source
-         //! 
          template< typename R1, typename R2, std::enable_if_t< common::traits::detect::is_detected< detail::iterator_iterator_swap, R1, R2>::value>* dummy = nullptr>
          auto remove( R1&& source, R2&& unwanted)
          {
@@ -546,10 +590,7 @@ namespace casual
             }
          }
 
-         //!
-         //! 
          //! applies `functor` on all occurencies, and call `interleave` between each
-         //!
          template< typename R, typename F, typename I>
          decltype( auto) for_each_interleave( R&& range, F&& functor, I&& interleave)
          {
@@ -571,7 +612,7 @@ namespace casual
 
          //! associate container specialization
          template< typename R, typename T,
-            std::enable_if_t< common::traits::container::is_associative< std::decay_t< R>>::value>* dummy = nullptr>
+            std::enable_if_t< common::traits::is::container::associative::like< std::decay_t< R>>::value, int> = 0>
          auto find( R&& range, const T& value)
          {
             return range::make( range.find( value), std::end( range));
@@ -579,7 +620,7 @@ namespace casual
 
          //! non associate container specialization
          template< typename R, typename T,
-            std::enable_if_t< ! common::traits::container::is_associative< std::decay_t< R>>::value>* dummy = nullptr>
+            std::enable_if_t< ! common::traits::is::container::associative::like< std::decay_t< R>>::value, int> = 0>
          auto find( R&& range, const T& value)
          {
             return range::make( std::find( std::begin( range), std::end( range), value), std::end( range));
@@ -590,19 +631,6 @@ namespace casual
          {
             return range::make( std::find_if( std::begin( range), std::end( range), predicate), std::end( range));
          }
-
-         template< typename R, typename T>
-         auto find_last( R&& range, const T& value) 
-         {
-            auto found = find( range, value);
-
-            while( found)
-            {
-
-            }
-            return found;
-         }
-
 
 
          template< typename R, typename P>
@@ -618,9 +646,7 @@ namespace casual
          }
 
 
-         //!
          //! appends `range` to `output`.
-         //! 
          //! @return output
          //! @{
          template< typename R, typename Out, typename std::enable_if_t< 
@@ -644,13 +670,19 @@ namespace casual
          }
          //! @}
 
+
+         //! push_back `value` to `output` if it's not allready present
+         //! @return true if push_back
          template< typename T, typename Out> 
-         void push_back_unique( const T& value, Out& output)
+         bool push_back_unique( const T& value, Out& output)
          {
             if( ! algorithm::find( output, value))
+            {
                output.push_back( value);
+               return true;
+            }
+            return false;
          }
-
 
          template< typename R, typename Out> 
          void append_unique( R&& range, Out& output)
@@ -659,6 +691,25 @@ namespace casual
 
             while( current)
                push_back_unique( *current++, output);
+         }
+
+         template< typename T, typename Out> 
+         void push_back_replace( T&& value, Out& output)
+         {
+            auto found = algorithm::find( output, value);
+            if( found)
+               *found = std::forward< T>( value);
+            else
+               output.push_back( std::forward< T>( value));
+         }
+
+         template< typename R, typename Out> 
+         void append_replace( R&& range, Out& output)
+         {
+            auto current = range::make( range);
+
+            while( current)
+               push_back_replace( *current++, output);
          }
 
 
@@ -677,24 +728,19 @@ namespace casual
             return std::make_tuple( range::make( std::begin( range), middle), range::make( middle, std::end( range)));
          }
 
-         //!
          //! @return a range that is a sub range of @p range that fullfills @p predicate
          //!
          //! same sematics as std::get< 0>( algorithm::partition( range, predicate));
-         //!
          template< typename R, typename P, typename = std::enable_if_t< common::traits::is::iterable< R>::value>>
          auto filter( R&& range, P predicate)
          {
             return range::make( std::begin( range), std::partition( std::begin( range), std::end( range), predicate));
          }
 
-
-         //!
          //! Divide @p range in two parts [range-first, divider), [divider, range-last).
          //! where divider is the first occurrence that is equal to @p value
          //!
          //! @return a tuple with the two ranges
-         //!
          template< typename R, typename T>
          auto divide( R&& range, const T& value)
          {
@@ -705,14 +751,12 @@ namespace casual
             return std::make_tuple( range::make( std::begin( range), divider), range::make( divider, std::end( range)));
          }
 
-         //!
          //! Split @p range in two parts [range-first, divider), [divider + 1, range-last).
          //! where divider is the first occurrence of @p value
          //!
          //! That is, exactly as divide but the divider is omitted in the resulting ranges
          //!
          //! @return a tuple with the two ranges
-         //!
          template< typename R, typename T>
          auto split( R&& range, const T& value)
          {
@@ -724,12 +768,10 @@ namespace casual
             return result;
          }
 
-         //!
          //! Divide @p range in two parts [range-first, divider), [divider, range-last).
          //! where divider is the first occurrence where @p predicate is true
          //!
          //! @return a tuple with the two ranges
-         //!
          template< typename R1, typename P>
          auto divide_if( R1&& range, P predicate)
          {
@@ -764,14 +806,10 @@ namespace casual
             return find_first_of( std::forward< R1>( target), std::forward< R2>( source), std::equal_to<>{});
          }
 
-
-
-         //!
          //! Divide @p range in two parts [range-first, divider), [divider, range-last).
          //! where divider is the first occurrence found in @p lookup
          //!
          //! @return a tuple with the two ranges
-         //!
          template< typename R1, typename R2, typename F>
          auto divide_first( R1&& range, R2&& lookup, F functor)
          {
@@ -780,26 +818,21 @@ namespace casual
             return std::make_tuple( range::make( std::begin( range), std::begin( divider)), divider);
          }
 
-         //!
          //! Divide @p range in two parts [range-first, divider), [divider, range-last).
          //! where divider is the first occurrence found in @p lookup
          //!
          //! @return a tuple with the two ranges
-         //!
          template< typename R1, typename R2>
          auto divide_first( R1&& range, R2&& lookup)
          {
             return divide_first( std::forward< R1>( range), std::forward< R2>( lookup), std::equal_to<>{});
          }
 
-
-         //!
          //! Divide @p range in two parts [range-first, intersection-end), [intersection-end, range-last).
          //! where the first range is the intersection of the @p range and @p lookup
          //! and the second range is the complement of @range with regards to @p lookup
          //!
          //! @return a tuple with the two ranges
-         //!
          template< typename R1, typename R2, typename F>
          auto intersection( R1&& range, R2&& lookup, F functor)
          {
@@ -811,22 +844,18 @@ namespace casual
             return stable_partition( std::forward< R1>( range), lambda);
          }
 
-         //!
          //! Divide @p range in two parts [range-first, intersection-end), [intersection-end, range-last).
          //! where the first range is the intersection of the @p range and @p lookup
          //! and the second range is the complement of @range with regards to @p lookup
          //!
          //! @return a tuple with the two ranges
-         //!
          template< typename R1, typename R2>
          auto intersection( R1&& range, R2&& lookup)
          {
             return intersection( std::forward< R1>( range), std::forward< R2>( lookup), std::equal_to<>{});
          }
 
-         //!
          //! @returns a range from @p source with values not found in @p other
-         //!
          //! @deprecated use intersection instead...
          template< typename R1, typename R2>
          auto difference( R1&& source, R2&& other)
@@ -834,9 +863,7 @@ namespace casual
             return std::get< 1>( intersection( std::forward< R1>( source), std::forward< R2>( other)));
          }
 
-         //!
          //! @returns a range from @p source with values not found in @p other
-         //!
          template< typename R1, typename R2, typename F>
          auto difference( R1&& source, R2&& other, F functor)
          {
@@ -847,9 +874,7 @@ namespace casual
          template< typename R, typename F>
          auto max( R&& range, F functor)
          {
-            //
             // Just to make sure range is not an rvalue container. we could use enable_if instead
-            //
             auto result = range::make( std::forward< R>( range));
 
             return range::make( std::max_element( std::begin( result), std::end( result), functor), std::end( result));
@@ -864,9 +889,7 @@ namespace casual
          template< typename R, typename F>
          auto min( R&& range, F functor)
          {
-            //
             // Just to make sure range is not an rvalue container. we could use enable_if instead.
-            //
             auto result = range::make( std::forward< R>( range));
 
             return range::make( std::min_element( std::begin( result), std::end( result), functor), std::end( result));
@@ -879,9 +902,7 @@ namespace casual
          }
 
 
-         //!
          //! @return true if all elements in @p other is found in @p source
-         //!
          template< typename R1, typename R2>
          bool includes( R1&& source, R2&& other)
          {
@@ -889,11 +910,9 @@ namespace casual
             return all_of( other, lambda);
          }
 
-         //!
          //! Uses @p compare to compare for equality
          //!
          //! @return true if all elements in @p other is found in @p source
-         //!
          template< typename R1, typename R2, typename Compare>
          bool includes( R1&& source, R2&& other, Compare compare)
          {
@@ -903,9 +922,7 @@ namespace casual
 
          }
 
-         //!
          //! @return true if all elements in the range compare equal
-         //!
          template< typename R>
          bool uniform( R&& range)
          {
@@ -921,16 +938,13 @@ namespace casual
             return true;
          }
 
-         //!
          //! @return true if @p range1 includes @p range2, AND @p range2 includes @p range1
-         //!
          template< typename R1, typename R2, typename Compare>
          bool uniform( R1&& range1, R2&& range2, Compare comp)
          {
             return includes( std::forward< R1>( range1), std::forward< R2>( range2), comp)
                  && includes( std::forward< R2>( range2), std::forward< R1>( range1), predicate::inverse( comp));
          }
-
 
          template< typename Range, typename Predicate>
          auto count_if( Range&& range, Predicate predicate)
@@ -946,6 +960,17 @@ namespace casual
                std::iota( std::begin( range), std::end( range), value);
             }
          } // numeric
+
+         namespace lexicographical
+         {
+            template< typename A, typename B> 
+            auto compare( A&& a, B&& b)
+            {
+               return std::lexicographical_compare(
+                  std::begin( a), std::end( a),
+                  std::begin( b), std::end( b));
+            }
+         } // lexicographical
 
          namespace sorted
          {
@@ -1041,12 +1066,7 @@ namespace casual
                return group( std::forward< R>( range), std::less< typename R::value_type>{});
             }
 
-            //!
             //! Returns a subrange that consists of (the first series of) values that fulfills the predicate
-            //!
-            //! @param range
-            //! @param predicate
-            //! @return
             template< typename R, typename P>
             auto subrange( R&& range, P&& predicate)
             {

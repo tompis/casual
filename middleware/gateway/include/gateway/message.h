@@ -8,9 +8,6 @@
 #pragma once
 
 
-
-#include "gateway/message.h"
-
 #include "common/message/type.h"
 #include "common/message/transaction.h"
 #include "common/message/service.h"
@@ -19,58 +16,12 @@
 #include "common/message/conversation.h"
 #include "common/domain.h"
 #include "common/serialize/native/binary.h"
+#include "common/serialize/value/customize.h"
 
 #include <thread>
 
 
 
-
-
-//!
-//! global overload for XID
-//!
-//! @{
-template< typename M>
-void casual_marshal_value( const XID& value, M& marshler)
-{
-   marshler << value.formatID;
-
-   if( ! casual::common::transaction::null( value))
-   {
-      marshler << value.gtrid_length;
-      marshler << value.bqual_length;
-
-      marshler.append( casual::common::transaction::data( value));
-   }
-}
-
-template< typename M>
-void casual_unmarshal_value( XID& value, M& unmarshler)
-{
-   unmarshler >> value.formatID;
-
-   if( ! casual::common::transaction::null( value))
-   {
-      unmarshler >> value.gtrid_length;
-      unmarshler >> value.bqual_length;
-
-      unmarshler.consume(
-         std::begin( value.data),
-         value.gtrid_length + value.bqual_length);
-   }
-}
-//! @}
-
-
-#define CASUAL_CUSTOMIZATION_POINT_MARSHAL( type, statement) \
-template< typename A> auto casual_marshal( type& value, A& archive) -> std::enable_if_t< casual::common::marshal::is_network_normalizing< A>::value> \
-{  \
-   statement  \
-} \
-template< typename A> auto casual_marshal( const type& value, A& archive) -> std::enable_if_t< casual::common::marshal::is_network_normalizing< A>::value> \
-{  \
-   statement  \
-} \
 
 namespace casual
 {
@@ -87,14 +38,9 @@ namespace casual
 
             CASUAL_CONST_CORRECT_SERIALIZE(
             {
-               archive & local;
-               archive & peer;
+               CASUAL_SERIALIZE( local);
+               CASUAL_SERIALIZE( peer);
             })
-
-            friend std::ostream& operator << ( std::ostream& out, const Address& value)
-            {
-               return out << "{ local: " << value.local << ", peer: " << value.peer << '}';
-            }
          };
 
 
@@ -108,19 +54,11 @@ namespace casual
 
             CASUAL_CONST_CORRECT_SERIALIZE({
                common::message::basic_message< type>::serialize( archive);
-               archive & process;
-               archive & domain;
-               archive & version;
-               archive & address;
+               CASUAL_SERIALIZE( process);
+               CASUAL_SERIALIZE( domain);
+               CASUAL_SERIALIZE( version);
+               CASUAL_SERIALIZE( address);
             })
-
-            friend std::ostream& operator << ( std::ostream& out, const basic_connect& value)
-            {
-               return out << "{ process: " << value.process
-                     << ", address: " << value.address
-                     << ", domain: " << value.domain
-                     << '}';
-            }
          };
 
          namespace outbound
@@ -129,10 +67,7 @@ namespace casual
             {
 
                struct Request : common::message::server::basic_id< common::message::Type::gateway_outbound_configuration_request>
-               {
-
-                  friend std::ostream& operator << ( std::ostream& out, const Request& value);
-               };
+               {};
 
 
                using base_reply = common::message::server::basic_id< common::message::Type::gateway_outbound_configuration_reply>;
@@ -143,11 +78,9 @@ namespace casual
 
                   CASUAL_CONST_CORRECT_SERIALIZE({
                      base_reply::serialize( archive);
-                     archive & services;
-                     archive & queues;
+                     CASUAL_SERIALIZE( services);
+                     CASUAL_SERIALIZE( queues);
                   })
-
-                  friend std::ostream& operator << ( std::ostream& out, const Reply& value);
                };
 
             } // configuration
@@ -162,11 +95,9 @@ namespace casual
                {
                   common::strong::socket::id descriptor;
 
-                  friend std::ostream& operator << ( std::ostream& out, const Done& value);
-
                   CASUAL_CONST_CORRECT_SERIALIZE({
                      base_type::serialize( archive);
-                     archive & descriptor;
+                     CASUAL_SERIALIZE( descriptor);
                   })
                };
             } // connect
@@ -181,10 +112,9 @@ namespace casual
                size_type messages = 0;
 
                CASUAL_CONST_CORRECT_SERIALIZE(
-                  archive & size;
-                  archive & messages;
+                  CASUAL_SERIALIZE( size);
+                  CASUAL_SERIALIZE( messages);
                )
-               friend std::ostream& operator << ( std::ostream& out, const Limit& value);
             };
 
             using base_connect =  basic_connect< common::message::Type::gateway_inbound_connect>;
@@ -198,6 +128,7 @@ namespace casual
 
    namespace common
    {
+
       namespace message
       {
          namespace reverse
@@ -205,222 +136,208 @@ namespace casual
             template<>
             struct type_traits< casual::gateway::message::outbound::configuration::Request> : detail::type< casual::gateway::message::outbound::configuration::Reply> {};
          } // reverse
+      } // message
 
-         namespace gateway
+      namespace serialize
+      {
+         namespace customize
          {
-            namespace domain
-            { 
-               namespace connect
+            namespace composit
+            {
+
+//! customization macro to make it easier to define customization points for all interdomain messages
+#define CASUAL_CUSTOMIZATION_POINT_NETWORK( type, statement) \
+template< typename A> struct Value< type, A, std::enable_if_t< common::serialize::traits::is::network::normalizing< A>::value>>  \
+{ \
+   template< typename V> static void serialize( A& archive, V&& value) \
+   {  \
+      statement  \
+   } \
+}; 
+         
+
+#define CASUAL_CUSTOMIZATION_POINT_SERIALIZE( role) CASUAL_SERIALIZE_NAME( value.role, #role)
+
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::gateway::domain::connect::Request,
                {
-                  CASUAL_CUSTOMIZATION_POINT_MARSHAL( Request,
-                  {
-                     archive & value.execution;
-                     archive & value.domain;
-                     archive & value.versions;
-                  })
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( domain);
+                  CASUAL_SERIALIZE_NAME( value.versions, "protocol.versions");
+               })
 
-                  CASUAL_CUSTOMIZATION_POINT_MARSHAL( Reply,
-                  {
-                     archive & value.execution;
-                     archive & value.domain;
-                     archive & value.version;
-                  })
-               } // connect
-
-               namespace discover
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::gateway::domain::connect::Reply,
                {
-                  CASUAL_CUSTOMIZATION_POINT_MARSHAL( Request,
-                  {
-                     archive & value.execution;
-                     archive & value.domain;
-                     archive & value.services;
-                     archive & value.queues;
-                  })
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( domain);
+                  CASUAL_SERIALIZE_NAME( value.version, "protocol.version");
+               })
 
-                  CASUAL_CUSTOMIZATION_POINT_MARSHAL( Reply,
-                  {
-                     archive & value.execution;
-                     archive & value.domain;
-                     archive & value.services;
-                     archive & value.queues;
-                  })
-               }
-            }
-         }
-
-         namespace service 
-         {
-            namespace call 
-            { 
-               CASUAL_CUSTOMIZATION_POINT_MARSHAL( callee::Request,
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::gateway::domain::discover::Request,
                {
-                  archive & value.execution;
-                  archive & value.service.name;
-                  archive & value.service.timeout;
-                  archive & value.parent;
-                  archive & value.trid.xid;
-                  archive & value.flags;
-                  archive & value.buffer;
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( domain);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( services);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( queues);
+               })
+
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::gateway::domain::discover::Reply,
+               {
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( domain);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( services);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( queues);
+               })
+
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::service::call::callee::Request,
+               {
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( service.name);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( service.timeout);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( parent);
+                  CASUAL_SERIALIZE_NAME( value.trid.xid, "xid");
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( flags);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( buffer);
                })
             
-               CASUAL_CUSTOMIZATION_POINT_MARSHAL( Reply,
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::service::call::Reply,
                {
-                     archive & value.execution;
-                     archive & value.code.result;
-                     archive & value.code.user;
-                     archive & value.transaction.trid.xid;
-                     archive & value.transaction.state;
-                     archive & value.buffer;
-               })
-            }
-         }
-
-         namespace conversation
-         {
-            namespace connect
-            {
-               CASUAL_CUSTOMIZATION_POINT_MARSHAL( callee::Request,
-               {
-                  archive & value.execution;
-                  archive & value.service.name;
-                  archive & value.service.timeout;
-                  archive & value.parent;
-                  archive & value.trid.xid;
-                  archive & value.flags;
-                  archive & value.recording;
-                  archive & value.buffer;
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( code.result);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( code.user);
+                  CASUAL_SERIALIZE_NAME( value.transaction.trid.xid, "transaction.xid");
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( transaction.state);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( buffer);
                })
 
-               CASUAL_CUSTOMIZATION_POINT_MARSHAL( Reply,
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::conversation::connect::callee::Request,
                {
-                  archive & value.execution;
-                  archive & value.route;
-                  archive & value.recording;
-                  archive & value.status;
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( service.name);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( service.timeout);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( parent);
+                  CASUAL_SERIALIZE_NAME( value.trid.xid, "xid");
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( flags);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( recording);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( buffer);
                })
 
-            } // connect
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::conversation::connect::Reply,
+               {
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( route);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( recording);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( code.result);
+                  // TODO: CASUAL_CUSTOMIZATION_POINT_SERIALIZE( code.user);   
+               })
 
-            CASUAL_CUSTOMIZATION_POINT_MARSHAL( Disconnect,
-            {
-               archive & value.execution;
-               archive & value.route;
-               archive & value.events;
-            })
 
-            CASUAL_CUSTOMIZATION_POINT_MARSHAL( callee::Send,
-            {
-               archive & value.execution;
-               archive & value.route;
-               archive & value.events;
-               archive & value.status;
-               archive & value.buffer;
-            })
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::conversation::Disconnect,
+               {
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( route);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( events);
+               })
 
-         } // conversation
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::conversation::callee::Send,
+               {
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( route);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( events);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( code.result);
+                  // TODO: CASUAL_CUSTOMIZATION_POINT_SERIALIZE( code.user);  
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( buffer);
+               })
 
-         namespace transaction
-         {
-            namespace resource
-            {
-               namespace marshal
+
+               namespace detail
                {
                   template< typename T, typename A>
                   void transaction_request( T& value, A& archive)
                   {
-                     archive & value.execution;
-                     archive & value.trid.xid;
-                     archive & value.resource;
-                     archive & value.flags;
+                     CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                     CASUAL_SERIALIZE_NAME( value.trid.xid, "xid");
+                     CASUAL_CUSTOMIZATION_POINT_SERIALIZE( resource);
+                     CASUAL_CUSTOMIZATION_POINT_SERIALIZE( flags);
                   }
 
                   template< typename T, typename A>
                   void transaction_reply( T& value, A& archive)
                   {
-                     archive & value.execution;
-                     archive & value.trid.xid;
-                     archive & value.resource;
-                     archive & value.state;
+                     CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                     CASUAL_SERIALIZE_NAME( value.trid.xid, "xid");
+                     CASUAL_CUSTOMIZATION_POINT_SERIALIZE( resource);
+                     CASUAL_CUSTOMIZATION_POINT_SERIALIZE( state);
                   }
 
-               } // marshal
+               } // detail
 
-               CASUAL_CUSTOMIZATION_POINT_MARSHAL( prepare::Request,
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::transaction::resource::prepare::Request,
                {
-                  marshal::transaction_request( value, archive);
+                  detail::transaction_request( value, archive);
                })
 
-               CASUAL_CUSTOMIZATION_POINT_MARSHAL( prepare::Reply,
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::transaction::resource::prepare::Reply,
                {
-                  marshal::transaction_reply( value, archive);
+                  detail::transaction_reply( value, archive);
                })
 
-               CASUAL_CUSTOMIZATION_POINT_MARSHAL( commit::Request,
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::transaction::resource::commit::Request,
                {
-                  marshal::transaction_request( value, archive);
+                  detail::transaction_request( value, archive);
                })
 
-               CASUAL_CUSTOMIZATION_POINT_MARSHAL( commit::Reply,
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::transaction::resource::commit::Reply,
                {
-                  marshal::transaction_reply( value, archive);
+                  detail::transaction_reply( value, archive);
                })
 
-               CASUAL_CUSTOMIZATION_POINT_MARSHAL( rollback::Request, 
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::transaction::resource::rollback::Request, 
                {
-                  marshal::transaction_request( value, archive);
+                  detail::transaction_request( value, archive);
                })
 
-               CASUAL_CUSTOMIZATION_POINT_MARSHAL( rollback::Reply,
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::transaction::resource::rollback::Reply,
                {
-                  marshal::transaction_reply( value, archive);
+                  detail::transaction_reply( value, archive);
                })
 
-            } // resource
-         } // transaction
-
-         namespace queue
-         {
-            namespace enqueue
-            {
-               CASUAL_CUSTOMIZATION_POINT_MARSHAL( Request,
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::queue::enqueue::Request,
                {
-                  archive & value.execution;
-                  archive & value.name;
-                  archive & value.trid.xid;
-                  archive & value.message;
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( name);
+                  CASUAL_SERIALIZE_NAME( value.trid.xid, "xid");
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( message);
                })
 
-               CASUAL_CUSTOMIZATION_POINT_MARSHAL( Reply,
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::queue::enqueue::Reply,
                {
-                  archive & value.execution;
-                  archive & value.id;
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( id);
                })
-            }
+            
 
-            namespace dequeue
-            {
-
-               CASUAL_CUSTOMIZATION_POINT_MARSHAL( Request,
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::queue::dequeue::Request,
                {
-                  archive & value.execution;
-                  archive & value.name;
-                  archive & value.trid.xid;
-                  archive & value.selector;
-                  archive & value.block;
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( name);
+                  CASUAL_SERIALIZE_NAME( value.trid.xid, "xid");
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( selector);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( block);
                })
 
 
-               CASUAL_CUSTOMIZATION_POINT_MARSHAL( Reply,
+               CASUAL_CUSTOMIZATION_POINT_NETWORK( common::message::queue::dequeue::Reply,
                {
-                  archive & value.execution;
-                  archive & value.message;
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( execution);
+                  CASUAL_CUSTOMIZATION_POINT_SERIALIZE( message);
                })               
-            }
-         } // queue
-      } // message
+
+            } // composit
+            
+         } // customize
+         
+      } // serialize
    } // common
-
-
 } // casual
 
 

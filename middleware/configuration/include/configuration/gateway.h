@@ -10,6 +10,7 @@
 
 #include "common/serialize/macro.h"
 #include "common/platform.h"
+#include "common/optional.h"
 
 #include <string>
 #include <vector>
@@ -36,7 +37,7 @@ namespace casual
 
             struct Default
             {
-               common::optional< Limit> limit;
+               Limit limit;
 
                CASUAL_CONST_CORRECT_SERIALIZE
                (
@@ -46,69 +47,66 @@ namespace casual
 
          } // listener
 
-         struct Listener : listener::Default
+         struct Listener
          {
-            Listener() = default;
-            Listener( std::function<void( Listener&)> foreign) { foreign( *this);}
-
             std::string address;
+            common::optional< listener::Limit> limit;
             std::string note;
 
             CASUAL_CONST_CORRECT_SERIALIZE
             (
-               listener::Default::serialize( archive);
                CASUAL_SERIALIZE( address);
+               CASUAL_SERIALIZE( limit);
                CASUAL_SERIALIZE( note);
             )
 
+            Listener& operator += ( const listener::Default& rhs);
             friend bool operator == ( const Listener& lhs, const Listener& rhs);
-            friend Listener& operator += ( Listener& lhs, const listener::Default& rhs);
          };
 
          namespace connection
          {
             struct Default
             {
-               common::optional< bool> restart;
-               common::optional< std::string> address;
+               bool restart = true;
+
+               // TODO: why address in default?
+               std::string address;
 
                CASUAL_CONST_CORRECT_SERIALIZE
                (
                   CASUAL_SERIALIZE( restart);
                   CASUAL_SERIALIZE( address);
                )
-
             };
-
          } // connection
 
-         struct Connection : connection::Default
+         struct Connection
          {
-            Connection() = default;
-            Connection( std::function<void( Connection&)> foreign) { foreign( *this);}
-
+            common::optional< std::string> address;
             std::vector< std::string> services;
             std::vector< std::string> queues;
             std::string note;
+            common::optional< bool> restart;
 
             CASUAL_CONST_CORRECT_SERIALIZE
             (
-               connection::Default::serialize( archive);
-               CASUAL_SERIALIZE( note);
+               CASUAL_SERIALIZE( address);
                CASUAL_SERIALIZE( services);
                CASUAL_SERIALIZE( queues);
+               CASUAL_SERIALIZE( restart);
+               CASUAL_SERIALIZE( note);
             )
 
+            Connection& operator += ( const connection::Default& rhs);
             friend bool operator == ( const Connection& lhs, const Connection& rhs);
-            friend Connection& operator += ( Connection& lhs, const connection::Default& rhs);
+            
          };
 
          namespace manager
          {
             struct Default
             {
-               Default();
-
                listener::Default listener;
                connection::Default connection;
 
@@ -134,14 +132,12 @@ namespace casual
                CASUAL_SERIALIZE( connections);
             )
 
-            //!
             //! Complement with defaults and validates
-            //!
             void finalize();
 
             Manager& operator += ( const Manager& rhs);
             Manager& operator += ( Manager&& rhs);
-            friend Manager operator + ( const Manager& lhs, const Manager& rhs);
+            friend Manager operator + ( Manager lhs, const Manager& rhs);
 
          };
 

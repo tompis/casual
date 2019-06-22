@@ -10,6 +10,7 @@
 
 
 #include "common/serialize/macro.h"
+#include "common/environment.h"
 
 #include <string>
 #include <vector>
@@ -19,14 +20,12 @@ namespace casual
 {
    namespace configuration
    {
+      inline namespace v1 {
+      
       namespace environment
       {
-
          struct Variable
          {
-            Variable();
-            Variable( std::function< void(Variable&)> foreign);
-
             std::string key;
             std::string value;
 
@@ -37,16 +36,13 @@ namespace casual
             )
 
             friend bool operator == ( const Variable& lhs, const Variable& rhs);
-
+            friend bool operator < ( const Variable& lhs, const Variable& rhs);
          };
 
       } // environment
 
       struct Environment
       {
-         Environment();
-         Environment( std::function< void(Environment&)> foreign);
-
          std::vector< std::string> files;
          std::vector< environment::Variable> variables;
 
@@ -56,7 +52,7 @@ namespace casual
             CASUAL_SERIALIZE( variables);
          )
 
-         friend bool operator == ( const Environment& lhs, const Environment& rhs);
+         Environment& operator += ( const Environment& value);
       };
 
       namespace environment
@@ -66,11 +62,11 @@ namespace casual
 
          std::vector< Variable> fetch( configuration::Environment environment);
 
-         std::vector< std::string> transform( const std::vector< Variable>& variables);
+         std::vector< common::environment::Variable> transform( const std::vector< Variable>& variables);
 
       } // environment
 
-
+      } // inline namespace v1
    } // config
 } // casual
 

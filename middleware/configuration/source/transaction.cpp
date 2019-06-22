@@ -7,6 +7,8 @@
 
 #include "configuration/transaction.h"
 
+#include "common/algorithm.h"
+
 
 namespace casual
 {
@@ -34,31 +36,43 @@ namespace casual
                   }
                } // complement
 
-               void validate( Manager& value)
+               void validate( const Manager& value)
                {
 
+               }
+
+               template< typename LHS, typename RHS>
+               void replace_or_add( LHS& lhs, RHS&& rhs)
+               {
+                  for( auto& value : rhs)
+                  {
+                     auto found = common::algorithm::find( lhs, value);
+
+                     if( found)
+                        *found = std::move( value);
+                     else
+                        lhs.push_back( std::move( value));
+                  }
                }
 
             } // <unnamed>
          } // local
 
+         Resource& Resource::operator += ( const resource::Default& rhs)
+         {
+            key = common::coalesce( std::move( key), rhs.key);
+            instances = common::coalesce( std::move( instances), rhs.instances);
+
+            return *this;
+         }
 
          bool operator == ( const Resource& lhs, const Resource& rhs)
          {
             return lhs.name == rhs.name;
          }
 
-         Resource& operator += ( Resource& lhs, const resource::Default& rhs)
-         {
-            lhs.key = common::coalesce( lhs.key, rhs.key);
-            lhs.instances = common::coalesce( lhs.instances, rhs.instances);
-
-            return lhs;
-         }
-
          Manager::Manager() : log{ "${CASUAL_DOMAIN_HOME}/transaction/log.db"}
          {
-            manager_default.resource.instances.emplace( 1);
          }
 
 
@@ -69,6 +83,19 @@ namespace casual
 
             // Make sure we've got valid configuration
             local::validate( *this);
+         }
+
+
+         Manager& operator += ( Manager& lhs, const Manager& rhs)
+         {
+            lhs.log = common::coalesce( rhs.log, lhs.log);
+
+            // defaults just propagates to the left...
+            lhs.manager_default = std::move( rhs.manager_default);
+
+            local::replace_or_add( lhs.resources, rhs.resources);
+
+            return lhs;
          }
       } // transaction
    } // configuration

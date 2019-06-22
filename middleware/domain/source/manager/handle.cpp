@@ -10,8 +10,11 @@
 #include "domain/manager/persistent.h"
 #include "domain/common.h"
 #include "domain/transform.h"
+#include "domain/pending/message/environment.h"
+#include "domain/pending/message/message.h"
 
 #include "configuration/gateway.h"
+
 
 #include "common/message/handle.h"
 #include "common/server/handle/call.h"
@@ -43,22 +46,31 @@ namespace casual
 
          } // ipc
 
+
+
          namespace local
          {
             namespace
             {
-
                namespace ipc
                {
+                  namespace pending
+                  {
+                     void send( const State& state, message::pending::Message&& pending)
+                     { 
+                        manager::ipc::device().blocking_send( 
+                           state.process.pending.handle().ipc, 
+                           casual::domain::pending::message::Request{ std::move( pending)});
+                     }
+                     
+                  } // pending
                   template< typename M>
-                  void send( State& state, const process::Handle& process, M&& message)
+                  void send( const State& state, const process::Handle& process, M&& message)
                   {
                      try
                      {
                         if( ! manager::ipc::device().non_blocking_send( process.ipc, message))
-                        {
-                           state.pending.replies.emplace_back( std::forward< M>( message), process);
-                        }
+                           ipc::pending::send( state, message::pending::Message{ std::forward< M>( message), process});
                      }
                      catch( const exception::system::communication::Unavailable&)
                      {
@@ -66,12 +78,10 @@ namespace casual
                      }
                   }
 
-                  void send( State& state, message::pending::Message&& pending)
+                  void send( const State& state, message::pending::Message&& pending)
                   {
                      if( ! message::pending::non::blocking::send( pending, manager::ipc::device().error_handler()))
-                     {
-                        state.pending.replies.push_back( std::move( pending));
-                     }
+                        ipc::pending::send( state, std::move( pending));
                   }
 
                } // ipc
@@ -163,10 +173,7 @@ namespace casual
                      // We only want child signals
                      signal::thread::scope::Mask mask{ signal::set::filled( signal::Type::child)};
 
-
-                     //
                      // We need to correlate with the service-manager (broker), if it's up
-                     //
 
                      common::message::domain::process::prepare::shutdown::Request prepare;
                      prepare.process = common::process::handle();
@@ -183,9 +190,7 @@ namespace casual
                      }
                      catch( const exception::system::communication::Unavailable&)
                      {
-                        //
-                        // broker is not online, we simulate the reply from the broker
-                        //
+                        // service-manager is not online, we simulate the reply from the broker
 
                         auto reply = common::message::reverse::type( prepare);
                         reply.processes = std::move( prepare.processes);
@@ -235,6 +240,7 @@ namespace casual
                            event.context = common::message::event::domain::Group::Context::boot_start;
                            event.id = m_batch.group.value();
                            event.name = state().group( m_batch.group).name;
+                           event.process = common::process::handle();
 
                            manager::local::ipc::send( state(), state().event( event));
                         }
@@ -247,12 +253,13 @@ namespace casual
                      {
                         try
                         {
-                           if( ! m_moved && state().event.active< common::message::event::domain::Group>())
+                           if( m_active && state().event.active< common::message::event::domain::Group>())
                            {
                               common::message::event::domain::Group event;
                               event.context = common::message::event::domain::Group::Context::boot_end;
                               event.id = m_batch.group.value();
                               event.name = state().group( m_batch.group).name;
+                              event.process = common::process::handle();
 
                               manager::local::ipc::send( state(), state().event( event));
                            }
@@ -284,7 +291,7 @@ namespace casual
                      }
 
                   private:
-                     common::move::Moved m_moved;
+                     common::move::Active m_active;
                   };
 
                   struct Shutdown : base_batch
@@ -298,12 +305,13 @@ namespace casual
                      {
                         try
                         {
-                           if( ! m_moved && state().event.active< common::message::event::domain::Group>())
+                           if( m_active && state().event.active< common::message::event::domain::Group>())
                            {
                               common::message::event::domain::Group event;
                               event.context = common::message::event::domain::Group::Context::shutdown_end;
                               event.id = m_batch.group.value();
                               event.name = state().group( m_batch.group).name;
+                              event.process = common::process::handle();
 
                               manager::local::ipc::send( state(), state().event( event));
                            }
@@ -335,6 +343,7 @@ namespace casual
                            event.context = common::message::event::domain::Group::Context::shutdown_start;
                            event.id = m_batch.group.value();
                            event.name = state().group( m_batch.group).name;
+                           event.process = common::process::handle();
 
                            manager::local::ipc::send( state(), state().event( event));
                         }
@@ -363,7 +372,7 @@ namespace casual
                      }
 
                   private:
-                     common::move::Moved m_moved;
+                     common::move::Active m_active;
                   };
 
                   namespace boot
@@ -380,6 +389,7 @@ namespace casual
                            {
                               message::event::domain::boot::End event;
                               event.domain = common::domain::identity();
+                              event.process = common::process::handle();
                               manager::local::ipc::send( state(), state().event( event));
                            }
                         }
@@ -409,6 +419,7 @@ namespace casual
                            {
                               message::event::domain::shutdown::End event;
                               event.domain = common::domain::identity();
+                              event.process = common::process::handle();
                               manager::local::ipc::send( state(), state().event( event));
                            }
                         }
@@ -429,6 +440,27 @@ namespace casual
          } // local
          namespace handle
          {
+            namespace start
+            {
+               namespace pending
+               {
+                  common::Process message()
+                  {
+                     Trace trace{ "domain::manager::handle::start::pending::message"};
+
+                     auto process = common::Process{ string::compose( "${CASUAL_HOME}/bin/", casual::domain::pending::message::environment::executable)};
+
+                     // wait for connect
+                     casual::domain::pending::message::Connect connect;
+                     ipc::device().blocking_receive( connect);
+
+                     process.handle( connect.process);
+                     environment::variable::process::set( casual::domain::pending::message::environment::variable, process.handle());
+
+                     return process;
+                  }
+               } // pending
+            } // start
 
             namespace mandatory
             {
@@ -622,12 +654,10 @@ namespace casual
                         {
                            message::shutdown::Request shutdown{ common::process::handle()};
 
-                           //
                            // Just to make each shutdown easy to follow in log.
-                           //
                            shutdown.execution = uuid::make();
 
-                           manager::local::ipc::send( this->state(), process, shutdown);
+                           manager::local::ipc::send( state(), process, shutdown);
                         }
                         else
                         {
@@ -660,17 +690,6 @@ namespace casual
                      common::log::line( verbose::log, "message: ", message);
 
                      state().event.subscription( message);
-
-                     // remove possible pending events for the removed subscriber
-                     {
-                        auto predicate = [&message]( message::pending::Message& m){
-                           if( message::is::event::message( m))
-                              m.remove( message.process.ipc);
-                           return m.sent();
-                        };
-
-                        algorithm::trim( state().pending.replies, algorithm::remove_if( state().pending.replies, predicate));
-                     }
  
                      common::log::line( log, "event: ", state().event);
                   }
@@ -717,13 +736,17 @@ namespace casual
                         if( std::get< 0>( restarts)) scale::instances( state(), *std::get< 0>( restarts));
                         if( std::get< 1>( restarts)) scale::instances( state(), *std::get< 1>( restarts));
 
-
-                        //
                         // Are there any listeners to this event?
-                        //
                         if( state().event.active< common::message::event::process::Exit>())
-                        {
                            manager::local::ipc::send( state(), state().event( message));
+
+
+                        // check if the process is our own pending-send
+                        // should not be possible unless some "human" kills the process
+                        if( message.state.pid == state().process.pending.handle())
+                        {
+                           log::line( log::category::error, "pending send exited: ", message.state);
+                           state().process.pending = handle::start::pending::message();
                         }
                      }
                   }
@@ -822,42 +845,44 @@ namespace casual
 
                      namespace singleton
                      {
-                        void broker( State& state, const common::process::Handle& process)
+                        void service( State& state, const common::process::Handle& process)
                         {
-                           Trace trace{ "domain::manager::handle::local::singleton::broker"};
+                           Trace trace{ "domain::manager::handle::local::singleton::service"};
                            
+                           auto transform_service = []( const auto& s)
+                           {
+                              common::message::service::advertise::Service result;
+                              result.name = s.name;
+                              result.category = s.category;
+                              result.transaction = s.transaction;
+                              return result;
+                           };
 
                            common::message::service::Advertise message;
                            message.process = common::process::handle();
-
-                           message.services = algorithm::transform( manager::admin::services( state).services,
-                                 []( const common::server::Service& s)
-                                 {
-                                    common::message::service::advertise::Service result;
-
-                                    result.name = s.name;
-                                    result.category = s.category;
-                                    result.transaction = s.transaction;
-
-                                    return result;
-                                 });
-
+                           message.services = algorithm::transform( manager::admin::services( state).services, transform_service);
+                              
                            manager::local::ipc::send( state, process, message);
 
-                           environment::variable::process::set( environment::variable::name::ipc::service::manager(), process);
+                           // so new spawned processes get it easier
+                           environment::variable::process::set( 
+                              environment::variable::name::ipc::service::manager(), process);
                         }
 
                         void tm( State& state, const common::process::Handle& process)
                         {
                            Trace trace{ "domain::manager::handle::local::singleton::tm"};
 
-                           environment::variable::process::set( environment::variable::name::ipc::transaction::manager(), process);
+                           // so new spawned processes get it easier
+                           environment::variable::process::set( 
+                              environment::variable::name::ipc::transaction::manager(), process);
                         }
 
                         void queue( State& state, const common::process::Handle& process)
                         {
                            Trace trace{ "domain::manager::handle::local::singleton::queue"};
 
+                           // so new spawned processes get it easier
                            environment::variable::process::set(
                                  environment::variable::name::ipc::queue::manager(), process);
                         }
@@ -867,7 +892,7 @@ namespace casual
                            Trace trace{ "domain::manager::handle::local::singleton::connect"};
 
                            static const std::map< Uuid, std::function< void(State&, const common::process::Handle&)>> tasks{
-                              { common::communication::instance::identity::service::manager, &broker},
+                              { common::communication::instance::identity::service::manager, &service},
                               { common::communication::instance::identity::transaction::manager, &tm},
                               { common::communication::instance::identity::queue::manager, &queue}
                            };
@@ -875,9 +900,7 @@ namespace casual
                            auto found = algorithm::find( tasks, message.identification);
 
                            if( found)
-                           {
                               found->second( state, message.process);
-                           }
                         }
 
                      } // singleton
@@ -896,12 +919,9 @@ namespace casual
                      manager::local::ipc::send( state(), message.process, reply);
                   });
 
-
-
                   if( message.identification)
                   {
                      auto found = algorithm::find( state().singletons, message.identification);
-
 
                      if( found)
                      {
@@ -935,13 +955,12 @@ namespace casual
                         {
                            message::event::domain::Error event;
                            event.severity = message::event::domain::Error::Severity::warning;
-                           event.message = "server connect - only one instance is allowed for " + uuid::string( message.identification);
+                           event.message = string::compose( "server connect - only one instance is allowed for ", message.identification);
 
                            manager::local::ipc::send( state(), state().event( event));
                         }
                         return;
                      }
-
 
                      state().singletons[ message.identification] = message.process;
 
@@ -988,13 +1007,10 @@ namespace casual
                   }
                }
 
-
             } // process
-
 
             namespace configuration
             {
-
                void Domain::operator () ( const common::message::domain::configuration::Request& message)
                {
                   Trace trace{ "domain::manager::handle::configuration::Domain"};
@@ -1006,7 +1022,6 @@ namespace casual
 
                   manager::local::ipc::send( state(), message.process, reply);
                }
-
 
                void Server::operator () ( const common::message::domain::configuration::server::Request& message)
                {
@@ -1021,33 +1036,29 @@ namespace casual
                   auto server = state().server( message.process.pid);
 
                   if( server)
+                     reply.service.restrictions = server->restrictions;
+
+                  auto transform_route = []( const auto& service)
                   {
-                     reply.restrictions = server->restrictions;
-                  }
-
-                  using service_type = message::domain::configuration::service::Service;
+                     message::domain::configuration::server::Reply::Service::Route result;
+                     result.name = service.name;
+                     result.routes = service.routes;
+                     return result;
+                  };
+                  
                   algorithm::transform_if(
-                        state().configuration.service.services,
-                        reply.routes,
-                        []( const service_type& s){ // transform
-
-                           message::domain::configuration::server::Reply::Service result;
-
-                           result.name = s.name;
-                           result.routes = s.routes;
-
-                           return result;
-                        },
-                        []( const service_type& s){ // predicate
-                           return s.routes.size() != 1 || s.routes[ 0] != s.name;
-                        });
-
+                     state().configuration.service.services,
+                     reply.service.routes,
+                     transform_route,
+                     []( const auto& s) // predicate
+                     { 
+                        return ! s.routes.empty();
+                     });
 
                   manager::local::ipc::send( state(), message.process, reply);
 
                }
             } // configuration
-
 
             namespace local
             {
@@ -1069,14 +1080,14 @@ namespace casual
                         }
 
                         // overload ack so we use domain-manager internal stuff to lookup service-manager
-                        void ack()
+                        void ack( const message::service::call::ACK& message)
                         {
                            Trace trace{ "domain::manager::handle::local::server::Policy::ack"};
 
                            try
                            {
                               auto service_manager = m_state.singleton( common::communication::instance::identity::service::manager);
-                              manager::ipc::device().blocking_send( service_manager.ipc, message::service::call::ACK{ common::process::handle()});
+                              manager::ipc::device().blocking_send( service_manager.ipc, message);
                            }
                            catch( const exception::system::communication::Unavailable&)
                            {

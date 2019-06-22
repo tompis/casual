@@ -97,10 +97,7 @@ namespace casual
                   }
 
                   if( cursor > end)
-                  {
-                     // Something is fishy
                      throw common::exception::xatmi::invalid::Argument{"Buffer is comprised"};
-                  }
                }
 
                void shrink()
@@ -176,6 +173,8 @@ namespace casual
                   // GCC returns null for std::vector::data with capacity zero
                   m_pool.back().capacity( size ? size : 1);
 
+                  common::log::line( verbose::log, "allocated buffer: ", m_pool.back());
+
                   return m_pool.back().handle();
                }
 
@@ -194,20 +193,18 @@ namespace casual
                      result->capacity( size ? size : 1);
                   }
 
+                  common::log::line( verbose::log, "reallocated buffer: ", *result);
+
                   return result->handle();
                }
 
             };
-
          } // <unnamed>
-
       } // field
-
    } // buffer
 
-   //
+
    // Register and define the type that can be used to get the custom pool
-   //
    template class common::buffer::pool::Registration< casual::buffer::field::Allocator>;
 
 
@@ -221,13 +218,6 @@ namespace casual
          namespace
          {
 
-/*
-            struct trace : common::trace::basic::Scope
-            {
-               template<decltype(sizeof("")) size>
-               explicit trace( const char (&information)[size]) : Scope( information, common::log::internal::buffer) {}
-            };
-*/
             namespace error
             {
                int handle() noexcept
@@ -281,32 +271,22 @@ namespace casual
 
                   try
                   {
-                     //
                      // Append id to buffer
-                     //
                      append( buffer, id);
 
-                     //
                      // Append size to buffer
-                     //
                      append( buffer, size);
 
-                     //
                      // Append data to buffer
-                     //
                      append( buffer, data, size);
 
-                     //
                      // Append current offset to index
-                     //
                      buffer.index[id].push_back( used);
 
                   }
                   catch( ...)
                   {
-                     //
                      // Make sure to reset the size in case of exception
-                     //
                      buffer.utilized( used);
                      throw;
                   }
@@ -341,15 +321,11 @@ namespace casual
                   {
                      auto& buffer = pool_type::pool.get( *handle);
 
-                     //
                      // Make sure to update the handle regardless
-                     //
                      const auto synchronize = common::execute::scope
                      ( [&]() { *handle = buffer.handle();});
 
-                     //
                      // Append the data
-                     //
                      append( buffer, id, std::forward<A>( arguments)...);
 
                   }
@@ -412,9 +388,7 @@ namespace casual
                   {
                      const auto& buffer = pool_type::pool.get( handle);
 
-                     //
                      // Select the data
-                     //
                      select( buffer, id, occurrence, std::forward<A>( arguments)...);
 
                   }
@@ -439,21 +413,15 @@ namespace casual
 
                   const auto offset = occurrences.at( occurrence);
 
-                  //
                   // Get the size of the value
-                  //
                   const auto size = decode<size_type>( buffer.handle() + offset + size_offset);
 
-                  //
                   // Remove the data from the buffer
-                  //
                   buffer.payload.memory.erase(
                      buffer.payload.memory.begin() + offset,
                      buffer.payload.memory.begin() + offset + data_offset + size);
 
-                  //
                   // Remove entry from index
-                  //
 
                   occurrences.erase( occurrences.begin() + occurrence);
 
@@ -462,12 +430,10 @@ namespace casual
                      buffer.index.erase( id);
                   }
 
-                  //
                   // Update offsets beyond this one
                   //
                   // The index and the actual buffer may not be in same order
                   // and thus we need to go through the whole index
-                  //
 
                   for( auto& field : buffer.index)
                   {
@@ -535,23 +501,16 @@ namespace casual
                template<typename M, typename I>
                void update( M& memory, I& index, const item_type id, const size_type occurrence, const_data_type data, const size_type size)
                {
-                  //
                   // Get the offset to where the field begin
-                  //
                   const auto offset = index.at( id).at( occurrence);
 
                   const auto current = decode<size_type>( memory.data() + offset + size_offset);
 
-
-                  //
                   // With equal sizes, stuff could be optimized ... but no
-                  //
 
-                  //
                   // Erase the old and insert the new ... and yes, it
                   // could be done more efficient but the whole idea
                   // with this functionality is rather stupid
-                  //
 
                   memory.insert(
                      memory.erase(
@@ -559,9 +518,7 @@ namespace casual
                         memory.begin() + offset + data_offset + current),
                      data, data + size);
 
-                  //
                   // Write the new size (afterwards since above can throw)
-                  //
 
                   const auto encoded = common::network::byteorder::encode( size);
                   std::copy(
@@ -569,12 +526,10 @@ namespace casual
                      reinterpret_cast<const_data_type>( &encoded) + sizeof( encoded),
                      memory.begin() + offset + size_offset);
 
-                  //
                   // Update offsets beyond this one
                   //
                   // The index and the actual buffer may not be in same order
                   // and thus we need to go through the whole index
-                  //
 
                   for( auto& field : index)
                   {
@@ -600,9 +555,7 @@ namespace casual
                template<typename M, typename I, typename T>
                void update( M& memory, I& index, const item_type id, const size_type occurrence, const T value)
                {
-                  //
                   // Could be optimized, but ... no
-                  //
                   const auto encoded = common::network::byteorder::encode( value);
                   update( memory, index, id, occurrence, reinterpret_cast<const_data_type>( &encoded), sizeof( encoded));
                }
@@ -623,15 +576,13 @@ namespace casual
                   {
                      auto& buffer = pool_type::pool.get( *handle);
 
-                     //
                      // Make sure to update the handle regardless
-                     //
-                     const auto synchronize = common::execute::scope
-                     ( [&]() { *handle = buffer.handle();});
+                     const auto synchronize = common::execute::scope( [&]() 
+                     { 
+                        *handle = buffer.handle();
+                     });
 
-                     //
                      // Update the data
-                     //
                      update( buffer.payload.memory, buffer.index, id, occurrence, std::forward<A>( arguments)...);
 
                   }
@@ -794,9 +745,7 @@ namespace casual
                      {
                         if( static_cast<std::size_t>(++index) < current->second.size())
                         {
-                           //
                            // Then we are ok
-                           //
                         }
                         else
                         {
@@ -814,9 +763,7 @@ namespace casual
                      }
                      else
                      {
-                        //
                         // We couldn't even find the previous one
-                        //
                         return CASUAL_FIELD_INVALID_ARGUMENT;
                      }
 

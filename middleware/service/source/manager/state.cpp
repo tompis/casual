@@ -32,7 +32,7 @@ namespace casual
             {
                template< typename M, typename ID>
                auto get( M& map, ID&& id) ->
-                std::enable_if_t< common::traits::container::is_associative< M>::value, decltype( map.at( id))>
+                std::enable_if_t< common::traits::is::container::associative::like< M>::value, decltype( map.at( id))>
                {
                   auto found = common::algorithm::find( map, id);
 
@@ -45,7 +45,7 @@ namespace casual
 
                template< typename C, typename ID>
                auto get( C& container, ID&& id) ->
-                std::enable_if_t< common::traits::container::is_sequence< C>::value, decltype( *std::begin( container))>
+                std::enable_if_t< common::traits::is::container::sequence::like< C>::value, decltype( *std::begin( container))>
                {
                   auto found = common::algorithm::find( container, id);
 
@@ -316,21 +316,10 @@ namespace casual
 
          } // state
 
-
-
          state::Service& State::service( const std::string& name)
          {
             return local::get( services, name);
          }
-
-         std::vector< common::strong::ipc::id> State::subscribers() const
-         {
-            return algorithm::transform( events.event< common::message::event::service::Call>().subscribers(), []( auto& v){
-               return v.ipc;
-            });
-         }
-
-
 
          namespace local
          {
@@ -637,6 +626,16 @@ namespace casual
             message.process = process::handle();
 
             update( message);
+         }
+
+         
+         void State::Metric::add( metric_type metric)
+         {
+            m_message.metrics.push_back( std::move( metric));
+         }
+         void State::Metric::add( std::vector< metric_type> metrics)
+         {
+            algorithm::move( std::move( metrics), m_message.metrics);
          }
       } // manager
    } // service

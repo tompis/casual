@@ -24,29 +24,8 @@ namespace casual
             {
                namespace
                {
-
                   namespace global
                   {
-                     namespace easy
-                     {
-                        std::vector< curl::type::native::easy> cache;
-                     } // easy
-
-                     namespace cleanup
-                     {
-                        void easy( curl::type::native::easy handle)
-                        {
-                           if( global::easy::cache.size() < 100)
-                           {
-                              curl_easy_reset( handle);
-                              global::easy::cache.push_back( handle);
-                           }
-                           else 
-                           {
-                              curl_easy_cleanup( handle);
-                           }
-                        }
-                     } // cleanup
                      struct Initializer 
                      {
                         static const Initializer& instance()
@@ -55,29 +34,27 @@ namespace casual
                            return singleton;
                         }
 
-                        auto multi() const { return common::memory::guard( curl_multi_init(), &curl_multi_cleanup);}
+                        auto multi() const
+                        {
+                           return curl::type::multi{ curl_multi_init()};
+                        }
                         
                         auto easy() const 
                         { 
-                           if( ! global::easy::cache.empty())
-                           {
-                              auto handle = common::memory::guard( global::easy::cache.back(), &cleanup::easy);
-                              global::easy::cache.pop_back();
-                              return handle;
-                           }
-                           return common::memory::guard( curl_easy_init(), &cleanup::easy);
+                           return curl::type::easy( curl_easy_init());
                         }
 
                      private:
                         Initializer()
                         {
                            curl::check( curl_global_init( CURL_GLOBAL_DEFAULT));
-                           global::easy::cache.reserve( 100);
+
+                           auto version = curl_version_info( CURLVERSION_NOW);
+                           common::log::line( http::log, "curl version: ", version->version);
                         }
 
                         ~Initializer()
                         {
-                           algorithm::for_each( global::easy::cache, []( auto handle){ curl_easy_cleanup( handle);});
                            curl_global_cleanup();
                         }
 
@@ -85,8 +62,66 @@ namespace casual
 
                      type::error::buffer error;
                   } // global
+
+                  namespace get
+                  {
+                     using info_code = decltype( CURLINFO_EFFECTIVE_URL);
+
+                     template< info_code code, typename Enable = void>
+                     struct info_value;
+
+                     // long
+                     template< info_code code>
+                     struct info_value< code, std::enable_if_t< 
+                        code == CURLINFO_HTTP_CONNECTCODE || 
+                        code == CURLINFO_NUM_CONNECTS ||
+                        code == CURLINFO_PRIMARY_PORT ||
+                        code == CURLINFO_LOCAL_PORT>> 
+                     {
+                        using type = long;
+                     };
+
+                     // char*
+                     template< info_code code>
+                     struct info_value< code, std::enable_if_t< 
+                        code == CURLINFO_EFFECTIVE_URL ||
+                        code == CURLINFO_PRIMARY_IP ||
+                        code == CURLINFO_LOCAL_IP>> 
+                     {
+                        using type = char*;
+                     };
+
+                     template< info_code code>
+                     using info_value_t = typename info_value< code>::type;
+
+                     template< info_code code>
+                     auto option( const type::easy& handle)
+                     {
+                        info_value_t< code> value{};
+                        curl_easy_getinfo( handle.get(), code, &value);
+                        return value;
+                     } 
+                      
+                  } // get
                } // <unnamed>
             } // local
+
+            namespace type
+            {
+               std::ostream& operator << ( std::ostream& out, const easy& value)
+               {
+                  return out << "{ HTTP_CONNECTCODE: " << local::get::option< CURLINFO_HTTP_CONNECTCODE>( value)
+                     << ", NUM_CONNECTS: " << local::get::option< CURLINFO_NUM_CONNECTS>( value)
+                     << ", EFFECTIVE_URL: " << local::get::option< CURLINFO_EFFECTIVE_URL>( value) 
+                     << ", PRIMARY_IP: " << local::get::option< CURLINFO_PRIMARY_IP>( value) 
+                     << ", PRIMARY_PORT: " << local::get::option< CURLINFO_PRIMARY_PORT>( value) 
+                     << ", LOCAL_IP: " << local::get::option< CURLINFO_LOCAL_IP>( value) 
+                     << ", LOCAL_PORT: " << local::get::option< CURLINFO_LOCAL_PORT>( value) 
+                     << '}';
+               }
+            } // type
+
+
 
             namespace error
             {

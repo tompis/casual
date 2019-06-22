@@ -28,16 +28,19 @@ namespace casual
    {
       namespace manager
       {
+
+         Settings::Settings() :
+            log{ environment::directory::domain() + "/transaction/log.db"}
+         {}
+
          namespace state
          {
-
             Metrics& Metrics::operator += ( const Metrics& rhs)
             {
                resource += rhs.resource;
                roundtrip += rhs.roundtrip;
                return *this;
             }
-
 
             namespace resource
             {
@@ -156,59 +159,6 @@ namespace casual
                } // external
             } // resource
 
-            void configure( State& state, const common::message::domain::configuration::Reply& configuration)
-            {
-
-               {
-                  Trace trace{ "transaction manager xa-switch configuration"};
-
-                  auto resources = configuration::resource::property::get();
-
-                  for( auto& resource : resources)
-                  {
-                     auto result = state.resource_properties.emplace( resource.key, std::move( resource));
-                     if( ! result.second)
-                        throw common::exception::casual::invalid::Configuration( "multiple keys in resource config: " + result.first->first);
-                  }
-               }
-
-               // configure resources
-               {
-                  Trace trace{ "transaction manager resource configuration"};
-
-                  auto transform_resource = []( const auto& r){
-
-                     state::resource::Proxy proxy{ state::resource::Proxy::generate_id{}};
-
-                     proxy.name = r.name;
-                     proxy.concurency = r.instances;
-                     proxy.key = r.key;
-                     proxy.openinfo = r.openinfo;
-                     proxy.closeinfo = r.closeinfo;
-                     proxy.note = r.note;
-
-                     return proxy;
-                  };
-
-                  auto validate = [&state]( const common::message::domain::configuration::transaction::Resource& r) {
-                     if( ! common::algorithm::find( state.resource_properties, r.key))
-                     {
-                        log::line( log::category::error, "failed to correlate resource key '", r.key, "' - action: skip resource");
-
-                        common::event::error::send( "failed to correlate resource key '" + r.key + "'");
-                        return false;
-                     }
-                     return true;
-                  };
-
-                  common::algorithm::transform_if(
-                        configuration.domain.transaction.resources,
-                        state.resources,
-                        transform_resource,
-                        validate);
-
-               }
-            }
          } // state
 
          Transaction::Resource::Result Transaction::Resource::convert( common::code::xa value)
@@ -296,43 +246,109 @@ namespace casual
             }
          }
 
+         std::ostream& operator << ( std::ostream& out, Transaction::Resource::Stage value)
+         {
+            using Stage = Transaction::Resource::Stage;
+            auto stringify = []( Stage value)
+            {
+               switch( value)
+               {
+                  case Stage::involved: return "involved";
+                  case Stage::prepare_requested: return "prepare_requested";
+                  case Stage::prepare_replied: return "prepare_replied";
+                  case Stage::commit_requested: return "commit_requested";
+                  case Stage::commit_replied: return "commit_replied";
+                  case Stage::rollback_requested: return "rollback_requested";
+                  case Stage::rollback_replied: return "rollback_replied";
+                  case Stage::done: return "done";
+                  case Stage::error: return "error";
+                  case Stage::not_involved: return "not_involved";
+               }
+               return "unknown";
+            };
+
+            return out << stringify( value);
+         }
+
+         std::ostream& operator << ( std::ostream& out, const Transaction::Resource& value) 
+         { 
+            return out << "{ id: " << value.id
+               << ", stage: " << value.stage
+               << ", result: " << Transaction::Resource::convert( value.result)
+               << '}';
+         }
+
+         std::vector< common::strong::resource::id> Transaction::Branch::involved() const
+         {
+            return common::algorithm::transform( resources, []( auto& r){ return r.id;});
+         }
+
+         void Transaction::Branch::involve( common::strong::resource::id resource)
+         {
+            if( ! algorithm::find( resources, resource))
+            {
+               log::line( verbose::log, "new resource involved: ", resource);
+               resources.emplace_back( resource);
+            }
+         }
+
+         Transaction::Resource::Stage Transaction::Branch::stage() const
+         {
+            auto min_stage = []( Resource::Stage stage, auto& resource){ return std::min( stage, resource.stage);};
+
+            return algorithm::accumulate( resources, Resource::Stage::not_involved, min_stage);
+         }
+
+         Transaction::Resource::Result Transaction::Branch::results() const
+         {
+            auto severe_result = []( Resource::Result result, auto& resource){ return std::min( result, resource.result);};
+
+            return algorithm::accumulate( resources, Resource::Result::xa_RDONLY, severe_result);
+         }
+
+         std::ostream& operator << ( std::ostream& out, const Transaction::Branch& value)
+         {
+            return out << "{ trid: " << value.trid
+               << ", resources: " << value.resources
+               << '}';
+         }
+
+         common::platform::size::type Transaction::resource_count() const noexcept
+         {
+            auto count_resources = []( auto size, auto& branch){ return size + branch.resources.size();};
+
+            return algorithm::accumulate( branches, 0, count_resources);
+         }    
+
          Transaction::Resource::Stage Transaction::stage() const
          {
-            Resource::Stage result = Resource::Stage::not_involved;
-
-            for( auto& resource : resources)
+            auto min_branch_stage = []( Resource::Stage stage, auto& branch)
             {
-               if( result > resource.stage)
-                  result = resource.stage;
-            }
-            return result;
+               return std::min( stage, branch.stage());
+            };
+            return algorithm::accumulate( branches, Resource::Stage::not_involved, min_branch_stage);
          }
 
          common::code::xa Transaction::results() const
          {
-            auto result = Resource::Result::xa_RDONLY;
-
-            for( auto& resource : resources)
+            auto severe_branch_results = []( Resource::Result result, auto& branch)
             {
-               if( resource.result < result)
-               {
-                  result = resource.result;
-               }
-            }
-            return Resource::convert( result);
+               return std::min( result, branch.results());
+            };
+            return Resource::convert( algorithm::accumulate( branches, Resource::Result::xa_RDONLY, severe_branch_results));
          }
 
 
          std::ostream& operator << ( std::ostream& out, const Transaction& value)
          {
-            return out << "{ trid: " << value.trid
-               << ", resources: " << common::range::make( value.resources)
+            return out << "{ global: " << value.global
+               << ", branches: " << value.branches
                << ", correlation: " << value.correlation
                << ", remote-resource: " << value.resource
                << '}';
          }
 
-         State::State( std::string database) : persistent_log( std::move( database)) {}
+         State::State( std::string database) : persistent( std::move( database)) {}
 
 
          bool State::outstanding() const
@@ -401,9 +417,18 @@ namespace casual
             auto found = common::algorithm::find( resources, rm);
 
             if( ! found)
-            {
                throw common::exception::system::invalid::Argument{ "failed to find resource"};
-            }
+
+            return *found;
+         }
+
+         state::resource::Proxy& State::get_resource( const std::string& name)
+         {
+            auto found = common::algorithm::find_if( resources, [&name]( auto& r){ return r.name == name;});
+
+            if( ! found)
+               throw common::exception::system::invalid::Argument{ "failed to find resource"};
+
             return *found;
          }
 

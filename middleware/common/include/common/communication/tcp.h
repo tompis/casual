@@ -56,8 +56,12 @@ namespace casual
 
                inline operator std::string() const { return host + ':' + port;} 
 
-
-               friend std::ostream& operator << ( std::ostream& out, const Address& value);
+               // for logging only
+               CASUAL_CONST_CORRECT_SERIALIZE_WRITE(
+               {
+                  CASUAL_SERIALIZE( host);
+                  CASUAL_SERIALIZE( port);
+               })
 
                std::string host;
                std::string port;
@@ -67,33 +71,24 @@ namespace casual
             {
                namespace address
                {
-
-                  //!
                   //! @return The address to which the socket is bound to on local host
-                  //!
                   Address host( descriptor_type descriptor);
                   Address host( const Socket& socket);
 
-                  //!
                   //! @return The address of the peer connected to the socket
-                  //!
                   Address peer( descriptor_type descriptor);
                   Address peer( const Socket& socket);
 
                } // address
 
-               //!
                //! creates a socket, binds it to `address` and let the OS listen to the socket
                //! @param address 
                //! @return socket prepared to use with accept
-               //!
                Socket listen( const Address& address);
 
-               //!
                //! performs blocking accept on the `listener`
                //! @param listener 
                //! @return the connected socket
-               //!
                Socket accept( const Socket& listener);
 
             } // socket
@@ -103,13 +98,11 @@ namespace casual
 
             namespace retry
             {
-               //!
                //! Keeps trying to connect
                //!
                //! @param address to connect to
                //! @param sleep sleep pattern
                //! @return created socket
-               //!
                Socket connect( const Address& address, process::pattern::Sleep sleep);
             } // retry
 
@@ -126,11 +119,7 @@ namespace casual
             };
 
 
-
-
-            //
             // Forwards
-            //
             namespace inbound
             {
                struct Connector;
@@ -213,7 +202,11 @@ namespace casual
                inline handle_type& socket() { return m_socket;};
                inline auto descriptor() const { return m_socket.descriptor();}
 
-               friend std::ostream& operator << ( std::ostream& out, const base_connector& rhs);
+               // for logging only
+               CASUAL_CONST_CORRECT_SERIALIZE_WRITE(
+               {
+                  CASUAL_SERIALIZE_NAME( m_socket, "socket");
+               })
 
             private:
                handle_type m_socket;

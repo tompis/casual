@@ -15,44 +15,6 @@ namespace casual
    namespace common
    {
 
-/*
-      TEST( casual_common_transaction_id, ostream)
-      {
-         common::unittest::Trace trace;
-
-         const Uuid gtrid = uuid::make();
-
-         transaction::ID id{ gtrid, gtrid, { strong::process::id{}, strong::ipc::id{}}};
-
-         std::ostringstream stream;
-         stream << id;
-
-         std::ostringstream expected;
-         expected << gtrid << ':' << gtrid << ':' << transaction::ID::cCasual << ":0:0";
-
-
-         EXPECT_TRUE( stream.str() == expected.str()) << "stream: " << stream.str() << '\n' << "expected: " << expected.str() << '\n';
-      }
-
-      TEST( casual_common_transaction_id, generic_string)
-      {
-         common::unittest::Trace trace;
-
-         transaction::ID id{ uuid::make(), uuid::make(), {  strong::process::id{}, strong::ipc::id{}}};
-
-         std::ostringstream stream;
-         stream << id;
-
-         auto trid = common::string::split( stream.str(), ':');
-
-         ASSERT_TRUE( trid.size() == 5);
-         EXPECT_TRUE( trid[ 0].size() == 32);
-         EXPECT_TRUE( trid[ 1].size() == 32);
-
-         EXPECT_TRUE( trid[ 3].size() == 1);
-         EXPECT_TRUE( trid[ 4].size() == 1);
-      }
-*/
       TEST( casual_common_transaction_id, uuid_constructor)
       {
          common::unittest::Trace trace;
@@ -76,8 +38,8 @@ namespace casual
       {
          common::unittest::Trace trace;
 
-         auto lhs = transaction::ID::create();
-         auto rhs = transaction::ID::create();
+         auto lhs = transaction::id::create();
+         auto rhs = transaction::id::create();
 
          EXPECT_TRUE( lhs != rhs) << "lhs: " << lhs << '\n' << "rhs: " << rhs << '\n';
 
@@ -87,7 +49,7 @@ namespace casual
       {
          common::unittest::Trace trace;
 
-         auto trid = transaction::ID::create();
+         auto trid = transaction::id::create();
 
          EXPECT_TRUE( trid.xid == trid.xid) << "trid: " << trid << '\n';
       }
@@ -96,7 +58,7 @@ namespace casual
       {
          common::unittest::Trace trace;
 
-         auto trid = transaction::ID::create();
+         auto trid = transaction::id::create();
 
          EXPECT_TRUE( trid.owner() == process::handle()) << "trid.owner(): " << trid.owner() << '\n' << "process::handle()" << process::handle() << '\n';
 
@@ -106,7 +68,7 @@ namespace casual
       {
          common::unittest::Trace trace;
 
-         auto lhs = transaction::ID::create();
+         auto lhs = transaction::id::create();
          auto rhs = lhs;
 
          EXPECT_TRUE( lhs == rhs) << "lhs: " << lhs << '\n' << "rhs: " << rhs << '\n';
@@ -120,7 +82,7 @@ namespace casual
       {
          common::unittest::Trace trace;
 
-         auto id = transaction::ID::create();
+         auto id = transaction::id::create();
 
          transaction::ID moved{ std::move( id)};
 
@@ -139,8 +101,8 @@ namespace casual
          char char_gtrid[ sizeof( Uuid::uuid_type)];
          algorithm::copy( gtrid.get(), std::begin( char_gtrid));
 
-         EXPECT_TRUE( algorithm::equal( char_gtrid, transaction::global( id))) << "global: " << transaction::global( id) << " - char_gtrid: " << view::binary::make( char_gtrid);
-         EXPECT_TRUE( algorithm::equal( char_gtrid, transaction::global( id.xid)));
+         EXPECT_TRUE( algorithm::equal( char_gtrid, transaction::id::range::global( id))) << "global: " << transaction::id::range::global( id) << " - char_gtrid: " << view::binary::make( char_gtrid);
+         EXPECT_TRUE( algorithm::equal( char_gtrid, transaction::id::range::global( id.xid)));
 
       }
 
@@ -155,8 +117,8 @@ namespace casual
          char char_bqual[ sizeof( Uuid::uuid_type)];
          algorithm::copy( bqual.get(), std::begin( char_bqual));
 
-         EXPECT_TRUE( algorithm::equal( char_bqual, transaction::branch( id))) << "branch: " << transaction::branch( id) << " - char_gtrid: " << view::binary::make( char_bqual);
-         EXPECT_TRUE( algorithm::equal( char_bqual, transaction::branch( id.xid)));
+         EXPECT_TRUE( algorithm::equal( char_bqual, transaction::id::range::branch( id))) << "branch: " << transaction::id::range::branch( id) << " - char_gtrid: " << view::binary::make( char_bqual);
+         EXPECT_TRUE( algorithm::equal( char_bqual, transaction::id::range::branch( id.xid)));
       }
 
    } // common

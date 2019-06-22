@@ -7,11 +7,11 @@
 
 #pragma once
 
-
 #include "common/serialize/named/value.h"
 #include "common/serialize/traits.h"
-#include "common/serialize/customize.h"
+#include "common/serialize/value.h"
 #include "common/platform.h"
+#include "common/view/binary.h"
 
 #include <utility>
 
@@ -21,7 +21,7 @@ namespace casual
    {
       namespace serialize
       {
-         //! Reader interface
+
          class Reader
          {
          public:
@@ -54,8 +54,11 @@ namespace casual
             inline bool read( std::string& value, const char* name) { return m_protocol->read( value, name);}
             inline bool read( platform::binary::type& value, const char* name) { return m_protocol->read( value, name);}
 
+            //! serialize raw data, no 'size' will be serialized, hence caller has to take care
+            //! of this if needed.
+            inline bool read( view::Binary value, const char* name) { return m_protocol->read( value, name);}
+
             //! Validates the 'consumed' archive, if the implementation has a validate member function.
-            //!
             //! It throws if there are information in the source that is not consumed by the object-model
             inline void validate() { m_protocol->validate();}
 
@@ -80,6 +83,7 @@ namespace casual
                virtual bool read( double& value, const char* name) = 0;
                virtual bool read( std::string& value, const char* name) = 0;
                virtual bool read( platform::binary::type& value, const char* name) = 0;
+               virtual bool read( view::Binary value, const char* name) = 0;
 
                virtual void validate() = 0;
             };
@@ -107,6 +111,7 @@ namespace casual
                bool read( double& value, const char* name) override { return m_protocol.read( value, name);}
                bool read( std::string& value, const char* name) override { return m_protocol.read( value, name);}
                bool read( platform::binary::type& value, const char* name) override { return m_protocol.read( value, name);}
+               bool read( view::Binary value, const char* name) override { return m_protocol.read( value, name);}
 
 
                void validate() override { selective_validate( m_protocol);}
@@ -135,37 +140,19 @@ namespace casual
             std::unique_ptr< concept> m_protocol;
 
          };
-         
-         namespace detail
-         {
-            template< typename T>
-            std::enable_if_t< ! traits::has::serialize< traits::remove_cvref_t< T>, Reader>::value>
-            serialize( Reader& archive, T& value, const char* const name)
-            {
-               customize::value::read( archive, value, name);
-            }
 
-            template< typename T>
-            std::enable_if_t< traits::has::serialize< traits::remove_cvref_t< T>, Reader>::value>
-            serialize( Reader& archive, T& value, const char* const name)
-            {
-               archive.composite_start( name);
-               value.serialize( archive);
-               archive.composite_end(  name);
-            } 
-         } // detail
-
-         template< typename NV>
-         Reader& operator >> ( Reader& archive, NV&& named)
+         //! Reader interface
+         template< typename V>
+         Reader& operator >> ( Reader& archive, V&& value)
          {
-            detail::serialize( archive, named.value(), named.name());
+            serialize::value::read( archive, std::forward< V>( value), nullptr);
             return archive;
          }
 
-         template< typename NV>
-         Reader& operator & ( Reader& archive, NV&& named)
+         template< typename V>
+         Reader& operator & ( Reader& archive, V&& value)
          {
-            return operator >> ( archive, std::forward< NV>( named));
+            return operator >> ( archive, std::forward< V>( value));
          }
 
 
@@ -200,6 +187,10 @@ namespace casual
             inline void write( double value, const char* name) { m_protocol->write( value, name);}
             inline void write( const std::string& value, const char* name) { m_protocol->write( value, name);}
             inline void write( const platform::binary::type& value, const char* name) { m_protocol->write( value, name);}
+            
+            //! serialize raw data, no 'size' will be serialized, hence caller has to take care
+            //! of this if needed.
+            inline void write( view::immutable::Binary value, const char* name) { m_protocol->write( value, name);}
 
             //! Flushes the archive, if the implementation has a flush member function.
             inline void flush() { m_protocol->flush();}
@@ -225,6 +216,7 @@ namespace casual
                virtual void write( double value, const char* name) = 0;
                virtual void write( const std::string& value, const char* name) = 0;
                virtual void write( const platform::binary::type& value, const char* name) = 0;
+               virtual void write( view::immutable::Binary value, const char* name) = 0;
 
                virtual void flush() = 0;
             };
@@ -251,7 +243,8 @@ namespace casual
                void write( float value, const char* name) override { m_protocol.write( value, name);}
                void write( double value, const char* name) override { m_protocol.write( value, name);}
                void write( const std::string& value, const char* name) override { m_protocol.write( value, name);}
-               void write( const platform::binary::type& value, const char* name) override { m_protocol.write( value, name);}
+               void write( const platform::binary::type&value, const char* name) override { m_protocol.write( value, name);}
+               void write( view::immutable::Binary value, const char* name) override { m_protocol.write( value, name);}
 
                void flush() override { selective_flush( m_protocol);}
 
@@ -274,29 +267,11 @@ namespace casual
 
          };
 
-         namespace detail
-         {
-            template< typename T>
-            std::enable_if_t< ! traits::has::serialize< traits::remove_cvref_t< T>, Writer>::value>
-            serialize( Writer& archive, const T& value, const char* const name)
-            {
-               customize::value::write( archive, value, name);
-            }
 
-            template< typename T>
-            std::enable_if_t< traits::has::serialize< traits::remove_cvref_t< T>, Writer>::value>
-            serialize( Writer& archive, const T& value, const char* const name)
-            {
-               archive.composite_start( name);
-               value.serialize( archive);
-               archive.composite_end( name);
-            } 
-         } // detail
-
-         template< typename NV>
-         Writer& operator << ( Writer& archive, NV&& named)
+         template< typename V>
+         Writer& operator << ( Writer& archive, V&& value)
          {
-            detail::serialize( archive, named.value(), named.name());
+            serialize::value::write( archive, std::forward< V>( value), nullptr);
             return archive;
          }
 

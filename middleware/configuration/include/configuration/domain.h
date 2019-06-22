@@ -35,14 +35,11 @@ namespace casual
          {
             struct Default
             {
-               Default();
-
                Environment environment;
 
-               server::executable::Default server;
-               server::executable::Default executable;
-               service::service::Default service;
-
+               executable::Default server;
+               executable::Default executable;
+               service::Default service;
 
                CASUAL_CONST_CORRECT_SERIALIZE
                (
@@ -51,6 +48,8 @@ namespace casual
                   CASUAL_SERIALIZE( executable);
                   CASUAL_SERIALIZE( service);
                )
+
+               Default& operator += ( const Default& rhs);
             };
 
          } // manager
@@ -58,19 +57,17 @@ namespace casual
 
          struct Manager
          {
-
             std::string name;
             manager::Default manager_default;
 
-            std::vector< group::Group> groups;
-            std::vector< server::Server> servers;
-            std::vector< server::Executable> executables;
-            std::vector< service::Service> services;
+            std::vector< Group> groups;
+            std::vector< Server> servers;
+            std::vector< Executable> executables;
+            std::vector< Service> services;
 
             transaction::Manager transaction;
             gateway::Manager gateway;
             queue::Manager queue;
-
 
             CASUAL_CONST_CORRECT_SERIALIZE
             (
@@ -89,7 +86,7 @@ namespace casual
             Manager& operator += ( const Manager& rhs);
             Manager& operator += ( Manager&& rhs);
 
-            friend Manager operator + ( const Manager& lhs, const Manager& rhs);
+            friend Manager operator + ( Manager lhs, const Manager& rhs);
          };
 
 

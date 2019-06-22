@@ -11,6 +11,7 @@
 
 #include "common/serialize/macro.h"
 #include "common/platform.h"
+#include "common/optional.h"
 
 #include <vector>
 #include <string>

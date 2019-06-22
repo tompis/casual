@@ -54,8 +54,6 @@ namespace casual
                         CASUAL_SERIALIZE( domain);
                         CASUAL_SERIALIZE( versions);
                      })
-
-                     friend std::ostream& operator << ( std::ostream& out, const Request& value);
                   };
 
                   struct Reply : basic_message< Type::gateway_domain_connect_reply>
@@ -69,22 +67,17 @@ namespace casual
                         CASUAL_SERIALIZE( domain);
                         CASUAL_SERIALIZE( version);
                      })
-
-                     friend std::ostream& operator << ( std::ostream& out, const Reply& value);
                   };
                } // connect
 
                namespace discover
                {
-
-                  //!
                   //! Request from another domain to the local gateway, that's then
                   //! 'forwarded' to broker and possible casual-queue to revel stuff about
                   //! this domain.
                   //!
                   //! other domain -> inbound-connection -> gateway ---> casual-broker
                   //!                                               [ \-> casual-gueue ]
-                  //!
                   struct Request : basic_message< Type::gateway_domain_discover_request>
                   {
                      common::process::Handle process;
@@ -101,15 +94,12 @@ namespace casual
                         CASUAL_SERIALIZE( queues);
                      })
 
-                     friend std::ostream& operator << ( std::ostream& out, const Request& value);
                   };
                   static_assert( traits::is_movable< Request>::value, "not movable");
 
-                  //!
                   //! Reply from a domain
                   //!    [casual-queue -\ ]
                   //!    casual-broker ----> gateway -> inbound-connection -> other domain
-                  //!
                   struct Reply : basic_message< Type::gateway_domain_discover_reply>
                   {
                      using Service = service::concurrent::advertise::Service;
@@ -128,23 +118,18 @@ namespace casual
                         CASUAL_SERIALIZE( services);
                         CASUAL_SERIALIZE( queues);
                      })
-
-                     friend std::ostream& operator << ( std::ostream& out, const Reply& value);
                   };
                   static_assert( traits::is_movable< Reply>::value, "not movable");
 
 
                   namespace accumulated
                   {
-
-                     //!
                      //! Reply from the gateway with accumulated replies from other domains
                      //!
                      //!                   requester  <-- gateway <--- outbound connection -> domain 1
                      //!                                            \- outbound connection -> domain 2
                      //!                                               ...
                      //!                                             |- outbound connection -> domain N
-                     //!
                      struct Reply : basic_message< Type::gateway_domain_discover_accumulated_reply>
                      {
                         std::vector< discover::Reply> replies;
@@ -154,8 +139,6 @@ namespace casual
                            base_type::serialize( archive);
                            CASUAL_SERIALIZE( replies);
                         })
-
-                        friend std::ostream& operator << ( std::ostream& out, const Reply& value);
                      };
                      static_assert( traits::is_movable< Reply>::value, "not movable");
                   } // accumulated

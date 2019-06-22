@@ -58,6 +58,9 @@ namespace casual
             domain_server_configuration_request,
             domain_server_configuration_reply,
 
+            domain_pending_send_connect = DOMAIN_BASE + 300,
+            domain_pending_send_request,
+
 
 
             // Server
@@ -80,7 +83,6 @@ namespace casual
             service_acknowledge,
 
             service_concurrent_advertise,
-            service_concurrent_metrics,
 
             service_conversation_connect_request = SERVICE_BASE + 200,
             service_conversation_connect_reply,
@@ -108,6 +110,7 @@ namespace casual
 
             EVENT_SERVICE_BASE = 4200,
             event_service_call = EVENT_SERVICE_BASE,
+            event_service_calls,
             EVENT_SERVICE_BASE_END,
             
             EVENT_BASE_END,
@@ -141,7 +144,8 @@ namespace casual
             transaction_resource_lookup_request = TRANSACTION_BASE + 300,
             transaction_resource_lookup_reply,
 
-            transaction_resource_involved = TRANSACTION_BASE + 400,
+            transaction_resource_involved_request = TRANSACTION_BASE + 400,
+            transaction_resource_involved_reply,
             transaction_external_resource_involved,
 
             transaction_resource_id_request = TRANSACTION_BASE + 500,
@@ -195,11 +199,8 @@ namespace casual
 
 
 
-
-            MOCKUP_BASE = 10000000, // avoid conflict with real messages
-            mockup_disconnect,
-            mockup_clear,
-            mockup_need_worker_process,
+            UNITTEST_BASE = 10000000, // avoid conflict with real messages
+            unittest_message,
          };
 
          //! Deduce witch type of message it is.
@@ -305,7 +306,6 @@ namespace casual
 
          } // shutdown
 
-
          // Below, some basic message related types that is used by others
 
          template< message::Type type>
@@ -319,12 +319,6 @@ namespace casual
                CASUAL_SERIALIZE( process);
             })
 
-            /*
-            friend std::ostream& operator << ( std::ostream& out, const basic_request& value) 
-            {
-               return out << "{ process: " << value.process << '}';
-            }
-            */
          };
 
          template< message::Type type>
@@ -434,8 +428,6 @@ namespace casual
 
                };
             } // detail
-
-
 
             template< typename T>
             auto type( T&& message) -> typename type_traits< typename std::decay<T>::type>::reverse_type

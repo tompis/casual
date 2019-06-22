@@ -265,26 +265,36 @@ namespace casual
                   {
                      struct Service
                      {
-                        std::string name;
-                        std::vector< std::string> routes;
+                        struct Route
+                        {
+                           std::string name;
+                           std::vector< std::string> routes;
+
+                           CASUAL_CONST_CORRECT_SERIALIZE(
+                           {
+                              CASUAL_SERIALIZE( name);
+                              CASUAL_SERIALIZE( routes);
+                           })
+                        };
+
+                        std::vector< std::string> restrictions;
+                        std::vector< Route> routes;
 
                         CASUAL_CONST_CORRECT_SERIALIZE(
                         {
-                           CASUAL_SERIALIZE( name);
+                           CASUAL_SERIALIZE( restrictions);
                            CASUAL_SERIALIZE( routes);
                         })
                      };
 
                      std::vector< std::string> resources;
-                     std::vector< std::string> restrictions;
-                     std::vector< Service> routes;
+                     Service service;
 
                      CASUAL_CONST_CORRECT_SERIALIZE(
                      {
                         base_reply::serialize( archive);
                         CASUAL_SERIALIZE( resources);
-                        CASUAL_SERIALIZE( restrictions);
-                        CASUAL_SERIALIZE( routes);
+                        CASUAL_SERIALIZE( service);
                      })
                   };
 
@@ -307,8 +317,6 @@ namespace casual
                         CASUAL_SERIALIZE( process);
                         CASUAL_SERIALIZE( identification);
                      })
-
-                     friend std::ostream& operator << ( std::ostream& out, const Request& value);
                   };
                   static_assert( traits::is_movable< Request>::value, "not movable");
 
@@ -321,6 +329,17 @@ namespace casual
                         shutdown
                      };
 
+                     inline friend std::ostream& operator << ( std::ostream& out, Directive value)
+                     {
+                        switch( value)
+                        {
+                           case Directive::start: return out << "start";
+                           case Directive::singleton: return out << "singleton";
+                           case Directive::shutdown: return out << "shutdown";
+                           default: return out << "unknown";
+                        }
+                     }
+
                      Directive directive = Directive::start;
 
                      CASUAL_CONST_CORRECT_SERIALIZE(
@@ -328,9 +347,6 @@ namespace casual
                         base_type::serialize( archive);
                         CASUAL_SERIALIZE( directive);
                      })
-
-                     friend std::ostream& operator << ( std::ostream& out, const Directive& value);
-                     friend std::ostream& operator << ( std::ostream& out, const Reply& value);
                   };
                   static_assert( traits::is_movable< Reply>::value, "not movable");
 
@@ -344,11 +360,21 @@ namespace casual
                   using base_request = message::basic_request< Type::domain_process_lookup_request>;
                   struct Request : base_request
                   {
-                     enum class Directive : char
+                     enum class Directive : short
                      {
                         wait,
                         direct
                      };
+
+                     inline friend std::ostream& operator << ( std::ostream& out, Directive value)
+                     {
+                        switch( value)
+                        {
+                           case Directive::wait: return out << "wait";
+                           case Directive::direct: return out << "direct";
+                           default: return out << "unknown";
+                        }
+                     }
 
                      Uuid identification;
                      strong::process::id pid;
@@ -362,8 +388,6 @@ namespace casual
                         CASUAL_SERIALIZE( directive);
                      })
 
-                     friend std::ostream& operator << ( std::ostream& out, Directive value);
-                     friend std::ostream& operator << ( std::ostream& out, const Request& value);
                   };
                   static_assert( traits::is_movable< Request>::value, "not movable");
 
@@ -399,8 +423,6 @@ namespace casual
                            base_request::serialize( archive);
                            CASUAL_SERIALIZE( processes);
                         })
-
-                        friend std::ostream& operator << ( std::ostream& out, const Request& value);
                      };
 
                      using base_reply = basic_request< Type::domain_process_prepare_shutdown_reply>;
@@ -415,16 +437,12 @@ namespace casual
                            base_reply::serialize( archive);
                            CASUAL_SERIALIZE( processes);
                         })
-
-                        friend std::ostream& operator << ( std::ostream& out, const Reply& value);
                      };
 
 
                   } // shutdown
                } // prepare
-
             } // process
-
          } // domain
 
          namespace reverse

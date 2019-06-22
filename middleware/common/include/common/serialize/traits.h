@@ -24,19 +24,6 @@ namespace casual
          {
             using namespace common::traits;
 
-            template< typename T>
-            struct is_pod : public traits::bool_constant< std::is_pod< T>::value && ! std::is_class< T>::value && ! std::is_enum< T>::value> {};
-
-            template<>
-            struct is_pod< std::string> : public traits::bool_constant< true> {};
-
-            template<>
-            struct is_pod< std::wstring> : public traits::bool_constant< true> {};
-
-            template<>
-            struct is_pod< std::vector< char> > : public traits::bool_constant< true> {};
-
-
             namespace need
             {
                namespace detail
@@ -61,6 +48,18 @@ namespace casual
 
                template< typename T, typename A>
                using serialize = detect::is_detected< detail::serialize, T, A>;
+
+               namespace forward
+               {
+                  namespace detail
+                  {
+                     template< typename T, typename A>
+                     using serialize = decltype( std::declval< traits::remove_cvref_t< T>&>().serialize( std::declval< traits::remove_cvref_t< A>&>(), ""));
+                  } // detail
+
+                  template< typename T, typename A>
+                  using serialize = detect::is_detected< detail::serialize, T, A>;
+               } // forward
             } // has
 
             namespace can
@@ -78,20 +77,36 @@ namespace casual
 
             namespace is
             {
-               namespace value
-               {                                 
-                  template< typename T>
-                  using serializable = traits::bool_constant<
-                     std::is_arithmetic<T>::value ||
-                     ( std::is_array<T>::value && sizeof( typename std::remove_all_extents<T>::type) == 1 ) ||
-                     traits::container::is_array< T>::value ||
-                     std::is_enum< T>::value>;
-               } // value
+               //! all "pods" that can be serialized directly
+               template< typename T>
+               using pod = traits::bool_constant< 
+                  ( std::is_pod< T>::value && ! std::is_class< T>::value && ! std::is_enum< T>::value ) // normal pods
+                  || std::is_same< T, std::string>::value 
+                  || std::is_same< T, platform::binary::type>::value 
+               >;
+
+               namespace named
+               {
+                  namespace detail
+                  {
+                     template< typename V>
+                     using value = typename V::serialize_named_value_type;
+                  } // detail
+
+                  template< typename V>
+                  using value = detect::is_detected< detail::value, V>;
+                  
+               } // named               
 
                namespace network
                {
+                  namespace detail
+                  {
+                     template< typename A>
+                     using normalizing = typename A::is_network_normalizing;
+                  } // detail
                   template< typename A>
-                  struct normalizing : std::false_type {};
+                  struct normalizing : bool_constant< detect::is_detected< detail::normalizing, A>::value>{};
                } // network
             } // is
          } // traits

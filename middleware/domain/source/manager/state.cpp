@@ -36,35 +36,11 @@ namespace casual
                   }
                } // ipc
 
-
-               template< typename T>
-               void print_executables( std::ostream& out, const T& value)
-               {
-                  out << "id: " << value.id
-                     << ", alias: " << value.alias
-                     << ", path: " << value.path
-                     << ", arguments: " << value.arguments
-                     << ", restart: " << value.restart
-                     << ", memberships: " << value.memberships
-                     << ", instances: " << value.instances;
-               }
-
             } // <unnamed>
          } // local
 
          namespace state
          {
-
-
-            std::ostream& operator << ( std::ostream& out, const Group& value)
-            {
-               return out << "{ id: " << value.id
-                     << ", name: " << value.name
-                     << ", dependencies: " << value.dependencies
-                     << ", resources: " << value.resources
-                     << '}';
-            }
-
             namespace instance
             {
                std::ostream& operator << ( std::ostream& out, State value)
@@ -131,9 +107,7 @@ namespace casual
 
                         auto running = std::get< 0>( split);
 
-                        //
                         // Do we scale in, or scale out?
-                        //
                         if( running.size() < count)
                         {
                            count -= running.size();
@@ -219,13 +193,6 @@ namespace casual
             }
 
 
-            std::ostream& operator << ( std::ostream& out, const Executable& value)
-            {
-               out << "{ ";
-               manager::local::print_executables( out, value);
-               return out << '}';
-            }
-
             Server::instance_type Server::instance( common::strong::process::id pid) const
             {
                auto found = algorithm::find_if( instances, [pid]( auto& p){
@@ -308,14 +275,6 @@ namespace casual
             }
 
 
-            std::ostream& operator << ( std::ostream& out, const Server& value)
-            {
-               out << "{ ";
-               manager::local::print_executables( out, value);
-               return out << ", resources: " << value.resources
-                  << ", restrictions: " << value.restrictions
-                  << '}';
-            }
 
             bool operator == ( const Server& lhs, common::strong::process::id rhs)
             {
@@ -345,13 +304,6 @@ namespace casual
             }
 
 
-            std::ostream& operator << ( std::ostream& out, const Batch& value)
-            {
-               return out << "{ group: " << value.group
-                     << ", servers: " << value.servers
-                     << ", executables: " << value.executables
-                     << '}';
-            }
 
          } // state
 
@@ -372,9 +324,7 @@ namespace casual
                      std::vector< std::reference_wrapper< state::Server>> server_wrappers;
                      std::vector< std::reference_wrapper< state::Executable>> excutable_wrappers;
 
-                     //
                      // We make sure we don't include our self in the boot sequence.
-                     //
                      algorithm::copy_if( state.servers, std::back_inserter( server_wrappers), [&state]( const auto& e){
                         return e.id != state.manager_id;
                      });
@@ -384,20 +334,16 @@ namespace casual
                      auto executable = range::make( excutable_wrappers);
                      auto servers = range::make( server_wrappers);
 
-                     //
                      // Reverse the order, so we 'consume' executable based on the group
                      // that is the farthest in the dependency chain
-                     //
                      for( auto& group : algorithm::reverse( groups))
                      {
                         state::Batch batch{ group.get().id};
 
-                        auto extract = [&]( auto& entites, auto& output){
-
-                           //
+                        auto extract = [&]( auto& entities, auto& output)
+                        {
                            // Partition executables so we get the ones that has current group as a dependency
-                           //
-                           auto slice = algorithm::stable_partition( entites, [&]( const auto& e){
+                           auto slice = algorithm::stable_partition( entities, [&]( const auto& e){
                               return static_cast< bool>( algorithm::find( e.get().memberships, group.get().id));
                            });
 
@@ -416,9 +362,7 @@ namespace casual
                         result.push_back( std::move( batch));
                      }
 
-                     //
                      // We reverse the result so the dependency order is correct
-                     //
                      return algorithm::reverse( result);
                   }
                } // order
@@ -450,12 +394,6 @@ namespace casual
 
             // We remove from pending 
             {
-               algorithm::trim( pending.replies, algorithm::remove_if( pending.replies, [pid]( message::pending::Message& m)
-               {
-                  m.remove( pid);
-                  return m.sent();
-               }));
-
                algorithm::trim( pending.lookup, algorithm::remove_if( pending.lookup, [pid]( auto& m)
                {
                   return m.process == pid;
@@ -529,7 +467,7 @@ namespace casual
          }
 
 
-         std::vector< std::string> State::variables( const state::Process& process)
+         std::vector< common::environment::Variable> State::variables( const state::Process& process)
          {
             auto result = casual::configuration::environment::transform( casual::configuration::environment::fetch( environment));
 
@@ -675,15 +613,6 @@ namespace casual
 
             return range::to_vector( algorithm::unique( algorithm::sort( resources)));
          }
-
-         std::ostream& operator << ( std::ostream& out, const State& state)
-         {
-            return out << "{ groups: " << state.groups
-               << ", executables: " << state.executables
-               << ", tasks: " << state.tasks
-                  << '}';
-         }
-
 
       } // manager
    } // domain

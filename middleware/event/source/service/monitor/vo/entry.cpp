@@ -8,9 +8,7 @@
       
 
 #include "event/service/monitor/vo/entry.h"
-
-#include <serviceframework/archive/archive.h>
-
+#include "common/serialize/archive.h"
 
 //## includes protected section begin [200.20]
 
@@ -57,7 +55,7 @@ namespace casual
                   //## additional attributes protected section end   [200.impl.attr.10]
                   std::string parentService;
                   std::string service;
-                  common::platform::Uuid callId;
+                  common::Uuid callId;
                   common::platform::time::point::type start;
                   common::platform::time::point::type end;
                   //## additional attributes protected section begin [200.impl.attr.20]
@@ -88,7 +86,7 @@ namespace casual
                {
                   return pimpl->service;
                }
-               common::platform::Uuid Entry::getCallId() const
+               common::Uuid Entry::getCallId() const
                {
                   return pimpl->callId;
                }
@@ -110,7 +108,7 @@ namespace casual
                {
                   pimpl->service = value;
                }
-               void Entry::setCallId( common::platform::Uuid value)
+               void Entry::setCallId( common::Uuid value)
                {
                   pimpl->callId = value;
                }
@@ -124,12 +122,12 @@ namespace casual
                }
 
 
-               void Entry::serialize( casual::serviceframework::archive::Reader& archive)
+               void Entry::serialize( casual::common::serialize::Reader& archive)
                {
                    pimpl->serialize( archive);
                }
 
-               void Entry::serialize( casual::serviceframework::archive::Writer& archive) const
+               void Entry::serialize( casual::common::serialize::Writer& archive) const
                {
                    pimpl->serialize( archive);
                }

@@ -107,10 +107,18 @@ namespace casual
                         m_buffer.back().value = value;
                      }
 
-                     void write( const platform::binary::type& value, const char* name)
+                     void write( view::immutable::Binary value, const char* name)
                      {
                         add( name);
-                        m_buffer.back().value = "<binary data> size: " + std::to_string( value.size());
+                        if( value.size() > 32) 
+                           m_buffer.back().value = string::compose( '"', "binary size: ", value.size(), '"');
+                        else
+                           m_buffer.back().value = string::compose( "0x", transcode::hex::encode(value));
+                     }
+
+                     void write( const platform::binary::type& value, const char* name)
+                     {
+                        write( view::binary::make( value), name);
                      }
 
                   private:

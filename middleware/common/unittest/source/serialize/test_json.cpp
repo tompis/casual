@@ -5,10 +5,11 @@
 //!
 
 
-#include <gtest/gtest.h>
+#include "common/unittest.h"
 
 
 #include "common/serialize/json.h"
+#include "common/exception/casual.h"
 
 #include "../../include/test_vo.h"
 
@@ -45,8 +46,9 @@ namespace casual
       } // local
 
 
-      TEST( serviceframework_json_archive, relaxed_read_serializable)
+      TEST( common_serialize_json, relaxed_read_serializable)
       {
+         common::unittest::Trace trace;
          //const std::string json = test::SimpleVO::json();
 
          test::SimpleVO value;
@@ -59,8 +61,9 @@ namespace casual
 
       }
 
-      TEST( serviceframework_json_archive, write_read_vector_long)
+      TEST( common_serialize_json, write_read_vector_long)
       {
+         common::unittest::Trace trace;
          std::string json;
 
          {
@@ -75,11 +78,34 @@ namespace casual
             ASSERT_TRUE( value.size() == 8);
             EXPECT_TRUE( value.at( 7) == 8);
          }
-
       }
 
-      TEST( serviceframework_json_archive, simple_write_read)
+      TEST( common_serialize_json, array)
       {
+         common::unittest::Trace trace;
+         common::platform::binary::type json;
+
+         const std::array< char, 4> origin{ '1', '2', '3', '4' };
+
+         {
+            
+            auto writer = serialize::json::writer( json);
+            writer << CASUAL_MAKE_NVP_NAME( origin, "value");
+            writer.flush();
+         }
+
+         {
+            std::array< char, 4> value;
+            auto reader = serialize::json::strict::reader( json);
+            reader >> CASUAL_MAKE_NVP( value);
+
+            EXPECT_TRUE( common::algorithm::equal( origin, value)) << "value: " << value;
+         }
+      }
+
+      TEST( common_serialize_json, simple_write_read)
+      {
+         common::unittest::Trace trace;
          std::string json;
 
          {
@@ -102,8 +128,9 @@ namespace casual
 
       }
 
-      TEST( serviceframework_json_archive, complex_write_read)
+      TEST( common_serialize_json, composit_write_read)
       {
+         common::unittest::Trace trace;
          std::string json;
 
          {
@@ -125,8 +152,9 @@ namespace casual
       }
 
 
-      TEST( serviceframework_json_archive, load_invalid_document__expecting_exception)
+      TEST( common_serialize_json, load_invalid_document__expecting_exception)
       {
+         common::unittest::Trace trace;
          const std::string json
          {
             R"({
@@ -144,8 +172,9 @@ namespace casual
          }, exception::casual::invalid::Document);
       }
 
-      TEST( serviceframework_json_archive, read_with_invalid_long__expecting_exception)
+      TEST( common_serialize_json, read_with_invalid_long__expecting_exception)
       {
+         common::unittest::Trace trace;
          const std::string json
          {
             R"(
@@ -171,8 +200,9 @@ namespace casual
 
       }
 
-      TEST( serviceframework_json_archive, read_with_invalid_string__expecting_exception)
+      TEST( common_serialize_json, read_with_invalid_string__expecting_exception)
       {
+         common::unittest::Trace trace;
          const std::string json
          {
             R"(

@@ -10,6 +10,8 @@
 #include "common/serialize/macro.h"
 #include "common/platform.h"
 
+#include "configuration/environment.h"
+
 #include "common/domain.h"
 
 namespace casual
@@ -183,6 +185,22 @@ namespace casual
                         )
                      };
                   } // scale
+
+                  namespace set
+                  {
+                     struct Environment
+                     {
+                        casual::configuration::Environment variables;
+                        std::vector< std::string> aliases;
+
+                        CASUAL_CONST_CORRECT_SERIALIZE
+                        (
+                           CASUAL_SERIALIZE( CASUAL_MAKE_NVP( variables));
+                           CASUAL_SERIALIZE( CASUAL_MAKE_NVP( aliases));
+                        )
+                     };
+                     
+                  } // set
 
                } // v1_0
             } // vo

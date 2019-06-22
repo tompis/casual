@@ -17,7 +17,7 @@
 #include "common/algorithm.h"
 #include "common/process.h"
 
-#include "common/serialize/customize.h"
+#include "common/serialize/value/customize.h"
 
 
 #include <string>
@@ -28,9 +28,8 @@
 //! @{
 bool operator == ( const XID& lhs, const XID& rhs);
 bool operator < ( const XID& lhs, const XID& rhs);
-bool operator != ( const XID& lhs, const XID& rhs);
+inline bool operator != ( const XID& lhs, const XID& rhs) { return ! ( lhs == rhs);}
 //! @}
-
 
 //! Global stream operator for XID
 std::ostream& operator << ( std::ostream& out, const XID& xid);
@@ -39,11 +38,10 @@ namespace casual
 {
    namespace common
    {
+
       namespace transaction
       {
          using xid_type = XID;
-
-         using xid_range_type = decltype( view::binary::make( std::declval< const xid_type&>().data));
 
          class ID
          {
@@ -54,23 +52,18 @@ namespace casual
                enum 
                {
                   null = -1,
-                  casual = 42
+                  casual = 42,
+                  branch = 43,
                };
             };
-
-            //! Creates a new unique transaction id, global and branch
-            static ID create();
-            static ID create( const process::Handle& owner);
-
 
             //! Initialize with null-xid
             //! @{
             ID() noexcept;
-            ID( const process::Handle& owner);
+            explicit ID( const process::Handle& owner);
             //! @}
 
             explicit ID( const xid_type& xid);
-
 
             //! Initialize with uuid, gtrid and bqual.
             //! Sets the format id to "casual"
@@ -84,8 +77,6 @@ namespace casual
             ID( const ID&) noexcept = default;
             ID& operator = ( const ID&) noexcept = default;
 
-            //! Creates a new Id with same global transaction id but a new branch id.
-            ID branch() const;
 
             //! @return true if XID is null
             bool null() const;
@@ -93,8 +84,6 @@ namespace casual
             //! @return true if XID is not null
             explicit operator bool() const;
 
-            //! Return the raw data of the xid in a range
-            xid_range_type range() const;
 
             //! @return owner/creator of the transaction
             const process::Handle& owner() const;
@@ -108,8 +97,15 @@ namespace casual
                return ! ( lhs == rhs);
             }
 
-            template< typename T, typename A, typename E>
-            friend struct serialize::customize::Value;
+            //template< typename T, typename A, typename E>
+            //friend struct serialize::customize::Value;
+
+            CASUAL_CONST_CORRECT_SERIALIZE(
+            {
+               CASUAL_SERIALIZE_NAME( m_owner, "owner");
+               CASUAL_SERIALIZE( xid);
+            })
+
 
             //! The XA-XID object.
             //!
@@ -123,88 +119,86 @@ namespace casual
             process::Handle m_owner;
          };
 
-         //! @return a (binary) range that represent the data part of the xid, global + branch
-         //! @{
-         xid_range_type data( const ID& id);
-         xid_range_type data( const xid_type& id);
-         //! @}
+         namespace id
+         {
+            //! Creates a new unique transaction id, global and branch
+            ID create();
+            ID create( const process::Handle& owner);
 
-         //! @return a (binary) range that represent the global part of the xid
-         //! @{
-         xid_range_type global( const ID& id);
-         xid_range_type global( const xid_type& id);
-         //! @}
+            //! @return true if trid is null, false otherwise
+            //! @{
+            bool null( const ID& id);
+            bool null( const xid_type& id);
+            //! @}
 
-         //! @return a (binary) range that represent the branch part of the xid
-         //! @{
-         xid_range_type branch( const ID& id);
-         xid_range_type branch( const xid_type& id);
-         //! @}
+            //! Creates a new Id with same global transaction id but a new branch id.
+            //! if the transaction is _null_ then a _null_ xid is returned 
+            ID branch( const ID& id);
+            
+            namespace range
+            {
+               using range_type = decltype( view::binary::make( std::declval< const xid_type&>().data));
 
-         //! @return true if trid is null, false otherwise
-         //! @{
-         bool null( const ID& id);
-         bool null( const xid_type& id);
-         //! @}
-         
+               namespace detail
+               {
+                  template< typename X>
+                  auto data( X&& xid) 
+                  {
+                     return view::binary::make( xid.data, xid.data + xid.gtrid_length + xid.bqual_length);
+                  }
+               } // detail
+
+               //! @return a (binary) range that represent the data part of the xid, global + branch
+               //! @{
+               inline auto data( const xid_type& xid) { return detail::data( xid);}
+               inline auto data( const ID& id) { return data( id.xid);}
+               inline auto data( xid_type& xid) { return detail::data( xid);}
+               inline auto data( ID& id) { return data( id.xid);}
+               //! @}
+
+               //! @return a (binary) range that represent the global part of the xid
+               //! @{
+               range_type global( const ID& id);
+               range_type global( const xid_type& id);
+               //! @}
+
+               //! @return a (binary) range that represent the branch part of the xid
+               //! @{
+               range_type branch( const ID& id);
+               range_type branch( const xid_type& id);
+               //! @}
+
+            } // range
+         } // id
       } // transaction
-
 
       namespace serialize
       {
          namespace customize
          {
-            //! specialization for transaction ID
-            //! @{
-            template< typename A>
-            struct Value< transaction::ID, A, std::enable_if_t< ! traits::need::named< A>::value>>
+            namespace composit
             {
-               static void write( A& archive, const transaction::ID& value, const char*)
+               //! specialization for XID
+               //! @{
+               template< typename A>
+               struct Value< XID, A>
                {
-                  archive << value.xid.formatID;
-
-                  if( value)
+                  template< typename V>  
+                  static void serialize( A& archive, V&& xid)
                   {
-                     archive << value.m_owner;
-                     archive << value.xid.gtrid_length;
-                     archive << value.xid.bqual_length;
-                     archive.append( value.range());
+                     CASUAL_SERIALIZE_NAME( xid.formatID, "formatID");
+
+                     if( ! transaction::id::null( xid))
+                     {
+                        CASUAL_SERIALIZE_NAME( xid.gtrid_length, "gtrid_length");
+                        CASUAL_SERIALIZE_NAME( xid.bqual_length, "bqual_length");
+                        CASUAL_SERIALIZE_NAME( transaction::id::range::data( xid), "data");
+                     }
                   }
-               }
-
-               static void read( A& archive, transaction::ID& value, const char*)
-               {
-                  archive >> value.xid.formatID;
-
-                  if( value)
-                  {
-                     archive >> value.m_owner;
-
-                     archive >> value.xid.gtrid_length;
-                     archive >> value.xid.bqual_length;
-
-                     archive.consume(
-                        std::begin( value.xid.data),
-                        value.xid.gtrid_length + value.xid.bqual_length);
-                  }
-               }
-            };
-
-            template< typename A>
-            struct Value< transaction::ID, A, std::enable_if_t< traits::need::named< A>::value>>
-            {
-               static void write( A& archive, const transaction::ID& value, const char* name)
-               {
-                  std::ostringstream out;
-                  out << value;
-
-                  CASUAL_SERIALIZE_NAME( out.str(), name);
-               }
-               
-            };
-
-
-            //! @}
+               };
+               //! @}
+            } // composit
+            
          } // customize
       } // serialize
 

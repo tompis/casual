@@ -11,6 +11,8 @@
 #include "configuration/message/transform.h"
 
 #include "common/domain.h"
+#include "common/exception/casual.h"
+
 
 namespace casual
 {
@@ -43,8 +45,6 @@ namespace casual
                            }
                         }
 
-
-
                         auto& count = m_mapping[ process.alias];
                         ++count;
 
@@ -52,10 +52,8 @@ namespace casual
                         {
                            process.alias = process.alias + "_" + std::to_string( count);
 
-                           //
                            // Just to make sure we don't get duplicates if users has configure aliases
                            // such as 'alias_1', and so on, we do another run
-                           //
                            operator ()( process);
                         }
                      }
@@ -93,9 +91,9 @@ namespace casual
 
                   Group( const manager::State& state) : m_state( state) {}
 
-                  manager::state::Group operator () ( const casual::configuration::group::Group& group) const
+                  manager::state::Group operator () ( const casual::configuration::Group& group) const
                   {
-                     manager::state::Group result{ group.name, { m_state.group_id.global}, group.note};
+                     manager::state::Group result{ group.name, { m_state.group_id.master}, group.note};
 
                      if( group.resources.has_value()) result.resources = group.resources.value();
 
@@ -130,27 +128,15 @@ namespace casual
                };
 
 
-
-               std::vector< std::string> environment( const casual::configuration::Environment& environment)
-               {
-                  std::vector< std::string> result;
-                  for( auto& variable : casual::configuration::environment::fetch( environment))
-                  {
-                     result.push_back( variable.key + "=" + variable.value);
-                  }
-                  return result;
-               }
-
-
                struct Executable
                {
 
-                  manager::state::Executable operator() ( const configuration::server::Executable& value, const std::vector< manager::state::Group>& groups)
+                  manager::state::Executable operator() ( const configuration::Executable& value, const std::vector< manager::state::Group>& groups)
                   {
                      return transform< manager::state::Executable>( value, groups);
                   }
 
-                  manager::state::Server operator() ( const configuration::server::Server& value, const std::vector< manager::state::Group>& groups)
+                  manager::state::Server operator() ( const configuration::Server& value, const std::vector< manager::state::Group>& groups)
                   {
                      auto result = transform< manager::state::Server>( value, groups);
 
@@ -177,7 +163,7 @@ namespace casual
                      result.restart = value.restart.value_or( false);
 
                      if( value.environment)
-                        result.environment.variables = local::environment( value.environment.value());
+                        result.environment.variables = transform::environment::variables( value.environment.value());
 
                      if( value.memberships)
                         result.memberships = local::membership( value.memberships.value(), groups);
@@ -288,7 +274,12 @@ namespace casual
                         result.memberships = algorithm::transform( value.memberships, []( auto id){
                            return id.value();
                         });
-                        result.environment.variables = value.environment.variables;
+
+                        result.environment.variables = algorithm::transform( value.environment.variables, []( auto& v)
+                        {  
+                           return static_cast< const std::string&>( v);
+                        });
+
                         result.restart = value.restart;
                         result.restarts = value.restarts;
 
@@ -315,10 +306,11 @@ namespace casual
 
          manager::State state( casual::configuration::domain::Manager domain)
          {
+            Trace trace{ "domain::transform::state"};
 
-            //
+            log::line( verbose::log, "configuration: ", domain);
+
             // Set the domain
-            //
             common::domain::identity( common::domain::Identity{ domain.name});
 
             manager::State result;
@@ -326,12 +318,8 @@ namespace casual
             result.configuration = casual::configuration::transform::configuration( domain);
             result.environment = domain.manager_default.environment;
 
-
-
-            //
             // Handle groups
-            //
-            {
+            {               
                manager::state::Group master{ ".casual.master", {}, "the master and (implicit) parent of all groups"};
                result.group_id.master = master.id;
                
@@ -351,31 +339,25 @@ namespace casual
             }
 
             {
-               //
                // We need to remove any of the reserved groups (that we created above), either because
                // the user has used one of the reserved names, or we're reading from a persistent stored
                // configuration
-               //
                const std::vector< std::string> reserved{
-                  ".casual.master", ".casual.transaction", ".casual.queue", ".global", ".casual.gateway"};
+                  ".casual.domain", ".casual.master", ".casual.transaction", ".casual.queue", ".global", ".casual.gateway"};
 
-               auto groups = common::algorithm::remove_if( domain.groups, [&reserved]( const casual::configuration::group::Group& g){
+               auto groups = common::algorithm::remove_if( domain.groups, [&reserved]( const auto& g)
+               {
                   return common::algorithm::find( reserved, g.name);
                });
 
-
-               //
                // We transform user defined groups
-               //
                algorithm::transform( groups, result.groups, local::Group{ result});
             }
 
             {
-               //
                // We need to make sure the gateway have dependencies to all user groups. We could
                // order the groups and pick the last one, but it's more semantic correct to make have dependencies
                // to all, since that is exactly what we're trying to represent.
-               //
                manager::state::Group gateway{ ".casual.gateway", {}};
                result.group_id.gateway = gateway.id;
 
@@ -386,16 +368,10 @@ namespace casual
                result.groups.push_back( std::move( gateway));
             }
 
-
-            //
             // Handle executables
-            //
             {
-
-               //
                // Add our self to processes that this domain has. Mostly to
                // make it symmetric
-               //
                {
 
                   manager::state::Server manager;
@@ -422,9 +398,17 @@ namespace casual
 
             }
 
-
             return result;
          }
+
+         namespace environment
+         {
+            std::vector< common::environment::Variable> variables( const casual::configuration::Environment& environment)
+            {
+               return casual::configuration::environment::transform( casual::configuration::environment::fetch( environment));
+            }
+
+         } // environment
 
       } // transform
    } // domain

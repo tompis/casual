@@ -10,6 +10,7 @@
 #include "common/algorithm.h"
 #include "common/functional.h"
 
+#include "serialize/line.h"
 
 #include <ostream>
 
@@ -47,41 +48,6 @@ namespace casual
             };
          };
 
-         //! specialization for tuple
-         template< typename C> 
-         struct has_formatter< C, std::enable_if_t< 
-            traits::is::tuple< C>::value>>
-            : std::true_type
-         {
-            struct formatter
-            {
-               template< typename T>
-               void operator () ( std::ostream& out, T&& tuple) const
-               { 
-                  out << '[';
-                  auto dispatch = [&out]( auto&&... parameters){
-                     formatter::log( out, parameters...);
-                  };
-                  common::apply( dispatch, std::forward< T>( tuple));
-                  out << ']';
-               }
-            private:
-
-               //! 3 overloads so we can deduce when to put a ', ' delimiter
-               //! @{
-
-               template< typename T, typename... Ts>
-               static void log( std::ostream& out, T&& value, Ts&&... ts) { out << value << ", "; log( out, std::forward< Ts>( ts)...);}
-
-               template< typename T>
-               static void log( std::ostream& out, T&& value) { out << value;}
-
-               static void log( std::ostream& out) { /* no op */}
-               //! @}
-
-            };
-         };
-
          //! Specialization for enum
          template< typename C> 
          struct has_formatter< C, std::enable_if_t< 
@@ -107,7 +73,8 @@ namespace casual
             {
                void operator () ( std::ostream& out, C value) const
                {
-                  out << std::error_code( value);
+                  auto code = std::error_code( value);
+                  out << '[' << code << ' ' << code.message() << ']';
                }
             };
          };
@@ -128,12 +95,30 @@ namespace casual
             };
          };
 
+         //! Specialization for stuff that serialize::line::Writer can take care of
+         template< typename C> 
+         struct has_formatter< C, std::enable_if_t< 
+            traits::is::binary::like< C>::value 
+            || traits::is::tuple< C>::value 
+            || serialize::traits::has::serialize< C, serialize::line::Writer>::value
+            || serialize::traits::has::forward::serialize< C, serialize::line::Writer>::value
+            || serialize::traits::is::named::value< C>::value
+            >> : std::true_type
+         {
+            struct formatter
+            {
+               template< typename V>
+               void operator () ( std::ostream& out, V&& value) const
+               {
+                  serialize::line::Writer{ out} << std::forward< V>( value);
+               }
+            };
+         };
+
          namespace detail
          {
             template< typename S>
-            void part( S& stream)
-            {
-            }
+            void part( S& stream) {}
 
             template< typename S, typename T>
             void part( S& stream, T&& value)
@@ -141,37 +126,64 @@ namespace casual
                stream << std::forward< T>( value);
             }
 
-            template< typename S, typename Arg, typename... Args>
-            void part( S& stream, Arg&& arg, Args&&... args)
+            template< typename S, typename T, typename... Ts>
+            void part( S& stream, T&& value, Ts&&... ts) 
             {
-               detail::part( stream, std::forward< Arg>( arg));
-               detail::part( stream, std::forward< Args>( args)...);
+               detail::part( stream, std::forward< T>( value));
+               detail::part( stream, std::forward< Ts>( ts)...);
             }
          } // detail
 
-         template< typename S, typename... Args>
-         S& write( S& stream, Args&&... args)
+         template< typename S, typename... Ts>
+         S& write( S& stream, Ts&&... ts)
          {
-            detail::part( stream, std::forward< Args>( args)...);
+            detail::part( stream, std::forward< Ts>( ts)...);
             return stream;
          }
-         
+/*!
+
+         namespace detail
+         {
+            namespace ostream
+            {
+               template< typename T> 
+               auto indirection( std::ostream& out, T&& value, traits::priority::tag< 0>) 
+                  -> decltype( std::declval< serialize::line::Writer&>() << std::declval< T&>(), void())
+               {
+                  casual::common::serialize::line::Writer archive{ out};
+                  archive << std::forward< T>( value);
+               }
+
+               template< typename T> 
+               auto indirection( std::ostream& out, T&& value, traits::priority::tag< 1>) 
+                  -> decltype( typename stream::has_formatter< traits::remove_cvref_t< T>>::formatter{}( out, std::forward< T>( value)))
+               {
+                  typename stream::has_formatter< traits::remove_cvref_t< T>>::formatter{}( out, std::forward< T>( value));
+               } 
+
+            } // ostream
+         } // detail
+       */   
       } // stream
    } // common
 } // casual
 
 namespace std
 {
-   // extended stream operator for std... This is not conformant if I understand it correct,
-   // but I find it hard to see what damage it could do, since it is restricted to the 
+   // extended stream operator for std... as I understand it, but I find it 
+   // hard to see what damage it could do, since it is restricted to the 
    // customization point 'casual::common::log::has_formatter', so we roll with it...
+   
    template< typename T> 
-   enable_if_t< casual::common::stream::has_formatter< casual::common::traits::remove_cvref_t< T>>::value, ostream&>
+   enable_if_t< 
+      casual::common::stream::has_formatter< casual::common::traits::remove_cvref_t< T>>::value
+      && ! casual::common::traits::has::ostream_stream_operator< casual::common::traits::remove_cvref_t< T>>::value
+      , 
+      ostream&>
    operator << ( ostream& out, T&& value)
    {
       using namespace casual::common;
       typename stream::has_formatter< traits::remove_cvref_t< T>>::formatter{}( out, std::forward< T>( value));
       return out;
    }
-   
 } // std

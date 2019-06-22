@@ -43,6 +43,11 @@ namespace casual
                   return create::detail::create( key, m_creators, data);
                }
 
+               std::vector< std::string> Dispatch::keys() const
+               {
+                  return algorithm::transform( m_creators, []( auto& pair){ return pair.first;});
+               }
+
 
             } // writer
          } // create

@@ -31,12 +31,16 @@ namespace casual
                   namespace detail
                   {
                      // Helper to make sure we only transport byte-arrays
+                     /*
                      template< typename T>
                      using is_network_array = traits::bool_constant<
                            ( std::is_array< typename std::remove_reference< T>::type>::value
                            && sizeof( typename std::remove_all_extents< typename std::remove_reference< T>::type>::type) == 1)
                            || traits::container::is_array< T>::value>;
+                     */
 
+                     template< typename T>
+                     using is_network_array = common::traits::is::binary::like< T>;
 
 
                      template< typename T>

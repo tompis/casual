@@ -13,6 +13,7 @@
 #include "common/serialize/macro.h"
 #include "common/platform.h"
 #include "common/metric.h"
+#include "common/process.h"
 
 namespace casual
 {
@@ -110,7 +111,7 @@ namespace casual
                   std::string key;
                   std::string openinfo;
                   std::string closeinfo;
-                  common::platform::size::type concurency;
+                  common::platform::size::type concurency = 0;
                   Metrics metrics;
 
                   std::vector< Instance> instances;
@@ -137,7 +138,7 @@ namespace casual
                struct Request
                {
                   resource::id_type resource;
-                  common::platform::Uuid correlation;
+                  common::Uuid correlation;
                   long type;
 
                   CASUAL_CONST_CORRECT_SERIALIZE(
@@ -150,13 +151,13 @@ namespace casual
 
                struct Reply
                {
-                  common::strong::ipc::id queue;
-                  common::platform::Uuid correlation;
+                  std::vector< common::process::Handle> destinations;
+                  common::Uuid correlation;
                   long type;
 
                   CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     CASUAL_SERIALIZE( queue);
+                     CASUAL_SERIALIZE( destinations);
                      CASUAL_SERIALIZE( correlation);
                      CASUAL_SERIALIZE( type);
                   })
@@ -164,7 +165,7 @@ namespace casual
 
             } // pending
 
-            struct Transaction
+            struct Branch
             {
                struct ID
                {
@@ -184,7 +185,7 @@ namespace casual
 
                ID trid;
                std::vector< resource::id_type> resources;
-               long state;
+               long state{};
 
                CASUAL_CONST_CORRECT_SERIALIZE(
                {
@@ -193,6 +194,31 @@ namespace casual
                   CASUAL_SERIALIZE( state);
                })
 
+            };
+
+            struct Transaction
+            {
+               struct Global
+               {
+                  std::string id;
+                  common::process::Handle owner;
+               
+                  CASUAL_CONST_CORRECT_SERIALIZE(
+                  {
+                     CASUAL_SERIALIZE( CASUAL_MAKE_NVP( id));
+                     CASUAL_SERIALIZE( CASUAL_MAKE_NVP( owner));
+                  })
+               };
+
+               Global global;
+               long state{};
+               std::vector< Branch> branches;
+
+               CASUAL_CONST_CORRECT_SERIALIZE(
+               {
+                  CASUAL_SERIALIZE( CASUAL_MAKE_NVP( global));
+                  CASUAL_SERIALIZE( CASUAL_MAKE_NVP( branches));
+               })
             };
 
             struct Log
@@ -249,21 +275,21 @@ namespace casual
                })
             };
 
-            namespace update
+            namespace scale
             {
                struct Instances
                {
-                  resource::id_type id;
+                  std::string name;
                   common::platform::size::type instances;
 
                   CASUAL_CONST_CORRECT_SERIALIZE(
                   {
-                     CASUAL_SERIALIZE( id);
+                     CASUAL_SERIALIZE( name);
                      CASUAL_SERIALIZE( instances);
                   })
 
-                  inline friend bool operator == ( const Instances& lhs, const Instances& rhs) { return lhs.id == rhs.id;}
-                  inline friend bool operator < ( const Instances& lhs, const Instances& rhs) { return lhs.id < rhs.id;}
+                  inline friend bool operator == ( const Instances& lhs, const Instances& rhs) { return lhs.name == rhs.name;}
+                  inline friend bool operator < ( const Instances& lhs, const Instances& rhs) { return lhs.name < rhs.name;}
                };
 
 

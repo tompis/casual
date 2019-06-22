@@ -89,13 +89,12 @@ namespace casual
                return pending( serialize::native::complete( event));
             }
 
-            friend std::ostream& operator << ( std::ostream& out, const Dispatch& value)
+            // for logging only
+            CASUAL_CONST_CORRECT_SERIALIZE_WRITE(
             {
-               return out << "{ event: " << Event::type()
-                     << ", subscribers: " << range::make( value.m_subscribers)
-                     << '}';
-            }
-
+               CASUAL_SERIALIZE_NAME( Event::type(), "event");
+               CASUAL_SERIALIZE_NAME( m_subscribers, "subscribers");
+            })
          };
 
          namespace dispatch

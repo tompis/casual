@@ -28,15 +28,11 @@ namespace casual
 
             friend Limit operator + ( const Limit& lhs, const Limit& rhs);
             
-
             CASUAL_CONST_CORRECT_SERIALIZE(
             {
                CASUAL_SERIALIZE( min);
                CASUAL_SERIALIZE( max);
             })
-
-            friend std::ostream& operator << ( std::ostream& out, const Limit& value);
-
          };
 
          platform::size::type count = 0;
@@ -64,9 +60,6 @@ namespace casual
             CASUAL_SERIALIZE( total);
             CASUAL_SERIALIZE( limit);
          })
-
-         friend std::ostream& operator << ( std::ostream& out, const Metric& value);
-
       };
    } // common
 } // casual

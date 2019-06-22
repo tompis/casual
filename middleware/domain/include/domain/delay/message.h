@@ -37,9 +37,9 @@ namespace casual
 
                CASUAL_CONST_CORRECT_SERIALIZE(
                {
-                  archive & destination;
-                  archive & delay;
-                  archive & message;
+                  CASUAL_SERIALIZE( destination);
+                  CASUAL_SERIALIZE( delay);
+                  CASUAL_SERIALIZE( message);
                })
                friend std::ostream& operator << ( std::ostream& out, const Request& rhs);
             };

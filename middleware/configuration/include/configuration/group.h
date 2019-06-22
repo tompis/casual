@@ -8,36 +8,32 @@
 
 #include "common/serialize/macro.h"
 #include "common/platform.h"
+#include "common/optional.h"
 
 namespace casual
 {
    namespace configuration
    {
-      namespace group
+      struct Group
       {
+         std::string name;
+         std::string note;
 
-         struct Group
+         common::optional< std::vector< std::string>> resources;
+         common::optional< std::vector< std::string>> dependencies;
+
+         CASUAL_CONST_CORRECT_SERIALIZE(
          {
-            Group();
-            Group( std::function< void(Group&)> foreign);
+            CASUAL_SERIALIZE( name);
+            CASUAL_SERIALIZE( note);
+            CASUAL_SERIALIZE( resources);
+            CASUAL_SERIALIZE( dependencies);
+         })
 
-            std::string name;
-            std::string note;
+         friend bool operator == ( const Group& lhs, const Group& rhs);
+         friend bool operator < ( const Group& lhs, const Group& rhs);
 
-            common::optional< std::vector< std::string>> resources;
-            common::optional< std::vector< std::string>> dependencies;
-
-            CASUAL_CONST_CORRECT_SERIALIZE
-            (
-               CASUAL_SERIALIZE( name);
-               CASUAL_SERIALIZE( note);
-               CASUAL_SERIALIZE( resources);
-               CASUAL_SERIALIZE( dependencies);
-            )
-
-            friend bool operator == ( const Group& lhs, const Group& rhs);
-         };
-      } // group
+      };
    } // configuration
 } // casual
 

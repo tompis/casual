@@ -5,12 +5,13 @@
 //!
 
 
-#include <gtest/gtest.h>
+#include "common/unittest.h"
 
 #include "../../include/test_vo.h"
 
 #include "common/serialize/yaml.h"
 #include "common/serialize/line.h"
+#include "common/exception/casual.h"
 
 
 #include "common/algorithm.h"
@@ -62,7 +63,7 @@ namespace casual
       } // local
 
 
-      TEST( serviceframework_yaml_archive, read_empty_array_with_no_brackets__expecting_success)
+      TEST( common_serialize_yaml, read_empty_array_with_no_brackets__expecting_success)
       {
 
          const std::string yaml( R"(
@@ -78,7 +79,7 @@ value:
       }
 
 
-      TEST( serviceframework_yaml_archive, relaxed_read_serializable)
+      TEST( common_serialize_yaml, relaxed_read_serializable)
       {
          test::SimpleVO value;
 
@@ -90,7 +91,7 @@ value:
       }
 
 
-      TEST( serviceframework_yaml_archive, strict_read_serializable__gives_ok)
+      TEST( common_serialize_yaml, strict_read_serializable__gives_ok)
       {
          test::SimpleVO value;
 
@@ -101,7 +102,7 @@ value:
          EXPECT_TRUE( value.m_longlong == 1234567890123456789) << "value.someLongLong: " << value.m_longlong;
       }
 
-      TEST( serviceframework_yaml_archive, strict_read_not_in_document__gives_throws)
+      TEST( common_serialize_yaml, strict_read_not_in_document__gives_throws)
       {
          auto reader = serialize::yaml::strict::reader( test::SimpleVO::yaml());
 
@@ -114,7 +115,32 @@ value:
 
       }
 
-      TEST( serviceframework_yaml_archive, write_read_vector_pod)
+      TEST( common_serialize_yaml, array)
+      {
+         common::unittest::Trace trace;
+         common::platform::binary::type yaml;
+
+         const std::array< char, 4> origin{ '1', '2', '3', '4' };
+
+         {
+            
+            auto writer = serialize::yaml::writer( yaml);
+            writer << CASUAL_MAKE_NVP_NAME( origin, "value");
+            writer.flush();
+
+            EXPECT_TRUE( ! yaml.empty()) << "size: " << yaml.size() << " - data: " << yaml;
+         }
+
+         {
+            std::array< char, 4> value;
+            auto reader = serialize::yaml::strict::reader( yaml);
+            reader >> CASUAL_MAKE_NVP( value);
+
+            EXPECT_TRUE( common::algorithm::equal( origin, value)) << "value: " << value;
+         }
+      }
+
+      TEST( common_serialize_yaml, write_read_vector_pod)
       {
          std::string yaml;
 
@@ -137,7 +163,7 @@ value:
          EXPECT_TRUE( values.at( 6) == 23);
       }
 
-      TEST( serviceframework_yaml_archive, write_read_vector_serializible)
+      TEST( common_serialize_yaml, write_read_vector_serializible)
       {
          std::string yaml;
 
@@ -170,7 +196,7 @@ value:
 
 
 
-      TEST( serviceframework_yaml_archive, write_read_map_complex)
+      TEST( common_serialize_yaml, write_read_map_complex)
       {
          std::string yaml;
 
@@ -209,7 +235,7 @@ value:
 
       }
 
-      TEST( serviceframework_yaml_archive, write_read_binary)
+      TEST( common_serialize_yaml, write_read_binary)
       {
 
          std::string yaml;
@@ -238,7 +264,7 @@ value:
       }
 
 
-      TEST( serviceframework_yaml_archive, read_invalid_document__expecting_exception)
+      TEST( common_serialize_yaml, read_invalid_document__expecting_exception)
       {
          const std::string yaml{ "   " };
 
@@ -248,7 +274,7 @@ value:
          }, exception::casual::invalid::Document);
       }
 
-      TEST( serviceframework_yaml_archive, read_invalid_bool__expecting_exception)
+      TEST( common_serialize_yaml, read_invalid_bool__expecting_exception)
       {
          constexpr auto yaml = R"(
 value:

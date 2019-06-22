@@ -7,24 +7,21 @@
 
 #include "configuration/group.h"
 
+#include "common/algorithm.h"
 
 namespace casual
 {
    namespace configuration
    {
-      namespace group
+      bool operator == ( const Group& lhs, const Group& rhs)
       {
+         return lhs.name == rhs.name;
+      }
 
-         Group::Group() = default;
-         Group::Group( std::function< void(Group&)> foreign) { foreign( *this);}
+      bool operator < ( const Group& lhs, const Group& rhs)
+      {
+         return lhs.name < rhs.name;
+      }
 
-
-         bool operator == ( const Group& lhs, const Group& rhs)
-         {
-            return lhs.name == rhs.name;
-         }
-
-
-      } // group
    } // configuration
 } // casual

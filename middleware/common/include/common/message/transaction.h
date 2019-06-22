@@ -9,6 +9,8 @@
 
 
 #include "common/message/type.h"
+
+#include "common/strong/id.h"
 #include "common/code/xa.h"
 #include "common/code/tx.h"
 #include "common/flag/xa.h"
@@ -37,11 +39,7 @@ namespace casual
                   CASUAL_SERIALIZE( process);
                   CASUAL_SERIALIZE( trid);
                })
-
             };
-
-
-
 
             template< message::Type type>
             struct basic_request : basic_transaction< type>
@@ -69,15 +67,13 @@ namespace casual
 
                struct Request : base_request
                {
-                  std::vector< strong::resource::id> resources;
+                  std::vector< strong::resource::id> involved;
 
                   CASUAL_CONST_CORRECT_SERIALIZE(
                   {
                      base_request::serialize( archive);
-                     CASUAL_SERIALIZE( resources);
+                     CASUAL_SERIALIZE( involved);
                   })
-
-                  friend std::ostream& operator << ( std::ostream& out, const Request& message);
                };
                static_assert( traits::is_movable< Request>::value, "not movable");
 
@@ -99,8 +95,16 @@ namespace casual
                      CASUAL_SERIALIZE( stage);
                   })
 
-                  friend std::ostream& operator << ( std::ostream& out, const Stage& stage);
-                  friend std::ostream& operator << ( std::ostream& out, const Reply& message);
+                  inline friend std::ostream& operator << ( std::ostream& out, Stage value)
+                  {
+                     switch( value)
+                     {
+                        case Stage::prepare: return out << "rollback";
+                        case Stage::commit: return out << "commit";
+                        case Stage::error: return out << "error";
+                        default: return out << "unknown";
+                     }
+                  }
                };
                static_assert( traits::is_movable< Reply>::value, "not movable");
 
@@ -112,15 +116,13 @@ namespace casual
 
                struct Request : base_request
                {
-                  std::vector< strong::resource::id> resources;
+                  std::vector< strong::resource::id> involved;
 
                   CASUAL_CONST_CORRECT_SERIALIZE(
                   {
                      base_request::serialize( archive);
-                     CASUAL_SERIALIZE( resources);
+                     CASUAL_SERIALIZE( involved);
                   })
-
-                  friend std::ostream& operator << ( std::ostream& out, const Request& message);
                };
                static_assert( traits::is_movable< Request>::value, "not movable");
 
@@ -129,7 +131,7 @@ namespace casual
 
                struct Reply : base_reply
                {
-                  enum class Stage : char
+                  enum class Stage : short
                   {
                      rollback = 0,
                      error = 2,
@@ -142,8 +144,17 @@ namespace casual
                      base_reply::serialize( archive);
                      CASUAL_SERIALIZE( stage);
                   })
-                  friend std::ostream& operator << ( std::ostream& out, const Reply::Stage& message);
-                  friend std::ostream& operator << ( std::ostream& out, const Reply& message);
+
+                  inline friend std::ostream& operator << ( std::ostream& out, Stage value)
+                  {
+                     switch( value)
+                     {
+                        case Stage::rollback: return out << "rollback";
+                        case Stage::error: return out << "error";
+                        default: return out << "unknown";
+                     }
+                  }
+
                };
                static_assert( traits::is_movable< Reply>::value, "not movable");
             } // rollback
@@ -215,39 +226,41 @@ namespace casual
                   id::type resource;
                   Statistics statistics;
 
-
                   CASUAL_CONST_CORRECT_SERIALIZE(
                   {
                      base_type::serialize( archive);
                      CASUAL_SERIALIZE( resource);
                      CASUAL_SERIALIZE( statistics);
                   })
-
-                  friend std::ostream& operator << ( std::ostream& out, const basic_reply& message)
-                  {
-                     return out << "{ trid: " << message.trid
-                           << ", process: " << message.process
-                           << ", resource: " << message.resource
-                           << ", state: " << message.state
-                           << ", statistics: " << message.statistics
-                           << '}';
-                  }
                };
 
-
-               struct Involved : basic_transaction< Type::transaction_resource_involved>
-               {
-                  std::vector< strong::resource::id> resources;
-
-                  CASUAL_CONST_CORRECT_SERIALIZE(
+               namespace involved
+               {  
+                  struct Request : basic_transaction< Type::transaction_resource_involved_request>
                   {
-                     base_type::serialize( archive);
-                     CASUAL_SERIALIZE( resources);
-                  })
+                     //! potentially new resorces involved
+                     std::vector< strong::resource::id> involved;
 
-                  friend std::ostream& operator << ( std::ostream& out, const Involved& value);
-               };
-               static_assert( traits::is_movable< Involved>::value, "not movable");
+                     CASUAL_CONST_CORRECT_SERIALIZE(
+                     {
+                        base_type::serialize( archive);
+                        CASUAL_SERIALIZE( involved);
+                     })
+                  };
+
+                  struct Reply : basic_message< Type::transaction_resource_involved_reply>
+                  {
+                     //! resources involved prior to the request
+                     std::vector< strong::resource::id> involved;
+
+                     CASUAL_CONST_CORRECT_SERIALIZE(
+                     {
+                        base_type::serialize( archive);
+                        CASUAL_SERIALIZE( involved);
+                     })
+                  };
+               } // involve
+
 
                template< message::Type type>
                struct basic_request : basic_transaction< type>
@@ -263,22 +276,11 @@ namespace casual
                      CASUAL_SERIALIZE( resource);
                      CASUAL_SERIALIZE( flags);
                   })
-
-                  friend std::ostream& operator << ( std::ostream& out, const basic_request& message)
-                  {
-                     return out << "{ trid: " << message.trid
-                           << ", process: " << message.process
-                           << ", resource: " << message.resource
-                           << ", flags: " << message.flags
-                           << '}';
-                  }
                };
 
                namespace connect
                {
-                  //!
                   //! Used to notify the TM that a resource proxy is up and running, or not...
-                  //!
                   struct Reply : basic_message< Type::transaction_resource_connect_reply>
                   {
                      common::process::Handle process;
@@ -292,8 +294,6 @@ namespace casual
                         CASUAL_SERIALIZE( resource);
                         CASUAL_SERIALIZE( state);
                      })
-
-                     friend std::ostream& operator << ( std::ostream& out, const Reply& message);
                   };
                   static_assert( traits::is_movable< Reply>::value, "not movable");
                } // connect
@@ -322,8 +322,6 @@ namespace casual
 
                } // rollback
 
-
-               //!
                //! These request and replies are used between TM and resources when
                //! the context is of "external proxies", that is, when some other part
                //! act as a resource proxy. This semantic is used when:
@@ -333,14 +331,11 @@ namespace casual
                //! The resource is doing exactly the same thing but the context is
                //! preserved, so that when the TM is invoked by the reply it knows
                //! the context, and can act accordingly
-               //!
                namespace external
                {
 
                   struct Involved : basic_transaction< Type::transaction_external_resource_involved>
                   {
-
-                     friend std::ostream& operator << ( std::ostream& out, const Involved& value);
                   };
                   static_assert( traits::is_movable< Involved>::value, "not movable");
 
@@ -370,6 +365,9 @@ namespace casual
             struct type_traits< transaction::commit::Request> : detail::type< transaction::commit::Reply> {};
             template<>
             struct type_traits< transaction::rollback::Request> : detail::type< transaction::rollback::Reply> {};
+
+            template<>
+            struct type_traits< transaction::resource::involved::Request> : detail::type< transaction::resource::involved::Reply> {};
 
             template<>
             struct type_traits< transaction::resource::lookup::Request> : detail::type< transaction::resource::lookup::Reply> {};

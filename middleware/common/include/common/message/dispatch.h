@@ -70,7 +70,6 @@ namespace casual
                   return result;
                }
 
-
                //! Inserts handler, that is, adds new handlers
                //!
                //! @param handlers
@@ -92,16 +91,11 @@ namespace casual
                   return std::move( lhs);
                }
 
-               friend std::ostream& operator << ( std::ostream& out, const basic_handler& value)
+               // for logging only
+               CASUAL_CONST_CORRECT_SERIALIZE_WRITE(
                {
-                  if( out)
-                  {
-                     auto types = value.types();
-                     return out << "{ types: " << range::make( types)
-                           << '}';
-                  }
-                  return out;
-               }
+                  CASUAL_SERIALIZE_NAME( m_handlers, "handlers");
+               })
 
             private:
 
@@ -124,16 +118,16 @@ namespace casual
                   return false;
                }
 
-               class base_handler
+               class concept
                {
                public:
-                  virtual ~base_handler() = default;
+                  virtual ~concept() = default;
                   virtual void dispatch( communication::message::Complete& complete) = 0;
                };
 
 
                template< typename H>
-               class handle_holder : public base_handler
+               class model : public concept
                {
                public:
 
@@ -149,11 +143,11 @@ namespace casual
                   using message_type = std::decay_t< typename traits_type::template argument< 0>::type>;
 
 
-                  handle_holder( handle_holder&&) = default;
-                  handle_holder& operator = ( handle_holder&&) = default;
+                  model( model&&) = default;
+                  model& operator = ( model&&) = default;
 
 
-                  handle_holder( handler_type&& handler) : m_handler( std::move( handler)) {}
+                  model( handler_type&& handler) : m_handler( std::move( handler)) {}
 
 
                   void dispatch( communication::message::Complete& complete) override
@@ -172,13 +166,13 @@ namespace casual
                };
 
 
-               using handlers_type = std::map< message_type, std::unique_ptr< base_handler>>;
+               using handlers_type = std::map< message_type, std::unique_ptr< concept>>;
 
 
                template< typename H>
                static void add( handlers_type& result, H&& handler)
                {
-                  using handle_type = handle_holder< typename std::decay< H>::type>;
+                  using handle_type = model< typename std::decay< H>::type>;
 
                   auto holder = std::make_unique< handle_type>( std::forward< H>( handler));
 
@@ -225,6 +219,62 @@ namespace casual
                   ;
                }
             }
+
+            
+            namespace empty
+            {
+               //! 
+               template< typename Unmarshal, typename D, typename BP, typename EC, typename NBL = int>
+               void pump( 
+                  basic_handler< Unmarshal>& handler, 
+                  D& device, 
+                  BP&& blocking_predicate, 
+                  EC&& empty_callback,
+                  NBL non_blocking_limit = std::numeric_limits< NBL>::max())
+               {
+                  using device_type = std::decay_t< decltype( device)>;
+
+                  while( true)
+                  {
+                     if( blocking_predicate())
+                     {
+                        handler( device.next( typename device_type::blocking_policy{}));
+                     }
+                     else
+                     {
+                        while( handler( device.next( typename device_type::non_blocking_policy{})) && non_blocking_limit-- > 0)
+                           ; /* no op */
+
+                        if( non_blocking_limit > 0)
+                           empty_callback();
+                     }
+                  }   
+               }
+
+               template< typename Unmarshal, typename D, typename EC>
+               void pump( 
+                  basic_handler< Unmarshal>& handler, 
+                  D& device, 
+                  EC&& empty_callback)
+               {
+                  using device_type = std::decay_t< decltype( device)>;
+
+                  while( true)
+                  {
+                     while( handler( device.next( typename device_type::non_blocking_policy{})))
+                     {
+                        ; /* no op */
+                     }
+
+                     // input is empty, we call the callback
+                     empty_callback();
+
+                     // we block
+                     handler( device.next( typename device_type::blocking_policy{}));
+                  }   
+               }
+            } // empty
+            
 
             namespace blocking
             {

@@ -8,15 +8,19 @@
 #pragma once
 
 
+#include "transaction/global.h"
+#include "transaction/manager/log.h"
+
 #include "common/platform.h"
 #include "common/message/transaction.h"
 #include "common/message/domain.h"
+#include "common/message/pending.h"
 #include "common/algorithm.h"
 #include "common/metric.h"
 
 #include "common/serialize/native/complete.h"
 
-#include "transaction/manager/log.h"
+
 
 #include "configuration/resource/property.h"
 
@@ -35,15 +39,15 @@ namespace casual
       {
          using size_type = common::platform::size::type;
 
-         namespace handle
-         {
-            namespace implementation
-            {
-               struct Interface;
-            } // implementation
-         } // handle
+         struct State;
 
-         class State;
+         //! argument settings
+         struct Settings
+         {
+            Settings();
+
+            std::string log;
+         };
 
          namespace state
          {
@@ -73,7 +77,7 @@ namespace casual
                {
                   struct Instance
                   {
-                     enum class State
+                     enum class State : short
                      {
                         absent,
                         started,
@@ -162,36 +166,14 @@ namespace casual
 
             namespace pending
             {
-               struct base_message
+               struct Request
                {
                   template< typename M>
-                  base_message( M&& information) : message{ common::serialize::native::complete( std::forward< M>( information))}
-                  {
-                  }
-
-                  base_message( base_message&&) noexcept = default;
-                  base_message& operator = ( base_message&&) noexcept = default;
-
-                  common::communication::message::Complete message;
-                  common::platform::time::point::type created;
-               };
-
-               struct Reply : base_message
-               {
-                  using queue_id_type = common::strong::ipc::id;
-
-                  template< typename M>
-                  Reply( queue_id_type target, M&& message) : base_message( std::forward< M>( message)), target( target) {}
-
-                  queue_id_type target;
-               };
-
-               struct Request : base_message
-               {
-                  template< typename M>
-                  Request( resource::id::type resource, M&& message) : base_message( std::forward< M>( message)), resource( resource) {}
+                  Request( resource::id::type resource, M&& message) 
+                     : resource( resource),  message( common::serialize::native::complete( std::forward< M>( message))) {}
 
                   resource::id::type resource;
+                  common::communication::message::Complete message;
 
                   inline friend bool operator == ( const Request& lhs, resource::id::type rhs) { return lhs.resource == rhs;}
                };
@@ -202,6 +184,19 @@ namespace casual
 
          struct Transaction
          {
+            //! Holds specific implementations for the current transaction. 
+            //! That is, depending on where the task comes from and if there
+            //! are some optimizations there are different semantics for 
+            //! the transaction.
+            struct Dispatch
+            {
+               std::function< bool( State&, common::message::transaction::resource::prepare::Reply&, Transaction&)> prepare;
+               std::function< bool( State&, common::message::transaction::resource::commit::Reply&, Transaction&)> commit;
+               std::function< bool( State&, common::message::transaction::resource::rollback::Reply&, Transaction&)> rollback;
+
+               inline explicit operator bool () { return static_cast< bool>( prepare);}
+            };
+
             struct Resource
             {
                using id_type = state::resource::id::type;
@@ -219,6 +214,10 @@ namespace casual
                   error,
                   not_involved,
                };
+
+               friend std::ostream& operator << ( std::ostream& out, Stage value);
+
+               friend Stage operator + ( Stage lhs, Stage rhs) { return std::max( lhs, rhs);}
 
                //! Used to rank the return codes from the resources, the lower the enum value (higher up),
                //! the more severe...
@@ -250,13 +249,16 @@ namespace casual
                   xa_RDONLY,  //! Went "better" than expected
                };
 
-               Resource( id_type id) : id( id) {}
+               inline Resource( id_type id) : id( id) {}
+
                Resource( Resource&&) noexcept = default;
                Resource& operator = ( Resource&&) noexcept = default;
 
                id_type id;
+
                Stage stage = Stage::involved;
                Result result = Result::xa_OK;
+
 
                static Result convert( common::code::xa value);
                static common::code::xa convert( Result value);
@@ -292,8 +294,35 @@ namespace casual
                inline friend bool operator == ( const Resource& lhs, const Resource& rhs) { return lhs.id == rhs.id; }
                inline friend bool operator == ( const Resource& lhs, id_type id) { return lhs.id == id; }
 
-               inline friend std::ostream& operator << ( std::ostream& out, const Resource& value) { return out << value.id; }
+               friend std::ostream& operator << ( std::ostream& out, const Resource& value);
+            };
 
+            struct Branch
+            {
+               Branch( const common::transaction::ID& trid) : trid( trid) {}
+
+               std::vector< common::strong::resource::id> involved() const;
+               void involve( common::strong::resource::id resource);
+
+               template< typename R> 
+               auto involve( R&& range) -> std::enable_if_t< common::traits::is::iterable< R>::value>
+               {
+                  for( auto r : range)
+                     involve( r);
+               }
+
+               //! @return the least progressed stage of all resources associated with this branch
+               Resource::Stage stage() const;
+
+               //! @return the most severe result from all the resources
+               Resource::Result results() const;
+
+               common::transaction::ID trid;
+               std::vector< Resource> resources;
+
+               inline friend bool operator == ( const Branch& lhs, const common::transaction::ID& rhs) { return lhs.trid == rhs;}
+
+               friend std::ostream& operator << ( std::ostream& out, const Branch& value);
             };
 
 
@@ -301,14 +330,24 @@ namespace casual
             Transaction( Transaction&&) = default;
             Transaction& operator = ( Transaction&&) = default;
 
-            Transaction( common::transaction::ID trid) : trid( std::move( trid)) {}
+            inline Transaction( const common::transaction::ID& trid) : global( trid)
+            {
+               branches.emplace_back( trid);
+            }
+
+            inline const common::process::Handle& owner() const { return global.trid.owner();}
+
+            common::platform::size::type resource_count() const noexcept;
+
+            //! the global part of the distributed transaction id
+            global::ID global;
+
+            //! 1..* branches of this global transaction
+            std::vector< Branch> branches;
 
             //! Depending on context the transaction will have different
             //! handle-implementations.
-            const handle::implementation::Interface* implementation = nullptr;
-
-            common::transaction::ID trid;
-            std::vector< Resource> resources;
+            Dispatch implementation;
 
             common::platform::time::point::type started;
             common::platform::time::point::type deadline;
@@ -319,41 +358,39 @@ namespace casual
             //! Indicate if the transaction is owned by a remote domain,
             //! and what RM id that domain act as.
             state::resource::id::type resource;
-
+            
+            //! @return the 
             Resource::Stage stage() const;
 
-            //! @return the most severe result from the resources
+            //! @return the most severe result from all the resources
+            //! in all branches
             common::code::xa results() const;
 
-            inline friend bool operator == ( const Transaction& lhs, const common::transaction::ID& trid) { return lhs.trid == trid;}
+            inline friend bool operator == ( const Transaction& lhs, const global::ID& rhs) { return lhs.global == rhs;}
             friend std::ostream& operator << ( std::ostream& out, const Transaction& value);
          };
 
 
-         class State
+         struct State
          {
-         public:
             State( std::string database);
 
-            State( const State&) = delete;
-            State& operator = ( const State&) = delete;
+            State( State&&) = default;
+            State& operator = ( State&&) = default;
 
             std::vector< Transaction> transactions;
-
             std::vector< state::resource::Proxy> resources;
-
             std::vector< state::resource::external::Proxy> externals;
 
-
-            struct
+            struct Persistent
             {
-               //! Replies that will be sent after an atomic write to the log
-               std::vector< state::pending::Reply> replies;
+               inline Persistent( std::string database) : log{ std::move( database)} {}
 
-               //! Resource request, that will be processed after an atomic
-               //! write to the log. If corresponding resources is busy, for some
-               //! requests, these will be moved to pending.requests
-               std::vector< state::pending::Request> requests;
+               //! Replies that will be sent after an atomic write to the log
+               std::vector< common::message::pending::Message> replies;
+
+               //! the persistent transaction log
+               Log log;
 
             } persistent;
 
@@ -365,9 +402,7 @@ namespace casual
 
             } pending;
 
-            //! the persistent transaction log
-            Log persistent_log;
-
+            
             std::map< std::string, configuration::resource::Property> resource_properties;
 
             //! @return true if there are pending stuff to do. We can't block
@@ -385,6 +420,7 @@ namespace casual
             void operator () ( const common::process::lifetime::Exit& death);
 
             state::resource::Proxy& get_resource( state::resource::id::type rm);
+            state::resource::Proxy& get_resource( const std::string& name);
             state::resource::Proxy::Instance& get_instance( state::resource::id::type rm, common::strong::process::id pid);
 
             bool remove_instance( common::strong::process::id pid);

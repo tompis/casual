@@ -299,9 +299,19 @@ namespace casual
                         { value = *common::transcode::utf8::decode( m_stack.back().text().get()).c_str(); }
                         void read( std::string& value) const
                         { value = common::transcode::utf8::decode( m_stack.back().text().get()); }
+                        
                         void read( std::vector<char>& value) const
                         { value = common::transcode::base64::decode( m_stack.back().text().get()); }
 
+                        void read( view::Binary value) const
+                        { 
+                           auto binary = common::transcode::base64::decode( m_stack.back().text().get());
+
+                           if( range::size( binary) != range::size( value))
+                              throw exception::casual::invalid::Node{ "binary size missmatch"};
+
+                           algorithm::copy( binary, std::begin( value));
+                        }
 
                         pugi::xml_document m_document;
                         std::vector< pugi::xml_node> m_stack;
@@ -408,7 +418,12 @@ namespace casual
                            m_stack.back().text().set( common::transcode::utf8::encode( value).c_str());
                         }
 
-                        void write( const std::vector<char>& value)
+                        void write( const platform::binary::type& value)
+                        {
+                           write( view::binary::make( value));
+                        }
+
+                        void write( view::immutable::Binary value)
                         {
                            m_stack.back().text().set( common::transcode::base64::encode( value).c_str());
                         }

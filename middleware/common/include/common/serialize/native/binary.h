@@ -6,9 +6,10 @@
 
 #pragma once
 
-#include "common/serialize/traits.h"
-#include "common/serialize/customize.h"
 
+#include "common/serialize/value.h"
+
+#include "common/traits.h"
 #include "common/communication/message.h"
 #include "common/algorithm.h"
 #include "common/memory.h"
@@ -79,7 +80,7 @@ namespace casual
                   template< typename T>
                   basic_output& operator << ( T&& value)
                   {
-                     customize::value::write( *this, std::forward< T>( value), nullptr);
+                     serialize::value::write( *this, std::forward< T>( value), nullptr);
                      return *this;
                   }
 
@@ -91,81 +92,49 @@ namespace casual
                   inline void composite_start( const char*) { /* no op */}
                   inline void composite_end(  const char* name) { /* no-op */ }
 
-                  template< typename Iter>
-                  void append( Iter first, Iter last)
-                  {
-                     m_buffer.insert(
-                           std::end( m_buffer),
-                           first,
-                           last);
-                  }
-
-                  template< typename C>
-                  void append( C&& range)
-                  {
-                     append( std::begin( range), std::end( range));
-                  }
 
                   template< typename T> 
-                  void write( const T& value, const char*) 
+                  void write( T&& value, const char*) 
                   { 
-                     write( value);
+                     write( std::forward< T>( value));
                   }
 
                private:
 
-                  template< typename T>
-                  std::enable_if_t< traits::has::serialize< traits::remove_cvref_t< T>, basic_output>::value>
-                  write( const T& value)
+                  template< typename Range>
+                  void append( Range&& range)
                   {
-                     value.serialize( *this);
+                     m_buffer.insert(
+                        std::end( m_buffer),
+                        std::begin( range),
+                        std::end( range));
                   }
 
                   template< typename T>
-                  std::enable_if_t< ! traits::has::serialize< traits::remove_cvref_t< T>, basic_output>::value>
-                  write( const T& value)
+                  auto write( T&& value) -> std::enable_if_t< std::is_arithmetic< common::traits::remove_cvref_t< T>>::value>
                   {
-                     write_pod( value);
+                     policy_type::write( std::forward< T>( value), m_buffer);
                   }
 
-                  template< typename T>
-                  void write_pod( const T& value)
+                  void write( const std::string& value) 
+                  { 
+                     write_size( value.size());
+                     append( value);
+                  }
+                  void write( const platform::binary::type& value) 
+                  { 
+                     write_size( value.size());
+                     append( value);
+                  }
+                  
+                  void write( view::immutable::Binary value) 
                   {
-                     policy_type::write( value, m_buffer);
+                     append( value);
                   }
 
                   void write_size( size_type value)
                   {
                      policy_type::write_size( value, m_buffer);
-                  }
-
-                  template< typename T>
-                  void write( const std::vector< T>& value)
-                  {
-                     write_size( value.size());
-
-                     for( auto& current : value)
-                     {
-                        *this << current;
-                     }
-                  }
-
-                  void write( const std::string& value)
-                  {
-                     write_size( value.size());
-
-                     append(
-                        std::begin( value),
-                        std::end( value));
-                  }
-
-                  void write( const platform::binary::type& value)
-                  {
-                     write_size( value.size());
-
-                     append(
-                        std::begin( value),
-                        std::end( value));
                   }
 
                   platform::binary::type& m_buffer;
@@ -179,10 +148,10 @@ namespace casual
                {
                   using policy_type = P;
 
-                  basic_input( const platform::binary::type& buffer)
-                     : m_buffer( buffer)
-                  {
-                  }
+                  basic_input( const platform::binary::type& buffer, platform::size::type offset)
+                     : m_buffer( buffer), m_offset{ offset} {}
+
+                  basic_input( const platform::binary::type& buffer) : m_buffer( buffer){}
 
                   template< typename T>
                   basic_input& operator & ( T&& value)
@@ -193,107 +162,72 @@ namespace casual
                   template< typename T>
                   basic_input& operator >> ( T&& value)
                   {
-                     customize::value::read( *this, value, nullptr);
+                     serialize::value::read( *this, value, nullptr);
                      return *this;
                   }
 
                   inline std::tuple< platform::size::type, bool> container_start( platform::size::type size, const char*) 
                   { 
-                     read_size( size);
-                     return { size, true};
+                     return { read_size(), true};
                   }
-                  inline void container_end( const char*) { /* no-op */ }
+                  inline void container_end( const char*) {} // no-op
 
                   inline bool composite_start( const char*) { return true;}
-                  inline void composite_end(  const char* name) { /* no-op */ }
-
-
-                  template< typename Iter>
-                  void consume( Iter out, size_type size)
-                  {
-                     assert( m_offset + size <= m_buffer.size());
-
-                     const auto first = std::begin( m_buffer) + m_offset;
-
-                     std::copy(
-                        first,
-                        first + size, out);
-
-                     m_offset += size;
-                  }
+                  inline void composite_end(  const char* name) {} // no-op
 
                   template< typename T> 
-                  void read( T& value, const char*) 
+                  void read( T&& value, const char*) 
                   { 
                      read( value);
                   }
 
                private:
 
-                  template< typename T>
-                  std::enable_if_t< traits::has::serialize< traits::remove_cvref_t< T>, basic_input>::value>
-                  read( T&& value)
+                  template< typename Range>
+                  void consume( Range&& range)
                   {
-                     value.serialize( *this);
+                     auto source = range::make( std::begin( m_buffer) + m_offset, range.size());
+                     assert( m_offset + source.size() <= range::size( m_buffer));
+
+                     algorithm::copy( source, range);
+
+                     m_offset += range.size();
                   }
 
                   template< typename T>
-                  std::enable_if_t< ! traits::has::serialize< traits::remove_cvref_t< T>, basic_input>::value>
-                  read( T& value)
-                  {
-                     read_pod( value);
-                  }
-
-                  template< typename T>
-                  void read( std::vector< T>& value)
-                  {
-                     decltype( value.size()) size;
-                     read_size( size);
-
-                     value.resize( size);
-
-                     for( auto& current : value)
-                     {
-                        *this >> current;
-                     }
-                  }
-
-                  void read( std::string& value)
-                  {
-                     decltype( value.size()) size;
-                     read_size( size);
-
-                     value.resize( size);
-
-                     consume( std::begin( value), size);
-                  }
-
-                  void read( platform::binary::type& value)
-                  {
-                     decltype( value.size()) size;
-                     read_size( size);
-
-                     value.resize( size);
-
-                     consume( std::begin( value), size);
-                  }
-
-                  template< typename T>
-                  void read_pod( T& value)
+                  auto read( T& value) -> std::enable_if_t< std::is_arithmetic< common::traits::remove_cvref_t< T>>::value>
                   {
                      m_offset = policy_type::read( m_buffer, m_offset, value);
                   }
 
-                  template< typename T>
-                  void read_size( T& value)
+                  void read( std::string& value)
                   {
-                     m_offset = policy_type::read_size( m_buffer, m_offset, value);
+                     value.resize( read_size());
+                     consume( value);
+                  }
+
+                  void read( platform::binary::type& value)
+                  {
+                     value.resize( read_size());
+                     consume( value);
+                  }
+
+                  void read( view::Binary value)
+                  {
+                     consume( value);
+                  }
+
+                  auto read_size()
+                  {
+                     size_type size;
+                     m_offset = policy_type::read_size( m_buffer, m_offset, size);
+                     return size;
                   }
 
                private:
 
                   const platform::binary::type& m_buffer;
-                  platform::binary::type::size_type m_offset = 0;
+                  platform::size::type m_offset = 0;
                };
 
                using Input = basic_input< Policy>;

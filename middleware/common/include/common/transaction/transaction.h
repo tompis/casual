@@ -1,8 +1,5 @@
-//! 
 //! Copyright (c) 2015, The casual project
-//!
 //! This software is licensed under the MIT license, https://opensource.org/licenses/MIT
-//!
 
 
 #pragma once
@@ -38,24 +35,39 @@ namespace casual
                rollback = TX_ROLLBACK_ONLY,
             };
 
-
             Transaction();
-            Transaction( ID trid);
-
+            explicit Transaction( ID trid);
 
             ID trid;
 
             Timeout timout;
 
-            //! associated rm:s to this transaction
-            std::vector< strong::resource::id> resources;
-
-
+            
             State state = State::active;
 
-
+            //! @return true if `trid` is _active_ 
             explicit operator bool() const;
 
+            //! associated rm:s to this transaction
+            inline const std::vector< strong::resource::id>& involved() const { return m_involved;}
+            
+            //! associate resource
+            void involve( strong::resource::id id);
+
+            template< typename R>
+            auto involve( R&& range) -> std::enable_if_t< traits::is::iterable< R>::value>
+            {
+               for( auto id : range) involve( id);
+            }  
+
+            //! dynamic associated rm:s to this transaction, a subset to `involved`
+            inline const std::vector< strong::resource::id>& dynamic() const { return m_dynamic;}
+            
+            //! associate id to dynamic registration
+            //! @attention will not associate with involved
+            //! @return true if id is not registred before
+            bool associate_dynamic( strong::resource::id id);
+            bool disassociate_dynamic( strong::resource::id id);
 
             //! associate a pending message reply
             void associate( const Uuid& correlation);
@@ -73,21 +85,24 @@ namespace casual
             //! associated descriptors to this transaction
             const std::vector< Uuid>& correlations() const;
 
-            //! @return true if the transaction is only local
+            //! @return true if the transaction is only local, current process 
+            //!  is the owner, no pending calls, and no external involvement
             bool local() const;
+
 
             //! Associate this transaction with 'external' resources. That is,
             //! make it "not local" so it will trigger a commit request to the TM
             void external();
-
 
             friend bool operator == ( const Transaction& lhs, const ID& rhs);
             friend bool operator == ( const Transaction& lhs, const XID& rhs);
             friend std::ostream& operator << ( std::ostream& out, const Transaction& rhs);
 
          private:
+            std::vector< strong::resource::id> m_involved;
             std::vector< Uuid> m_pending;
-            bool m_local = true;
+            std::vector< strong::resource::id> m_dynamic;
+            bool m_external = false;
          };
 
       } // transaction

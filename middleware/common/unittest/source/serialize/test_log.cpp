@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "common/serialize/log.h"
+#include "common/serialize/macro.h"
 
 
 #include <sstream>

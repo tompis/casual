@@ -12,8 +12,8 @@ IncludePaths([
 LibraryPaths([
     'bin',
     '../common/bin',
-    '../xatmi/bin',
     '../serviceframework/bin',
+    '../xatmi/bin',
     '$(CASUAL_OPTIONAL_LIBRARY_PATHS)',
     ])
 
@@ -28,7 +28,7 @@ lib_configuration = LinkLibrary( 'bin/casual-configuration',
         Compile( 'source/domain.cpp'),
         Compile( 'source/queue.cpp'),
         Compile( 'source/gateway.cpp'),
-        Compile( 'source/server.cpp'),
+        Compile( 'source/executable.cpp'),
         Compile( 'source/service.cpp'),
         Compile( 'source/group.cpp'),
         Compile( 'source/transaction.cpp'),
@@ -65,18 +65,20 @@ LinkUnittest( 'bin/test-casual-configuration',
         Compile( 'unittest/source/test_gateway.cpp'),
         Compile( 'unittest/source/test_message.cpp'),
         Compile( 'unittest/source/test_environment.cpp'),
+        Compile( 'unittest/source/test_transaction.cpp'),
+
         
         Compile( 'unittest/source/resource/test_property.cpp'),
         Compile( 'unittest/source/build/test_server.cpp'),
+
+        Compile( 'unittest/source/domain/test_accumulate.cpp'),
    ],
    [ 
        example_archive, 
        lib_configuration, 
        'casual-serviceframework', 
        'casual-common', 
-       'casual-mockup', 
        'casual-unittest',
-       'casual-mockup-unittest-environment',
    ])  
 
 

@@ -44,9 +44,7 @@ namespace casual
             && std::is_integral< Size>::value >* dummy = nullptr>
          explicit constexpr Range( convertible_iterator first, Size size) : m_first( first), m_last( first + size) {}
 
-         //!
          //! conversion from Range with convertable iterators
-         //!
          template< typename convertible_iterator, std::enable_if_t< std::is_convertible< convertible_iterator, iterator>::value>* dummy = nullptr>
          constexpr Range( Range< convertible_iterator> range) :  m_first( std::begin( range)), m_last( std::end( range)) {}
 
@@ -86,8 +84,8 @@ namespace casual
          constexpr reference front() { return *m_first;}
          constexpr const reference front() const { return *m_first;}
 
-         constexpr reference back() { return *( m_last - 1);}
-         constexpr const reference back() const { return *( m_last - 1);}
+         constexpr reference back() { return *( std::prev( m_last));}
+         constexpr const reference back() const { return *( std::prev( m_last));}
 
          constexpr reference at( const difference_type index) { return at( m_first, m_last, index);}
          constexpr const reference at( const difference_type index) const { return at( m_first, m_last, index);}
@@ -100,19 +98,13 @@ namespace casual
          };
          friend constexpr bool operator != ( const Range& lhs, const Range& rhs) { return !( lhs == rhs);}
 
-         template< typename C,
-            std::enable_if_t< 
-               traits::is::iterable< C>::value 
-               && ! traits::container::is_string< C>::value>* dummy = nullptr>
+         template< typename C, std::enable_if_t< ! traits::is::string::like< C>::value, int> = 0>
          friend constexpr bool operator == ( const Range& lhs, const C& rhs)
          {
             return equal( lhs, rhs);
          }
 
-         template< typename C,
-            std::enable_if_t< 
-               traits::is::iterable< C>::value 
-               && ! traits::container::is_string< C>::value>* dummy = nullptr>
+         template< typename C, std::enable_if_t< ! traits::is::string::like< C>::value, int> = 0>
          friend constexpr bool operator == ( C& lhs, const Range< Iter>& rhs)
          {
             return equal( lhs, rhs);
@@ -126,19 +118,16 @@ namespace casual
          constexpr static pointer data( iterator first, iterator last) noexcept
          {
             if( first != last)
-            {
                return &( *first);
-            }
+
             return nullptr;
          }
 
          constexpr static reference at( iterator first, iterator last, const difference_type index)
          {
-            if( std::distance( first, last) < index) { throw std::out_of_range{ std::to_string( index)};}
-
-            return *( first + index);
+            assert( index < std::distance( first, last));
+            return *( std::next( first, index));
          }
-
 
          iterator m_first = iterator{};
          iterator m_last = iterator{};
@@ -162,21 +151,19 @@ namespace casual
             struct tag {};
 
             template< typename T>
-            struct tag< T, std::enable_if_t< traits::container::is_sequence< T>::value>>
+            struct tag< T, std::enable_if_t< traits::is::container::sequence::like< T>::value>>
             {
                using type = category::container;
             };
 
             template< typename T>
-            struct tag< T, std::enable_if_t< traits::iterator::is_output< T>::value>>
+            struct tag< T, std::enable_if_t< traits::is::output::iterator< T>::value>>
             {
                using type = category::output_iterator;
             };
 
             template< typename T>
-            struct tag< T, std::enable_if_t< 
-               traits::is::iterable< T>::value
-               && ! traits::has::push_back< T>::value>>
+            struct tag< T, std::enable_if_t< traits::is::container::array::like< T>::value>>
             {
                using type = category::fixed;
             };            
@@ -186,27 +173,27 @@ namespace casual
 
          } // category
 
-         template< typename Iter, typename = std::enable_if_t< common::traits::is::iterator< Iter>::value>>
-         Range< Iter> make( Iter first, Iter last)
+         template< typename Iter, std::enable_if_t< common::traits::is::iterator< Iter>::value, int> = 0>
+         auto make( Iter first, Iter last)
          {
             return Range< Iter>( first, last);
          }
 
          template< typename Iter, typename Count, std::enable_if_t< 
             common::traits::is::iterator< Iter>::value 
-            && std::is_integral< Count>::value>* dummy = nullptr>
-         Range< Iter> make( Iter first, Count count)
+            && std::is_integral< Count>::value, int> = 0>
+         auto make( Iter first, Count count)
          {
             return Range< Iter>( first, first + count);
          }
 
-         template< typename C, typename = std::enable_if_t<std::is_lvalue_reference< C>::value && common::traits::is::iterable< C>::value>>
+         template< typename C, std::enable_if_t< std::is_lvalue_reference< C>::value && common::traits::is::iterable< C>::value, int> = 0>
          auto make( C&& container)
          {
             return make( std::begin( container), std::end( container));
          }
 
-         template< typename C, typename = std::enable_if_t<std::is_lvalue_reference< C>::value && common::traits::is::reverse::iterable< C>::value>>
+         template< typename C, std::enable_if_t< std::is_lvalue_reference< C>::value && common::traits::is::reverse::iterable< C>::value, int> = 0>
          auto make_reverse( C&& container)
          {
             return make( container.rbegin(), container.rend());
@@ -231,42 +218,35 @@ namespace casual
          template< typename C>
          using const_type_t = typename type_traits< const C>::type;
 
-         template< typename R, std::enable_if_t< std::is_array< std::remove_reference_t< R>>::value>* dummy = nullptr>
+         template< typename R, std::enable_if_t< std::is_array< std::remove_reference_t< R>>::value, int> = 0>
          constexpr platform::size::type size( R&& range) { return sizeof( R) / sizeof( *range);}
 
-         template< typename R, std::enable_if_t< common::traits::has::size< R>::value>* dummy = nullptr>
+         template< typename R, std::enable_if_t< common::traits::has::size< R>::value, int> = 0>
          constexpr platform::size::type size( R&& range) { return range.size();}
 
-         template< typename R, std::enable_if_t< std::is_array< std::remove_reference_t< R>>::value>* dummy = nullptr>
+         template< typename R, std::enable_if_t< std::is_array< std::remove_reference_t< R>>::value, int> = 0>
          constexpr bool empty( R&& range) { return false;}
 
-         template< typename R, std::enable_if_t< common::traits::has::empty< R>::value>* dummy = nullptr>
+         template< typename R, std::enable_if_t< common::traits::has::empty< R>::value, int> = 0>
          constexpr bool empty( R&& range) { return range.empty();}
 
          namespace position
          {
-            //!
             //! @return returns true if @lhs overlaps @rhs in some way.
-            //!
             template< typename R1, typename R2>
             bool overlap( R1&& lhs, R2&& rhs)
             {
                return std::end( lhs) >= std::begin( rhs) && std::begin( lhs) <= std::end( rhs);
             }
 
-
-            //!
             //! @return true if @lhs is adjacent to @rhs or @rhs is adjacent to @lhs
-            //!
             template< typename R1, typename R2>
             bool adjacent( R1&& lhs, R2&& rhs)
             {
                return std::end( lhs) + 1 == std::begin( rhs) || std::end( lhs) + 1 == std::begin( rhs);
             }
 
-            //!
             //! @return true if @rhs is a sub-range to @lhs
-            //!
             template< typename R1, typename R2>
             bool includes( R1&& lhs, R2&& rhs)
             {
@@ -339,12 +319,8 @@ namespace casual
          template< typename R>
          auto to_reference( R&& range)
          {
-            std::vector< std::reference_wrapper< std::remove_reference_t< decltype( *std::begin( range))>>> result;
-            result.reserve( size( range));
-
-            std::copy( std::begin( range), std::end( range), std::back_inserter( result));
-
-            return result;
+            using result_typ = std::vector< std::reference_wrapper< std::remove_reference_t< decltype( *std::begin( range))>>>;
+            return result_typ( std::begin( range), std::end( range));
          }
 
 
@@ -356,13 +332,11 @@ namespace casual
             return out.str();
          }
 
-         //!
          //! Returns the first value in the range
          //!
          //! @param range
          //! @return first value
          //! @throws std::out_of_range if range is empty
-         //!
          template< typename R>
          decltype( auto) front( R&& range)
          {
@@ -379,9 +353,7 @@ namespace casual
             return range.back();
          }
 
-         //!
          //! If @p range has size > 1, shorten range to size 1.
-         //!
          template< typename R>
          auto zero_one( R&& range)
          {

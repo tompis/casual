@@ -48,6 +48,27 @@ namespace casual
       statement  \
    } \
 
+// to forward one value
+#define CASUAL_FORWARD_SERIALIZE( member) \
+   template< typename A>  \
+   void serialize( A& archive, const char* name) \
+   {  \
+      casual::common::serialize::detail::dispatch( archive, member, name); \
+   } \
+   template< typename A>  \
+   void serialize( A& archive, const char* name) const \
+   {  \
+      casual::common::serialize::detail::dispatch( archive, member, name); \
+   } \
+
+
+#define CASUAL_CONST_CORRECT_SERIALIZE_WRITE( statement) \
+   template< typename A>  \
+   void serialize( A& archive) const\
+   {  \
+      statement  \
+   } \
+
 #define CASUAL_SERIALIZE( value) \
    casual::common::serialize::detail::dispatch( archive, value, #value)
 
@@ -56,4 +77,7 @@ namespace casual
 
 
 #define CASUAL_MAKE_NVP( member) \
-      casual::common::serialize::named::value::make( member, #member)
+   casual::common::serialize::named::value::make( member, #member)
+
+#define CASUAL_MAKE_NVP_NAME( member, name) \
+   casual::common::serialize::named::value::make( member, name)

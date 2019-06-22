@@ -5,7 +5,8 @@
 //!
 
 
-#include <common/unittest.h>
+#include "common/unittest.h"
+#include "common/unittest/log.h"
 #include "common/algorithm.h"
 
 namespace casual
@@ -376,6 +377,19 @@ namespace casual
       }
 
 
+      TEST( casual_common_algorithm, duplicates)
+      {
+         common::unittest::Trace trace;
+
+         std::vector< int> set{ 1, 2, 3, 4, 5, 6, 7, 1, 3};
+
+         auto duplicates = algorithm::duplicates( algorithm::sort( set));
+
+         ASSERT_TRUE( duplicates.size() == 2) << "duplicates: " << duplicates;
+         EXPECT_TRUE( set.at( 0) == 1);
+         EXPECT_TRUE( set.at( 1) == 3);
+      }
+
 
       TEST( casual_common_algorithm, copy_empty)
       {
@@ -699,6 +713,27 @@ namespace casual
          algorithm::append_unique( source, target);
 
          EXPECT_TRUE(( target == std::vector< int>{ 1, 2, 4, 3}));
+      }
+
+      TEST( casual_common_algorithm_transform_if, rvalue)
+      {
+         common::unittest::Trace trace;
+
+         const std::vector< int> source{ 1, 2, 4, 3, 1, 1, 3, 3, 4, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2};
+         auto result = algorithm::transform_if( source, std::vector< std::string>{}, []( auto v){ return std::to_string( v);}, []( auto v){ return v == 3;});
+
+         EXPECT_TRUE(( result == std::vector< std::string>{ "3", "3", "3"}));
+      }
+
+      TEST( casual_common_algorithm_transform_if, back_inserter)
+      {
+         common::unittest::Trace trace;
+
+         const std::vector< int> source{ 1, 2, 4, 3, 1, 1, 3, 3, 4, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2};
+         std::vector< std::string> result;
+         algorithm::transform_if( source, std::back_inserter( result), []( auto v){ return std::to_string( v);}, []( auto v){ return v == 3;});
+
+         EXPECT_TRUE(( result == std::vector< std::string>{ "3", "3", "3"}));
       }
    } // common
 

@@ -31,7 +31,7 @@ namespace casual
 
             namespace code
             {
-               common::message::service::call::Reply::Code transform( const common::service::header::Fields& header, curl::type::code::easy code) noexcept;
+               common::message::service::Code transform( const state::pending::Request& request, curl::type::code::easy code) noexcept;
             } // code
  
             namespace detail
@@ -82,15 +82,23 @@ namespace casual
                   // Though, it could easily be my misunderstanding of the API that is the reason...
                   detail::dispath( state, outbound);
 
+                  common::log::line( verbose::log, "running: ", running);
+
                   return running != 0;
                }
 
                inline bool wait( State& state)
                {
                   Trace trace{ "http::outbound::request::detail::wait"};
+                  
+                  {
+                     long timeout{};
+                     curl_multi_timeout( state.pending.requests.multi().get(), &timeout);
+                     common::log::line( verbose::log, "timeout: ", timeout);
+                  }
 
                   int count{};
-
+                  
                   // we block
                   curl::check( curl_multi_wait(
                      state.pending.requests.multi().get(),
@@ -98,6 +106,8 @@ namespace casual
                      state.inbound.size(),
                      curl::timeout,
                      &count));
+
+                  common::log::line( verbose::log, "count: ", count);
 
                   return count != 0;
                }
@@ -135,26 +145,6 @@ namespace casual
                   }
                }
             } // blocking
-
-
-            namespace non
-            {
-               namespace blocking
-               {
-                  template< typename ID, typename OD>
-                  void dispath( State& state, ID&& inbound, OD&& outbound)
-                  {
-                     Trace trace{ "http::outbound::request::non::blocking::dispatch"};
-                     
-                     detail::perform( state, outbound);
-
-                     using inbound_non_blocking = common::communication::ipc::inbound::Connector::non_blocking_policy;
-
-                     // take care of inbound
-                     inbound( inbound_non_blocking{});
-                  }
-               } // blocking
-            } // non
             
          } // request
       } // outbound

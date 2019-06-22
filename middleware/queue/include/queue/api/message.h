@@ -10,7 +10,7 @@
 
 #include "common/serialize/macro.h"
 #include "common/platform.h"
-#include "serviceframework/log.h"
+#include "common/uuid.h"
 
 #include <string>
 
@@ -24,19 +24,13 @@ namespace casual
 
       struct Attributes
       {
-         //!
          //! Correlation information.
-         //!
          std::string properties;
 
-         //!
          //! reply queue.
-         //!
          std::string reply;
 
-         //!
          //! When the message is available, in absolute time.
-         //!
          common::platform::time::point::type available = common::platform::time::point::type::min();
 
          CASUAL_CONST_CORRECT_SERIALIZE(
@@ -50,16 +44,12 @@ namespace casual
 
       struct Selector
       {
-         //!
          //! If empty -> not used
          //! If not empty -> the first message that gets a match against the regexp is dequeued.
-         //!
          std::string properties;
 
-         //!
          //! If not 'null', the first message that has this particular id is dequeued
-         //!
-         common::platform::Uuid id;
+         common::Uuid id;
 
          CASUAL_CONST_CORRECT_SERIALIZE(
          {

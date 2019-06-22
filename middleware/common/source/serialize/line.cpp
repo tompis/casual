@@ -8,8 +8,10 @@
 #include "common/serialize/line.h"
 
 #include "common/platform.h"
+#include "common/transcode.h"
 
 #include <ostream>
+#include <iomanip>
 
 namespace casual
 {
@@ -17,99 +19,82 @@ namespace casual
    {
       namespace serialize
       {
-         namespace local
-         {
-            namespace
-            {
-               constexpr auto quote = '\"';
-               constexpr auto first = "";
-               constexpr auto scope = ", ";
-
-               std::ostream& maybe_name( std::ostream& stream, const char* name)
-               {
-                  if( name)
-                  {
-                     stream <<  name  << ": ";
-                  }
-                  return stream;
-               }
-
-               struct Implementation
-               {
-                  Implementation( std::ostream& stream) : m_stream( stream) {}
-
-                  platform::size::type container_start( const platform::size::type size, const char* name)
-                  {
-                     begin_scope();
-                     maybe_name( m_stream, name) << "[ ";
-                     return size;
-                  }
-
-                  void container_end( const char*)
-                  {
-                     m_stream << ']';
-                  }
-
-                  void composite_start( const char* name)
-                  {
-                     begin_scope();
-                     maybe_name( m_stream, name) << "{ ";
-                  }
-                  
-                  void composite_end(  const char*)
-                  {
-                     m_stream << '}';
-                  }
-
-                  template<typename T>
-                  void write( T&& value, const char* name)
-                  {
-                     in_scope();
-                     maybe_name( m_stream, name) << value;
-                  }
-
-                  void write( bool value, const char* name)
-                  {
-                     in_scope();
-                     maybe_name( m_stream, name) << ( value ? "true" : "false"); 
-                  }
-
-                  void write( const platform::binary::type& value, const char* name)
-                  {
-                     in_scope();
-                     maybe_name( m_stream, name) << quote << "binary size: " << value.size() << quote;
-                  }
-
-                  void write( const std::string& value, const char* name)
-                  {
-                     in_scope();
-                     maybe_name( m_stream, name) << quote << value << quote;
-                  }
-
-               private:
-
-                  void begin_scope()
-                  {
-                     m_stream << std::exchange( m_prefix, local::first);
-                  }
-
-                  void in_scope()
-                  {
-                     m_stream << std::exchange( m_prefix, local::scope);
-                  }
-
-
-                  std::ostream& m_stream;
-                  const char* m_prefix = local::first;
-               };
-            } // <unnamed>
-         } // local
-
          namespace line
          {
-            Writer writer( std::ostream& out)
+
+
+            std::ostream& Writer::maybe_name( std::ostream& stream, const char* name)
             {
-               return Writer::emplace< local::Implementation>( out);
+               if( name)
+                  stream << std::quoted( name)  << ": ";
+
+               return stream;
+            }
+
+            platform::size::type Writer::container_start( const platform::size::type size, const char* name)
+            {
+               begin_scope();
+               maybe_name( m_stream, name) << ( size == 0 ? "[" : "[ ");
+               return size;
+            }
+
+            void Writer::container_end( const char*)
+            {
+               m_stream << ']';
+               m_prefix = detail::scope;
+            }
+
+            void Writer::composite_start( const char* name)
+            {
+               begin_scope();
+               maybe_name( m_stream, name) << "{ ";
+            }
+            
+            void Writer::composite_end( const char*)
+            {
+               m_stream << '}';
+               m_prefix = detail::scope;
+            }
+
+            void Writer::write( bool value, const char* name)
+            {
+               in_scope();
+               maybe_name( m_stream, name) << ( value ? "true" : "false"); 
+            }
+
+            void Writer::write( view::immutable::Binary value, const char* name)
+            {
+               in_scope();
+               maybe_name( m_stream, name);
+               
+               if( value.size() > 32) 
+                  m_stream << "\"binary size: " << value.size() << '"';
+               else
+               {
+                  m_stream << "0x"; 
+                  transcode::hex::encode( m_stream, value);
+               }
+            }
+
+            void Writer::write( const platform::binary::type& value, const char* name)
+            {
+               write( view::binary::make( value), name);
+            }
+
+            void Writer::write( const std::string& value, const char* name)
+            {
+               in_scope();
+               maybe_name( m_stream, name) << std::quoted( value);
+            }
+
+            void Writer::begin_scope()
+            {
+               m_stream << std::exchange( m_prefix, detail::first);
+            }
+
+            void Writer::in_scope()
+            {
+               m_stream << std::exchange( m_prefix, detail::scope);
             }
 
          } // log

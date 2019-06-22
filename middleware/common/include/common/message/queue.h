@@ -55,8 +55,6 @@ namespace casual
                   base_message_information::serialize( archive);
                   CASUAL_SERIALIZE( payload);
                })
-
-               friend std::ostream& operator << ( std::ostream& out, const base_message& value);
             };
             static_assert( traits::is_movable< base_message>::value, "not movable");
 
@@ -73,8 +71,6 @@ namespace casual
                      CASUAL_SERIALIZE( process);
                      CASUAL_SERIALIZE( name);
                   })
-
-                  friend std::ostream& operator << ( std::ostream& out, const Request& value);
                };
                static_assert( traits::is_movable< Request>::value, "not movable");
 
@@ -96,8 +92,6 @@ namespace casual
                   })
 
                   bool local() const;
-
-                  friend std::ostream& operator << ( std::ostream& out, const Reply& value);
                };
                static_assert( traits::is_movable< Reply>::value, "not movable");
             } // lookup
@@ -124,8 +118,6 @@ namespace casual
                      CASUAL_SERIALIZE( name);
                      CASUAL_SERIALIZE( message);
                   })
-
-                  friend std::ostream& operator << ( std::ostream& out, const Request& value);
                };
                static_assert( traits::is_movable< Request>::value, "not movable");
 
@@ -138,8 +130,6 @@ namespace casual
                      base_type::serialize( archive);
                      CASUAL_SERIALIZE( id);
                   })
-
-                  friend std::ostream& operator << ( std::ostream& out, const Reply& value);
                };
                static_assert( traits::is_movable< Reply>::value, "not movable");
 
@@ -157,7 +147,6 @@ namespace casual
                      CASUAL_SERIALIZE( properties);
                      CASUAL_SERIALIZE( id);
                   })
-                  friend std::ostream& operator << ( std::ostream& out, const Selector& value);
                };
 
                struct Request : basic_message< Type::queue_dequeue_request>
@@ -179,8 +168,6 @@ namespace casual
                      CASUAL_SERIALIZE( selector);
                      CASUAL_SERIALIZE( block);
                   })
-
-                  friend std::ostream& operator << ( std::ostream& out, const Request& value);
                };
                static_assert( traits::is_movable< Request>::value, "not movable");
 
@@ -210,8 +197,6 @@ namespace casual
                      base_type::serialize( archive);
                      CASUAL_SERIALIZE( message);
                   })
-
-                  friend std::ostream& operator << ( std::ostream& out, const Reply& value);
                };
                static_assert( traits::is_movable< Reply>::value, "not movable");
 
@@ -230,8 +215,6 @@ namespace casual
                         CASUAL_SERIALIZE( queue);
                         CASUAL_SERIALIZE( name);
                      })
-
-                     friend std::ostream& operator << ( std::ostream& out, const Request& value);
                   };
                   static_assert( traits::is_movable< Request>::value, "not movable");
 
@@ -244,8 +227,6 @@ namespace casual
                         base_type::serialize( archive);
                         CASUAL_SERIALIZE( found);
                      })
-
-                     friend std::ostream& operator << ( std::ostream& out, const Reply& value);
                   };
                   static_assert( traits::is_movable< Reply>::value, "not movable");
 
@@ -286,8 +267,16 @@ namespace casual
                   CASUAL_SERIALIZE( type);
                })
 
-               friend std::ostream& operator << ( std::ostream& out, const Type& value);
-               friend std::ostream& operator << ( std::ostream& out, const Queue& value);
+               inline friend std::ostream& operator << ( std::ostream& out, Type value)
+               {
+                  switch( value)
+                  {
+                     case Type::group_error_queue: return out << "group_error_queue";
+                     case Type::error_queue: return out << "error_queue";
+                     case Type::queue: return out << "queue";
+                     default: return out << "unknown";
+                  }
+               }
             };
             static_assert( traits::is_movable< Queue>::value, "not movable");
 
@@ -315,7 +304,6 @@ namespace casual
                      CASUAL_SERIALIZE( pending);
                      CASUAL_SERIALIZE( timestamp);
                   })
-                  friend std::ostream& operator << ( std::ostream& out, const Queue& value);
                };
                static_assert( traits::is_movable< Queue>::value, "not movable");
 
@@ -358,8 +346,6 @@ namespace casual
                      CASUAL_SERIALIZE( timestamp);
                      CASUAL_SERIALIZE( size);
                   })
-
-                  friend std::ostream& operator << ( std::ostream& out, const Message& value);
                };
                static_assert( traits::is_movable< Message>::value, "not movable");
 
@@ -431,7 +417,6 @@ namespace casual
                         CASUAL_SERIALIZE( name);
                         CASUAL_SERIALIZE( selector);
                      })
-                     friend std::ostream& operator << ( std::ostream& out, const Request& value);
                   };
 
                   struct Reply : basic_message< Type::queue_peek_information_reply>
@@ -443,7 +428,6 @@ namespace casual
                         base_type::serialize( archive);
                         CASUAL_SERIALIZE( messages);
                      })
-                     friend std::ostream& operator << ( std::ostream& out, const Reply& value);
                   };
 
                } // information
@@ -461,8 +445,6 @@ namespace casual
                         CASUAL_SERIALIZE( process);
                         CASUAL_SERIALIZE( ids);
                      })
-
-                     friend std::ostream& operator << ( std::ostream& out, const Request& value);
                   };
                   static_assert( traits::is_movable< Request>::value, "not movable");
 
@@ -476,14 +458,10 @@ namespace casual
                         base_type::serialize( archive);
                         CASUAL_SERIALIZE( messages);
                      })
-
-                     friend std::ostream& operator << ( std::ostream& out, const Reply& value);
                   };
                   static_assert( traits::is_movable< Reply>::value, "not movable");
 
-
                } // messages
-
             } // peek
 
 
@@ -529,8 +507,6 @@ namespace casual
                      Queue( std::string name, size_type retries) : name{ std::move( name)}, retries{ retries} {}
                      Queue( std::string name) : name{ std::move( name)} {}
 
-                     Queue( std::function< void(Queue&)> foreign) { foreign( *this);}
-
                      std::string name;
                      size_type retries = 0;
 
@@ -539,8 +515,6 @@ namespace casual
                         CASUAL_SERIALIZE( name);
                         CASUAL_SERIALIZE( retries);
                      })
-
-                     friend std::ostream& operator << ( std::ostream& out, const Queue& message);
                   };
                   static_assert( traits::is_movable< Queue>::value, "not movable");
                } // advertise
@@ -553,6 +527,17 @@ namespace casual
                      remove,
                      replace
                   };
+
+                  inline friend std::ostream& operator << ( std::ostream& out, Directive value)
+                  {
+                     switch( value)
+                     {
+                        case Directive::add: return out << "add";
+                        case Directive::remove: return out << "remove";
+                        case Directive::replace: return out << "replace";
+                        default: return out << "unknown";
+                     }
+                  }
 
                   Directive directive = Directive::add;
 
@@ -569,9 +554,6 @@ namespace casual
                      CASUAL_SERIALIZE( order);
                      CASUAL_SERIALIZE( queues);
                   })
-
-                  friend std::ostream& operator << ( std::ostream& out, Directive value);
-                  friend std::ostream& operator << ( std::ostream& out, const Advertise& message);
                };
                static_assert( traits::is_movable< Advertise>::value, "not movable");
             } // concurrent

@@ -20,6 +20,8 @@
 
 #include "common/communication/instance.h"
 
+#include "domain/pending/message/send.h"
+
 // std
 #include <vector>
 #include <string>
@@ -32,8 +34,6 @@ namespace casual
    {
       namespace manager
       {
-
-
          namespace ipc
          {
             const common::communication::ipc::Helper& device()
@@ -92,7 +92,7 @@ namespace casual
                         } // get
                      } // detail
                      template< typename D, typename M>
-                     void send( State& state, D&& device, M&& message)
+                     void send( D&& device, M&& message)
                      {
                         Trace trace{ "service::manager::handle::local::eventually::send"};
 
@@ -101,11 +101,7 @@ namespace casual
                         try
                         {
                            if( ! communication::ipc::non::blocking::send( detail::get::device( device), message, ipc::device().error_handler()))
-                           {
-                              log::line( log, "non blocking send failed - action: try later");
-
-                              state.pending.replies.emplace_back( std::forward< M>( message), detail::get::process( device));
-                           }
+                              casual::domain::pending::message::send( detail::get::process( device), std::forward< M>( message));
                         }
                         catch( const common::exception::system::communication::Unavailable&)
                         {
@@ -114,8 +110,42 @@ namespace casual
 
                      }
                   } // eventually
+
+                  namespace metric
+                  {
+                     void send( State& state)
+                     {
+                        auto pending = state.events( state.metric.message());
+                        state.metric.clear();
+
+                        if( ! common::message::pending::non::blocking::send( pending, manager::ipc::device().error_handler()))
+                           casual::domain::pending::message::send( pending);
+                     }
+                  } // metric
                } // <unnamed>
             } // local
+
+            namespace metric
+            {
+               void send( State& state)
+               {
+                  if( state.metric)
+                  {
+                     local::metric::send( state);
+                  }
+               }
+
+               namespace batch
+               {
+                  void send( State& state)
+                  {
+                     if( state.metric.size() >= platform::batch::service::metrics)
+                     {
+                        local::metric::send( state);
+                     }
+                  }
+               } // batch
+            } // metric
 
 
             void process_exit( const common::process::lifetime::Exit& exit)
@@ -148,7 +178,7 @@ namespace casual
                         message.correlation = instance.correlation();
                         message.code.result = common::code::xatmi::service_error; 
 
-                        handle::local::eventually::send( state, instance.caller(), std::move( message));
+                        handle::local::eventually::send( instance.caller(), std::move( message));
                      }
 
                   } // <unnamed>
@@ -191,9 +221,7 @@ namespace casual
                   }
 
                } // prepare
-
             } // process
-
 
             namespace event
             {
@@ -216,12 +244,8 @@ namespace casual
 
                      m_state.events.subscription( message);
                   }
-
-
                } // subscription
-
             } // event
-
 
             namespace service
             {
@@ -245,24 +269,26 @@ namespace casual
                      m_state.update( message);
                   }
 
-                  void Metric::operator () ( common::message::service::concurrent::Metric& message)
+                  void Metric::operator () ( common::message::event::service::Calls& message)
                   {
                      Trace trace{ "service::manager::handle::service::concurrent::Metric"};
 
                      log::line( verbose::log, "message: ", message);
 
-                     auto now = platform::time::clock::type::now();
-
-                     for( auto& s : message.services)
+                     for( auto& metric : message.metrics)
                      {
-                        auto service = m_state.find_service( s.name);
+                        auto service = m_state.find_service( metric.service);
                         if( service)
                         {
-                           service->metric += s.duration;
-
-                           // TODO: do we need more accuracy?
-                           service->last( now);
+                           service->metric += metric.duration();
+                           service->last( metric.end);
                         }
+                     }
+
+                     if( m_state.events)
+                     {
+                        m_state.metric.add( std::move( message.metrics));
+                        handle::metric::batch::send( m_state);
                      }
                   }
                } // concurrent
@@ -287,7 +313,6 @@ namespace casual
 
                         auto reply = common::message::reverse::type( message);
                         reply.service = service.information;
-                        reply.service.event_subscribers = m_state.subscribers();
                         reply.state = decltype( reply.state)::idle;
                         reply.process = handle;
 
@@ -301,7 +326,6 @@ namespace casual
                      {
                         auto reply = common::message::reverse::type( message);
                         reply.service = service.information;
-                        reply.service.event_subscribers = m_state.subscribers();
 
                         switch( message.context)
                         {
@@ -444,8 +468,6 @@ namespace casual
 
             namespace domain
             {
-
-
                namespace discover
                {
                   void Request::operator () ( message_type& message)
@@ -508,10 +530,8 @@ namespace casual
 
                         if( service && ! service->instances.empty())
                         {
-                           //
                            // The requested service is now available, use
                            // the lookup to decide how to progress.
-                           //
                            service::Lookup{ m_state}( pending.request);
                         }
                         else
@@ -530,13 +550,10 @@ namespace casual
                      }
                   }
 
-
                } // discover
-
             } // domain
 
-
-            void ACK::operator () ( message_type& message)
+            void ACK::operator () ( const common::message::service::call::ACK& message)
             {
                Trace trace{ "service::manager::handle::ACK"};
 
@@ -547,8 +564,15 @@ namespace casual
                   auto now = platform::time::clock::type::now();
 
                   // This message can only come from a local instance
-                  auto& instance = m_state.local( message.process.pid);
+                  auto& instance = m_state.local( message.metric.process.pid);
                   auto service = instance.unreserve( now);
+
+                  // add metric
+                  if( m_state.events.active< common::message::event::service::Calls>())
+                  {
+                     m_state.metric.add( std::move( message.metric));
+                     handle::metric::batch::send( m_state);
+                  }
 
                   // Check if there are pending request for services that this
                   // instance has.
@@ -594,14 +618,10 @@ namespace casual
                ipc::device().blocking_send( id, message);
             }
 
-            void Policy::ack()
+            void Policy::ack( const common::message::service::call::ACK& ack)
             {
-               common::message::service::call::ACK ack;
-
-               ack.process = common::process::handle();
-
-               ACK sendACK( m_state);
-               sendACK( ack);
+               handle::ACK handler( m_state);
+               handler( ack);
             }
 
             void Policy::transaction(

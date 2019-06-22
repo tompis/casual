@@ -31,19 +31,14 @@ namespace casual
       {
          namespace ipc
          {
-
-            
             namespace message
             {
                static_assert( transport::max_message_size() <= platform::ipc::transport::size, "ipc message is too big'");
 
                std::ostream& operator << ( std::ostream& out, const Transport& value)
                {
-                  return out << "{ type: " << value.type()
-                     << ", correlation: " << uuid::string( value.correlation())
-                     << ", offset: " << value.payload_offset()
+                  return out << "{ header: " << value.message.header
                      << ", payload.size: " << value.payload_size()
-                     << ", complete_size: " << value.complete_size()
                      << ", header-size: " << transport::header_size()
                      << ", transport-size: " <<  value.size()
                      << ", max-size: " << transport::max_message_size() << "}";
@@ -71,15 +66,10 @@ namespace casual
 
             Handle::~Handle() = default;
 
-            std::ostream& operator << ( std::ostream& out, const Handle& rhs)
-            {
-               return out << "{ ipc: " << rhs.m_ipc << ", socket: " << rhs.m_socket << '}';
-            }
-
 
             Address::Address( strong::ipc::id ipc)
             {
-               const auto& directory = environment::transient::directory();
+               const auto& directory = environment::ipc::directory();
                const auto postfix = '/' + uuid::string( ipc.value());
                const auto max_size = sizeof( m_native.sun_path) - postfix.size() - 1;
 
@@ -194,8 +184,8 @@ namespace casual
                            {
                               // try again...
                               // We flush inbound
-                              ipc::inbound::device().flush();
-                              //std::this_thread::sleep_for( std::chrono::microseconds{ 10});
+                              //ipc::inbound::device().flush();
+                              std::this_thread::sleep_for( std::chrono::microseconds{ 10});
                               break;
                            }
                            case code::system::no_such_file_or_directory:
@@ -396,9 +386,7 @@ namespace casual
                         transport.assign( range::make( part_begin, part_end));
                         transport.message.header.offset = std::distance( std::begin( complete.payload), part_begin);
 
-                        //
                         // send the physical message
-                        //
                         if( ! native::blocking::send( socket, destination, transport))
                         {
                            return uuid::empty();
@@ -465,9 +453,7 @@ namespace casual
                            transport.assign( range::make( part_begin, part_end));
                            transport.message.header.offset = std::distance( std::begin( complete.payload), part_begin);
 
-                           //
                            // send the physical message
-                           //
                            if( ! native::non::blocking::send( socket, destination, transport))
                            {
                               return uuid::empty();
@@ -534,11 +520,6 @@ namespace casual
                   }
                }
 
-               std::ostream& operator << ( std::ostream& out, const Connector& rhs)
-               {
-                  return out << "{ handle: " << rhs.m_handle
-                     << '}';
-               }
 
                Device& device()
                {
@@ -553,12 +534,6 @@ namespace casual
                Connector::Connector( strong::ipc::id ipc) 
                   : m_destination{ ipc}
                {
-               }
-
-               std::ostream& operator << ( std::ostream& out, const Connector& rhs)
-               {
-                  return out << "{ destination: " << rhs.m_destination
-                     << '}';
                }
 
             } // outbound

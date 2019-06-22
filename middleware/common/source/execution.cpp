@@ -7,6 +7,8 @@
 
 #include "common/execution.h"
 #include "common/uuid.h"
+#include "common/environment.h"
+#include "common/exception/handle.h"
 
 
 namespace casual
@@ -19,9 +21,34 @@ namespace casual
          {
             namespace
             {
+               constexpr auto environment = "CASUAL_EXECUTION_ID";
+
+               auto get()
+               {
+                  auto id = uuid::make();
+                  environment::variable::set( environment, uuid::string( id));
+                  return id;
+               }
+
+               auto initialize()
+               {
+                  if( environment::variable::exists( environment))
+                  {
+                     try 
+                     {
+                        return Uuid{ environment::variable::get( environment)};
+                     }
+                     catch( ...)
+                     {
+                        exception::handle();
+                     }
+                  }
+                  return get();
+               }
+
                Uuid& id()
                {
-                  static Uuid id = common::uuid::make();
+                  static Uuid id = initialize();
                   return id;
                }
             } // <unnamed>
@@ -32,11 +59,15 @@ namespace casual
             local::id() = id;
          }
 
+         void reset()
+         {
+            local::id() = local::get();
+         }
+
          const Uuid& id()
          {
             return local::id();
          }
-
 
          namespace service
          {

@@ -12,7 +12,6 @@
 #include "configuration/common.h"
 
 #include "common/serialize/create.h"
-#include "serviceframework/log.h"
 
 #include <fstream>
 
@@ -34,14 +33,18 @@ namespace casual
       {
          Environment env;
          env.variables = {
-               { []( environment::Variable& v){
-                  v.key = "a";
-                  v.value = "b";
-               }},
-               { []( environment::Variable& v){
-                  v.key = "c";
-                  v.value = "d";
-               }}
+            [](){
+               environment::Variable v;
+               v.key = "a";
+               v.value = "b";
+               return v;
+            }(),
+            [](){
+               environment::Variable v;
+               v.key = "c";
+               v.value = "d";
+               return v;
+            }()
          };
 
          auto result = environment::fetch( env);
@@ -130,14 +133,18 @@ namespace casual
          {
             refered.files.push_back( env_file);
             refered.variables = {
-                  { []( environment::Variable& v){
-                     v.key = "k_c";
-                     v.value = "v_c";
-                  }},
-                  { []( environment::Variable& v){
-                     v.key = "k_d";
-                     v.value = "v_d";
-                  }}
+               [](){
+                  environment::Variable v;
+                  v.key = "k_c";
+                  v.value = "v_c";
+                  return v;
+               }(),
+               [](){
+                  environment::Variable v;
+                  v.key = "k_d";
+                  v.value = "v_d";
+                  return v;
+               }()
             };
          }
 
@@ -155,20 +162,20 @@ namespace casual
          first.variables = local::variables();
          auto first_file = local::serialize( first, GetParam());
 
-         common::log::line( configuration::log, CASUAL_MAKE_NVP( first));
+         common::log::line( configuration::log, "first: ", first);
 
          Environment second;
          second.variables = local::variables();
          second.files.push_back( first_file);
          auto second_file = local::serialize( second, GetParam());
 
-         common::log::line( configuration::log, CASUAL_MAKE_NVP( second));
+         common::log::line( configuration::log, "second: ", second);
 
          Environment third;
          third.variables = local::variables();
          third.files.push_back( second_file);
 
-         common::log::line( configuration::log, CASUAL_MAKE_NVP( third));
+         common::log::line( configuration::log, "third: ", third);
 
 
          auto expected = first.variables;

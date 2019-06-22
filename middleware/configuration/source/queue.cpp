@@ -29,10 +29,11 @@ namespace casual
    {
       namespace queue
       {
-         Queue::Queue() = default;
-         Queue::Queue( std::function<void( Queue&)> foreign) { foreign( *this);}
-
-
+         Queue& Queue::operator += ( const queue::Default& value)
+         {
+            retries = common::coalesce( std::move( retries), value.retries);
+            return *this;
+         }
          bool operator < ( const Queue& lhs, const Queue& rhs)
          {
             return lhs.name < rhs.name;
@@ -42,9 +43,6 @@ namespace casual
          {
             return lhs.name == rhs.name;
          }
-
-         Group::Group() = default;
-         Group::Group( std::function<void( Group&)> foreign) { foreign( *this);}
 
          bool operator < ( const Group& lhs, const Group& rhs)
          {
@@ -60,7 +58,6 @@ namespace casual
          {
             namespace
             {
-
                void default_values( Manager& manager)
                {
                   for( auto& group : manager.groups)
@@ -106,9 +103,7 @@ namespace casual
                {
                   common::algorithm::for_each( manager.groups, Validate{});
 
-                  //
                   // Check unique groups
-                  //
                   {
                      using G = decltype( manager.groups.front());
 
@@ -125,8 +120,8 @@ namespace casual
                      auto order_group_qb = []( G lhs, G rhs){ return lhs.queuebase < rhs.queuebase;};
                      auto equality_group_gb = []( G lhs, G rhs){ return lhs.queuebase == rhs.queuebase;};
 
-                     // remote in-memory queues when we validate uniqueness
-                     auto persitent_groups = std::get< 0>( algorithm::partition( groups, []( G g){ return g.queuebase.value_or( "") != ":memory:";}));
+                     // remove in-memory queues when we validate uniqueness
+                     auto persitent_groups = algorithm::filter( groups, []( G g){ return g.queuebase.value_or( "") != ":memory:";});
 
                      if( common::algorithm::adjacent_find( common::algorithm::sort( persitent_groups, order_group_qb), equality_group_gb))
                      {
@@ -134,9 +129,7 @@ namespace casual
                      }
                   }
 
-                  //
                   // Check unique queues
-                  //
                   {
                      using queue_type = std::remove_reference_t< decltype( manager.groups.front().queues.front())>;
                      std::vector< std::reference_wrapper< queue_type>> queues;
@@ -150,7 +143,6 @@ namespace casual
                      {
                         throw common::exception::casual::invalid::Configuration{ "queues has to be unique"};
                      }
-
                   }
                }
 
@@ -162,13 +154,9 @@ namespace casual
                      auto found = common::algorithm::find( lhs, value);
 
                      if( found)
-                     {
                         *found = std::move( value);
-                     }
                      else
-                     {
                         lhs.push_back( std::move( value));
-                     }
                   }
                }
 
@@ -176,6 +164,9 @@ namespace casual
                template< typename G>
                Manager& append( Manager& lhs, G&& rhs)
                {
+                  // defaults just propagates to the left...
+                  lhs.manager_default = std::move( rhs.manager_default);
+
                   local::replace_or_add( lhs.groups, std::move( rhs.groups));
 
                   return lhs;
@@ -188,25 +179,17 @@ namespace casual
          {
             Default::Default() : directory{ "${CASUAL_DOMAIN_HOME}/queue/groups"}
             {
-               queue.retries.emplace( 0);
             }
          } // manager
-
-         Manager::Manager()
-         = default;
 
          void Manager::finalize()
          {
             Trace trace{ "config::queue::Manager::finalize"};
 
-            //
             // Complement with default values
-            //
             local::default_values( *this);
 
-            //
             // Make sure we've got valid configuration
-            //
             local::validate( *this);
          }
 
@@ -228,8 +211,6 @@ namespace casual
             result += rhs;
             return result;
          }
-
-
 
          namespace unittest
          {

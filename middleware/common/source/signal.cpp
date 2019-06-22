@@ -151,20 +151,16 @@ namespace casual
 
                         void handle()
                         {
-                           //
                            // We assume that loading from atomic is cheaper than mutex-lock
-                           //
 
                            if( handler::global_total_pending.load() > 0)
                            {
                               std::lock_guard< std::mutex> lock{ m_mutex};
 
-                              //
                               // We only allow one thread at a time to actually handle the
                               // pending signals
                               //
                               // We check the total-pending again
-                              //
                               if( handler::global_total_pending.load() > 0)
                               {
                                  dispatch( signal::mask::current());
@@ -174,20 +170,16 @@ namespace casual
 
                         void handle( signal::Set set)
                         {
-                           //
                            // We assume that loading from atomic is cheaper than mutex-lock
-                           //
 
                            if( handler::global_total_pending.load() > 0)
                            {
                               std::lock_guard< std::mutex> lock{ m_mutex};
 
-                              //
                               // We only allow one thread at a time to actually handle the
                               // pending signals
                               //
                               // We check the total-pending again
-                              //
                               if( handler::global_total_pending.load() > 0)
                               {
                                  dispatch( set);
@@ -236,9 +228,7 @@ namespace casual
 
                            basic_handler()
                            {
-                              //
                               // Register the signal handler for this signal
-                              //
                               local::handler::registration( Signal, &signal_callback< Signal>, Flags);
                            }
 
@@ -247,28 +237,20 @@ namespace casual
 
                            void handle( const signal::Set& current)
                            {
-                              //
                               // We know that this function is invoked with mutex, so we
                               // can ignore concurrency problem
-                              //
 
                               if( pending_type::pending.load())
                               {
                                  if( ! current.exists( Signal))
                                  {
-                                    //
                                     // Signal is not blocked
-                                    //
                                     log::line( log::debug, "signal: handling signal: ", Signal);
 
-                                    //
                                     // We've consumed the signal
-                                    //
                                     pending_type::pending.store( false);
 
-                                    //
                                     // Decrement the global count
-                                    //
                                     --handler::global_total_pending;
 
                                     throw Exception{};
@@ -282,8 +264,6 @@ namespace casual
                            }
                         };
 
-
-
                         basic_handler< signal::Type::child, exception::signal::child::Terminate, SA_NOCLDSTOP> m_child;
                         basic_handler< signal::Type::terminate, exception::signal::Terminate> m_terminate;
                         basic_handler< signal::Type::quit, exception::signal::Terminate> m_quit;
@@ -291,9 +271,7 @@ namespace casual
                         basic_handler< signal::Type::alarm, exception::signal::Timeout> m_alarm;
                         basic_handler< signal::Type::user, exception::signal::User> m_user;
 
-                        //
                         // Only for handle
-                        //
                         std::mutex m_mutex;
                      };
 
@@ -309,9 +287,7 @@ namespace casual
             namespace
             {
 
-               //
                // We need to instantiate the handler globally to trigger signal-handler-registration
-               //
                handler::Handle& global_handler = handler::Handle::instance();
             } // <unnamed>
          } // local
@@ -339,12 +315,6 @@ namespace casual
             }
          } // current
 
-/*
-         Type received()
-         {
-
-         }
-         */
 
          namespace timer
          {
@@ -400,15 +370,11 @@ namespace casual
                {
                   if( offset == common::platform::time::unit::min())
                   {
-                     //
                      // Special case == 'unset'
-                     //
                      return unset();
                   }
 
-                  //
                   // We send the signal directly
-                  //
                   log::line( log::debug, "timer - offset is less than zero: ", offset.count(), " - send alarm directly");
                   signal::send( process::id(), signal::Type::alarm);
                   return local::get();
@@ -458,7 +424,7 @@ namespace casual
 
             Scoped::~Scoped()
             {
-               if( ! m_moved)
+               if( m_active)
                {
                   if( m_old == platform::time::point::type::min())
                   {
@@ -497,7 +463,7 @@ namespace casual
 
             Deadline::~Deadline()
             {
-               if( ! m_moved)
+               if( m_active)
                {
                   timer::unset();
                }
@@ -640,10 +606,8 @@ namespace casual
 
          } // mask
 
-
          namespace thread
          {
-
             void send( std::thread& thread, Type signal)
             {
                log::line( log::debug, "signal::thread::send thread: ", thread.get_id(), " signal: ", signal);
@@ -654,22 +618,15 @@ namespace casual
             void send( common::thread::native::type thread, Type signal)
             {
                if( pthread_kill( thread, 0) == 0)
-          {
+               {
                   if( pthread_kill( thread, cast::underlying( signal)) != 0)
-                  {
                       log::line( log::category::error, "failed to send signal - ", signal, " -> thread: ", thread, " - error: " , code::last::system::error());
-                  } 
-               }
-               else
-               {     
-                  log::line( log::category::error, "thread-handle is not valid - action: ignore");
                }
             }
 
             void send( Type signal)
             {
                log::line( log::debug, "signal::thread::send current thread - signal: ", signal);
-
                send( common::thread::native::current(), signal);
             }
 
@@ -680,7 +637,7 @@ namespace casual
 
                Reset::~Reset()
                {
-                  if( ! m_moved)
+                  if( m_active)
                   {
                      mask::set( m_mask);
                   }
@@ -695,25 +652,13 @@ namespace casual
 
                Mask::Mask( signal::Set mask) : Reset( mask::set( mask)) {}
 
-
-
-               Block::Block() : Reset( mask::block())
-               {
-               }
-
-               Block::Block( signal::Set mask) : Reset( mask::block( mask))
-               {
-               }
-
-               Unblock::Unblock( signal::Set mask) : Reset( mask::unblock( mask))
-               {
-               }
+               Block::Block() : Reset( mask::block()) {}
+               Block::Block( signal::Set mask) : Reset( mask::block( mask)) {}
+               Unblock::Unblock( signal::Set mask) : Reset( mask::unblock( mask)) {}
 
             } // scope
 
          } // thread
-
-
       } // signal
    } // common
 } // casual

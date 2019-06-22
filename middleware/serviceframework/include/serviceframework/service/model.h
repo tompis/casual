@@ -10,6 +10,7 @@
 
 #include "common/serialize/macro.h"
 #include "common/platform.h"
+#include "common/view/binary.h"
 
 #include <string>
 #include <vector>
@@ -39,6 +40,7 @@ namespace casual
 
                   string,
                   binary,
+                  fixed_binary,
                };
 
 
@@ -58,6 +60,8 @@ namespace casual
 
                   template<> struct traits< std::string> : base_traits< Category::string>{};
                   template<> struct traits< common::platform::binary::type> : base_traits< Category::binary>{};
+                  template<> struct traits< common::view::Binary> : base_traits< Category::fixed_binary>{};
+                  template<> struct traits< common::view::immutable::Binary> : base_traits< Category::fixed_binary>{};
 
                   template<> struct traits< char> : base_traits< Category::character>{};
                   template<> struct traits< bool> : base_traits< Category::boolean>{};

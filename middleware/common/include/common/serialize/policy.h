@@ -13,6 +13,7 @@
 #include "common/log/category.h"
 #include "common/exception/casual.h"
 #include "common/log.h"
+#include "common/string.h"
 
 #include <tuple>
 

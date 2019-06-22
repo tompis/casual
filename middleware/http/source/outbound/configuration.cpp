@@ -17,6 +17,7 @@
 
 #include "common/serialize/create.h"
 #include "common/platform.h"
+#include "common/file.h"
 
 namespace casual
 {
@@ -36,9 +37,7 @@ namespace casual
 
                      common::log::line( verbose::log, "file: ", name);
 
-                     //
                      // Create the reader and deserialize configuration
-                     //
                      Model http;
                      common::file::Input file{ name};
                      auto reader = common::serialize::create::reader::consumed::from( file.extension(), file);

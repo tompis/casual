@@ -10,6 +10,7 @@
 
 #include "common/serialize/macro.h"
 #include "common/platform.h"
+#include "common/optional.h"
 
 #include <string>
 #include <vector>
@@ -24,8 +25,8 @@ namespace casual
          {
             struct Default
             {
-               common::optional< std::string> key;
-               common::optional< common::platform::size::type> instances;
+               std::string key;
+               common::platform::size::type instances = 1;
 
                CASUAL_CONST_CORRECT_SERIALIZE
                (
@@ -35,9 +36,12 @@ namespace casual
             };
          } // resource
 
-         struct Resource : resource::Default
+         struct Resource
          {
             std::string name;
+            common::optional< std::string> key;
+            common::optional< common::platform::size::type> instances;
+            
             std::string note;
 
             common::optional< std::string> openinfo;
@@ -45,15 +49,17 @@ namespace casual
 
             CASUAL_CONST_CORRECT_SERIALIZE
             (
-               resource::Default::serialize( archive);
                CASUAL_SERIALIZE( name);
+               CASUAL_SERIALIZE( key);
+               CASUAL_SERIALIZE( instances);
                CASUAL_SERIALIZE( note);
                CASUAL_SERIALIZE( openinfo);
                CASUAL_SERIALIZE( closeinfo);
             )
 
+            Resource& operator += ( const resource::Default& rhs);
             friend bool operator == ( const Resource& lhs, const Resource& rhs);
-            friend Resource& operator += ( Resource& lhs, const resource::Default& rhs);
+            
          };
 
          namespace manager
@@ -88,6 +94,8 @@ namespace casual
                CASUAL_SERIALIZE( log);
                CASUAL_SERIALIZE( resources);
             )
+
+            friend Manager& operator += ( Manager& lhs, const Manager& rhs);
          };
 
 

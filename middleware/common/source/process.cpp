@@ -8,6 +8,7 @@
 #include "common/process.h"
 #include "common/exception/system.h"
 #include "common/exception/casual.h"
+#include "common/exception/handle.h"
 
 #include "common/file.h"
 #include "common/log.h"
@@ -43,7 +44,6 @@
 
 
 #ifdef __APPLE__
-   #include <crt_externs.h>
    #include <mach-o/dyld.h>
 #else
    #include <unistd.h>
@@ -61,7 +61,6 @@ namespace casual
          {
             namespace
             {
-
                std::string get_process_path()
                {
 #ifdef __APPLE__
@@ -71,7 +70,9 @@ namespace casual
                   {
                      throw exception::system::invalid::Argument{ "failed to get the path to the current executable"};
                   }
-                  if( path.data()) { return path.data();}
+                  if( path.data()) 
+                     return path.data();
+
                   return {};
 #else
                   return file::name::link( "/proc/self/exe");
@@ -89,16 +90,6 @@ namespace casual
                   static std::string basename = file::name::base( local::path());
                   return basename;
                }
-
-               char* const * environment()
-               {
-                  #ifdef __APPLE__
-                      return *::_NSGetEnviron();
-                  #else
-                     return ::environ;
-                  #endif
-               }
-
 
                namespace instantiated
                {
@@ -159,12 +150,6 @@ namespace casual
             return std::tie( lhs.pid, lhs.ipc) < std::tie( rhs.pid, rhs.ipc);
          }
 
-         std::ostream& operator << ( std::ostream& out, const Handle& value)
-         {
-            return out << "{ pid: " << value.pid << ", ipc: " << value.ipc << '}';
-         }
-
-
 
          const Uuid& uuid()
          {
@@ -181,9 +166,7 @@ namespace casual
             posix_time.tv_nsec = std::chrono::duration_cast< std::chrono::nanoseconds>(
                   time - std::chrono::seconds{ posix_time.tv_sec}).count();
 
-            //
             // We check signals before we sleep
-            //
             signal::handle();
 
             if( nanosleep( &posix_time, nullptr) == -1)
@@ -236,18 +219,9 @@ namespace casual
                return --m_quantity == 0;
             }
 
-            std::ostream& operator << ( std::ostream& out, const Sleep::Pattern& value)
-            {
-               return out << "{ duration: " << value.m_time.count() << "us, quantity: " << value.m_quantity
-                     << '}';
-            }
-
-
             Sleep::Sleep( std::initializer_list< Pattern> pattern) : m_pattern( std::move( pattern))
             {
-               //
                // We reverse the patterns so we can go from the back
-               //
                algorithm::reverse( m_pattern);
             }
 
@@ -264,11 +238,6 @@ namespace casual
                return false;
             }
 
-            std::ostream& operator << ( std::ostream& out, const Sleep& value)
-            {
-               return out << "{ pattern: " << range::make( value.m_pattern) << '}';
-            }
-
          } // pattern
 
          namespace local
@@ -277,43 +246,28 @@ namespace casual
             {
                namespace current
                {
-
                   namespace copy
                   {
-                     //
                      // Appends from current process environment, if it's not
                      // already overridden.
-                     //
-                     void environment( std::vector< std::string>& variables)
+                     auto environment( std::vector< environment::Variable>&& variables)
                      {
-                        //
-                        // Since we're reading environment variables we need to lock
-                        //
-                        std::unique_lock< std::mutex> lock{ environment::variable::mutex()};
+                        auto current = environment::variable::native::current();
 
-                        auto current = local::environment();
-
-                        while( (*current) != nullptr)
+                        auto equal_name = []( auto& l, auto& r)
                         {
-                           std::string variable{ *current};
+                           return algorithm::equal( l.name(), r.name());
+                        };
 
-                           auto found =  algorithm::find_if( variables, [&variable]( const std::string& v){
-                              return algorithm::equal(
-                                 std::get< 0>( algorithm::divide( variable, '=')),
-                                 std::get< 0>( algorithm::divide( v, '='))
-                              );
-                           });
+                        // use the complement of the intersection
+                        auto not_overridden = std::get< 1>( algorithm::intersection( current, variables, equal_name));
 
-                           if( ! found)
-                           {
-                              variables.push_back( std::move( variable));
-                           }
+                        // move append the variables
+                        algorithm::move( not_overridden, variables);
 
-                           ++current;
-                        }
+                        return variables;
                      }
                   } // copy
-
 
                } // current
 
@@ -321,40 +275,28 @@ namespace casual
                {
                   auto string_data = []( auto& v){ return v.data();};
 
-                  std::vector< const char*> environment( std::vector< std::string>& environment)
+                  template< typename E>
+                  std::vector< const char*> environment( const E& environment)
                   {
-                     std::vector< const char*> result;
-                     result.resize( environment.size() + 1);
-
-                     std::transform(
-                        std::begin( environment),
-                        std::end( environment),
-                        std::begin( result),
-                        C::string_data);
-
+                     auto result = algorithm::transform( environment, C::string_data);
                      result.push_back( nullptr);
 
                      return result;
                   }
 
-                  std::vector< const char*> arguments( const std::string& path, std::vector< std::string>& arguments)
+                  std::vector< const char*> arguments( const std::string& path, const std::vector< std::string>& arguments)
                   {
-                     std::vector< const char*> c_arguments;
+                     std::vector< const char*> result;
 
-                     //
                      // think we must add application-name as first argument...
-                     //
-                     c_arguments.push_back( path.c_str());
+                     result.push_back( path.c_str());
 
+                     algorithm::transform( arguments, result, C::string_data);
 
-                     algorithm::transform( arguments, c_arguments, C::string_data);
-
-                     //
                      // Null end
-                     //
-                     c_arguments.push_back( nullptr);
+                     result.push_back( nullptr);
 
-                     return c_arguments;
+                     return result;
                   }
 
                } // C
@@ -367,10 +309,8 @@ namespace casual
                      {
                         check_error( posix_spawnattr_init( &m_attributes), "posix_spawnattr_init");
 
-                        //
                         // We try to eliminate signals to propagate to children by it self...
                         // we don't need to set groupid with posix_spawnattr_setpgroup since the default is 0.
-                        //
                         check_error( posix_spawnattr_setflags( &m_attributes, POSIX_SPAWN_SETPGROUP), "posix_spawnattr_setflags");
                      }
 
@@ -397,62 +337,49 @@ namespace casual
          } // local
 
 
-      strong::process::id spawn(
+         strong::process::id spawn(
             std::string path,
             std::vector< std::string> arguments,
-            std::vector< std::string> environment)
+            std::vector< environment::Variable> environment)
          {
             Trace trace{ "process::spawn"};
 
             path = environment::string( std::move( path));
 
-            //
             // check if path exist and process has permission to execute it.
             // could still go wrong, since we don't know if the path will actually execute,
             // but we'll probably get rid of most of the errors (due to bad configuration and such)
-            //
             if( ! file::permission::execution( path))
-            {
                throw exception::system::invalid::Argument( string::compose( "spawn failed - path: ", path));
-            }
 
-            //
             // We need to expand environment and arguments
-            //
             {
-               for( auto& argument : arguments)
+               auto expand_variable = []( auto& variable)
                {
-                  argument = environment::string( argument);
-               }
-
-               for( auto& variable : environment)
-               {
-                  variable = environment::string( variable);
-               }
+                  variable = environment::string( std::move( variable));
+               };
+               
+               algorithm::for_each( arguments, expand_variable);
+               algorithm::for_each( environment, expand_variable);
             }
 
-            
             log::line( log::debug, "process::spawn ", path, ' ', arguments);
             log::line( verbose::log, "environment: ", environment);
 
-            //
             // Append current, if not "overridden"
-            //
-            local::current::copy::environment( environment);
+            environment = local::current::copy::environment( std::move( environment));
 
-
-            strong::process::id pid;
-
-            {
+            auto pid = [&](){
                local::spawn::Attributes attributes;
 
-               //
                // prepare c-style arguments and environment
-               //
                auto c_arguments = local::C::arguments( path, arguments);
                auto c_environment = local::C::environment( environment);
 
-               platform::process::native::type native_pid;
+               platform::process::native::type native_pid{};
+
+               // make sure we don't block interupt and terminate
+               signal::thread::scope::Unblock unblock{ signal::Set{ signal::Type::interrupt, signal::Type::terminate}};
 
                auto status =  posix_spawnp(
                      &native_pid,
@@ -460,24 +387,17 @@ namespace casual
                      nullptr,
                      attributes.get(),
                      const_cast< char* const*>( c_arguments.data()),
-                     const_cast< char* const*>( c_environment.data())
-                     );
-               switch( status)
-               {
-                  case 0:
-                     break;
-                  default:
-                     exception::system::throw_from_code( status);
-               }
+                     const_cast< char* const*>( c_environment.data()));
 
-               pid = strong::process::id{ native_pid};
-            }
+               if( status != 0)
+                  exception::system::throw_from_code( status);
+            
+               return strong::process::id{ native_pid};
+            }();
 
-            //
             // We try to minimize the glitch where the spawned process does not
             // get signals for a short period of time. We need to block so we don't
             // get child-terminate signals (or other signals for that matter...)
-            //
             signal::thread::scope::Block block;
 
             process::sleep( 200us);
@@ -508,17 +428,14 @@ namespace casual
             return pid;
          }
 
-
-         strong::process::id spawn( const std::string& path, std::vector< std::string> arguments)
+         strong::process::id spawn( std::string path, std::vector< std::string> arguments)
          {
-            return spawn( path, std::move( arguments), {});
+            return spawn( std::move( path), std::move( arguments), {});
          }
 
-
-
-         int execute( const std::string& path, std::vector< std::string> arguments)
+         int execute( std::string path, std::vector< std::string> arguments)
          {
-            return wait( spawn( path, std::move( arguments)));
+            return wait( spawn( std::move( path), std::move( arguments)));
          }
 
 
@@ -528,9 +445,8 @@ namespace casual
             {
                lifetime::Exit wait( strong::process::id pid, int flags = WNOHANG)
                {
-
-
-                  auto handle_signal = [](){
+                  auto handle_signal = []()
+                  {
                      try
                      {
                         signal::handle();
@@ -562,9 +478,7 @@ namespace casual
                            {
                               handle_signal();
 
-                              //
                               // We do another turn in the loop
-                              //
                               return true;
                            }
                            default:
@@ -629,10 +543,8 @@ namespace casual
                         result.push_back( std::move( exit));
                      }
                      else if( ! exit.pid)
-                     {
-                        //
+                     {//
                         // No children exists
-                        //
                         return;
                      }
                   }
@@ -727,18 +639,11 @@ namespace casual
                return out;
             }
 
-            std::ostream& operator << ( std::ostream& out, const Exit& terminated)
-            {
-               return out << "{ pid: " << terminated.pid << ", reason: " << terminated.reason << '}';
-            }
-
             std::vector< lifetime::Exit> ended()
             {
                Trace trace{ "process::lifetime::ended"};
 
-               //
                // We'll only handle child signals.
-               //
                signal::thread::scope::Mask block{ signal::set::filled( signal::Type::child)};
 
                std::vector< lifetime::Exit> terminations;
@@ -808,8 +713,37 @@ namespace casual
 
          } // lifetime
 
-
       } // process
+
+      Process::Process( const std::string& path, std::vector< std::string> arguments)
+         : m_handle{ process::spawn( path, std::move( arguments))}
+      {
+
+      }
+
+      Process::~Process() 
+      {
+         if( m_handle.pid)
+         {
+            try 
+            {
+               process::terminate( m_handle);
+            }
+            catch( ...)
+            {
+               exception::handle();
+            }
+         }
+      }
+
+      void Process::handle( const process::Handle& handle)
+      {
+         if( m_handle.pid != handle.pid)
+            throw exception::system::invalid::Process{ string::compose( "trying to update process with different pids: ", m_handle.pid, " != ", handle.pid)};
+
+         m_handle = handle;
+      }
+
    } // common
 } // casual
 

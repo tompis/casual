@@ -312,6 +312,8 @@ namespace casual
                   serialize::Writer create( const std::string& key, std::ostream& stream);
                   serialize::Writer create( const std::string& key, platform::binary::type& data);
 
+                  std::vector< std::string> keys() const;
+
                private:
                   Dispatch();
 
@@ -361,6 +363,17 @@ namespace casual
 
                template< typename I> 
                CASUAL_OPTION_UNUSED bool Registration< I>::m_dummy = Dispatch::instance().registration< I>( I::keys());
+
+               namespace complete
+               {
+                  inline auto format() 
+                  {
+                     return []( auto values, bool)
+                     {
+                        return Dispatch::instance().keys();
+                     };
+                  }
+               } // complete
 
             } // writer
          } // create

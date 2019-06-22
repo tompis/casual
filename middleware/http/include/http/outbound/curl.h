@@ -32,11 +32,49 @@ namespace casual
                namespace native
                {
                   using easy = decltype( curl_easy_init());
+                  using multi = decltype( curl_multi_init());
+                  using slist = curl_slist*;
                } // native
 
-               using multi = decltype( common::memory::guard( curl_multi_init(), &curl_multi_cleanup));
-               using easy = decltype( common::memory::guard( curl_easy_init(), &curl_easy_cleanup));
-               using header_list = std::unique_ptr< curl_slist, std::function< void(curl_slist*)>>;
+               namespace detail
+               {
+                  namespace cleanup
+                  {
+                     struct multi
+                     {
+                        void operator () ( native::multi handle) const noexcept { curl_multi_cleanup( handle);}
+                     };
+
+                     struct easy
+                     {
+                        void operator () ( native::easy handle) const noexcept { curl_easy_cleanup( handle);}
+                     };
+
+                     struct slist
+                     {
+                        void operator () ( native::slist handle) const noexcept { curl_slist_free_all( handle);}
+                     };
+
+                  } // cleanup
+
+                  
+                  namespace base
+                  {
+                     using easy = std::unique_ptr< std::remove_pointer_t< native::easy>, detail::cleanup::easy>;
+                  } // base
+                  
+
+               } // detail
+
+               using multi = std::unique_ptr< std::remove_pointer_t< native::multi>, detail::cleanup::multi>;
+               struct easy : detail::base::easy
+               {
+                  using detail::base::easy::easy;
+                  friend std::ostream& operator << ( std::ostream& out, const easy& value);
+               };
+               
+
+               using header_list = std::unique_ptr< std::remove_pointer_t< native::slist>, detail::cleanup::slist>;
 
                using socket = curl_socket_t;
                using wait_descriptor = curl_waitfd;

@@ -117,7 +117,7 @@ proxy:
          CASUAL_SERIALIZE( name);
          CASUAL_SERIALIZE( documentation);
          CASUAL_SERIALIZE( language);
-         archive & serviceframework::name::value::pair::make( "namespace", name_space);
+         CASUAL_SERIALIZE( serviceframework::name::value::pair::make( "namespace", name_space));
          CASUAL_SERIALIZE( output_headers);
          CASUAL_SERIALIZE( output_source);
 
@@ -151,7 +151,7 @@ proxy:
       {
          CASUAL_SERIALIZE( name);
          CASUAL_SERIALIZE( documentation);
-         archive & serviceframework::name::value::pair::make( "return", return_type);
+         CASUAL_SERIALIZE( serviceframework::name::value::pair::make( "return", return_type));
          CASUAL_SERIALIZE( arguments);
       }
 

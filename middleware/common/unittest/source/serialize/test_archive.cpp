@@ -27,7 +27,7 @@ namespace casual
 {
 
 
-   TEST( serviceframework_binary_writer, serialize_pod)
+   TEST( serialize_binary_writer, serialize_pod)
    {
 
       common::platform::binary::type buffer;
@@ -36,7 +36,7 @@ namespace casual
       writer << CASUAL_MAKE_NVP( 10);
    }
 
-   TEST( serviceframework_binary_writer, serialize_string)
+   TEST( serialize_binary_writer, serialize_string)
    {
 
       common::platform::binary::type buffer;
@@ -57,7 +57,7 @@ namespace casual
    }
 
 
-   TEST( serviceframework_binary_reader_writer, serialize_pod)
+   TEST( serialize_binary_reader_writer, serialize_pod)
    {
 
       common::platform::binary::type buffer;
@@ -77,7 +77,7 @@ namespace casual
 
 
 
-   TEST( serviceframework_binary_reader_writer, serialize_vector_long)
+   TEST( serialize_binary_reader_writer, serialize_vector_long)
    {
 
       common::platform::binary::type buffer;
@@ -103,7 +103,7 @@ namespace casual
    }
 
 
-   TEST( serviceframework_binary_reader_writer, map_long_string)
+   TEST( serialize_binary_reader_writer, map_long_string)
    {
 
       common::platform::binary::type buffer;
@@ -143,7 +143,7 @@ namespace casual
       )
    };
 
-   TEST( serviceframework_binary_reader_writer, serializible)
+   TEST( serialize_binary_reader_writer, serializible)
    {
 
       common::platform::binary::type buffer;
@@ -170,7 +170,7 @@ namespace casual
 
    }
 
-   TEST( serviceframework_binary_reader_writer, complex_serializible)
+   TEST( serialize_binary_reader_writer, complex_serializible)
    {
 
       common::platform::binary::type buffer;

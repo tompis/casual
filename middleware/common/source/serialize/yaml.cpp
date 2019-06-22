@@ -89,18 +89,16 @@ namespace casual
                         const std::string& wrap_empty( const std::string& yaml)
                         {
                            if( yaml.empty())
-                           {
                               return empty();
-                           }
+
                            return yaml;
                         }
 
                         const char* wrap_empty( const char* const yaml)
                         {
                            if( ! yaml || yaml[ 0] == '\0')
-                           {
                               return empty().c_str();
-                           }
+
                            return yaml;
                         }
                      };
@@ -137,10 +135,8 @@ namespace casual
                            {
                               start( name);
 
-                              for( auto current = node.begin(); current != node.end(); ++current)
-                              {
-                                 deduce( *current, "element");  
-                              }
+                              for( auto& current : node)
+                                 deduce( current, "element");  
                               
                               end( name);
                            }
@@ -209,15 +205,11 @@ namespace casual
                            {
                               // If there are elements, it must be a sequence
                               if( node.Type() != YAML::NodeType::Sequence)
-                              {
                                  throw exception::casual::invalid::Node{ "expected sequence"};
-                              }
 
                               // We stack'em in reverse order
                               for( auto index = size; index > 0; --index)
-                              {
                                  m_stack.push_back( &node[ index - 1]);
-                              }
                            }
 
                            return std::make_tuple( size, true);
@@ -232,14 +224,10 @@ namespace casual
                         bool composite_start( const char* const name)
                         {
                            if( ! start( name))
-                           {
                               return false;
-                           }
 
                            if( m_stack.back()->Type() != YAML::NodeType::Map)
-                           {
                               throw exception::casual::invalid::Node{ "expected map"};
-                           }
 
                            return true;
                         }
@@ -280,22 +268,14 @@ namespace casual
                               auto node = m_stack.back()->FindValue( name);
 
                               if( node)
-                              {
                                  m_stack.push_back( node);
-                              }
                               else
-                              {
                                  return false;
-                              }
                            }
 
-                           //
                            // Either we found the node or we assume it's an 'unnamed' container
                            // element that is already pushed to the stack
-                           //
-
                            return true;
-
                         }
 
                         void end( const char* const name)
@@ -337,6 +317,13 @@ namespace casual
                            YAML::Binary binary;
                            consume( *m_stack.back(), binary);
                            value.assign( binary.data(), binary.data() + binary.size());
+                        }
+
+                        void read( view::Binary value) const
+                        {
+                           YAML::Binary binary;
+                           consume( *m_stack.back(), binary);
+                           algorithm::copy( range::make( binary.data(), binary.size()), value);
                         }
 
                      protected:
@@ -433,9 +420,7 @@ namespace casual
                            m_output << value;
                         }
 
-                        //
                         // A few overloads
-                        //
 
                         void write( const char& value)
                         {
@@ -449,17 +434,20 @@ namespace casual
 
                         void write( const platform::binary::type& value)
                         {
+                           write( view::binary::make( value));
+                        }
+
+                        void write( view::immutable::Binary value)
+                        {
                            // TODO: Is this conformant ?
-                           const YAML::Binary binary{ reinterpret_cast< const unsigned char*>( value.data()), value.size()};
+                           const YAML::Binary binary( reinterpret_cast< const unsigned char*>( value.data()), value.size());
                            m_output << binary;
                         }
 
-                     
                         YAML::Emitter m_output;
                      };
 
                   } // writer
-
                } // <unnamed>
             } // local
             namespace strict

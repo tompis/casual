@@ -12,6 +12,7 @@
 
 #include "common/serialize/macro.h"
 #include "common/algorithm.h"
+#include "common/view/binary.h"
 #include "common/network/byteorder.h"
 
 
@@ -53,7 +54,7 @@ namespace casual
             Payload( std::string type, platform::binary::size::type size);
 
             //!
-            //! g++ does not generate noexecpt move ctor/assignment
+            //! g++ does not generate noexcept move ctor/assignment
             //! @{
             Payload( Payload&& rhs) noexcept;
             Payload& operator = ( Payload&& rhs) noexcept;
@@ -64,6 +65,7 @@ namespace casual
             Payload& operator = ( const Payload&);
 
             bool null() const;
+            inline explicit operator bool () const { return ! type.empty();}
 
             std::string type;
             platform::binary::type memory;
@@ -87,34 +89,41 @@ namespace casual
                Payload stream( std::istream& in);
                //! @}
 
+               //! consumes 0..* payloads from `in` and call dispatch
+               void stream( std::istream& in, const std::function< void( Payload&&)>& dispatch);
+
             } // binary
 
             struct Send
             {
-               Send( const Payload& payload, platform::binary::size::type transport, platform::binary::size::type reserved)
-                  :  transport( transport), reserved( reserved), m_payload( payload) {}
+               using size_type = platform::binary::size::type;
 
-               Send( const Payload& payload)
-                  : transport( payload.memory.size()), m_payload( payload) {}
+               inline Send( const Payload& payload, size_type transport, size_type reserved)
+                  :  m_payload( payload), m_transport{ transport}, m_reserved{ reserved} {}
 
+               inline Send( const Payload& payload)
+                  : m_payload( payload), m_transport( payload.memory.size()) {}
+                  // Send( payload, payload.memory.size(), payload.memory.size()) {}
 
-               inline const Payload& payload() const { return m_payload.get();};
-               platform::binary::size::type transport = 0;
-               platform::binary::size::type reserved = 0;
+               inline const Payload& payload() const noexcept { return m_payload.get();};
 
+               inline auto transport() const noexcept { return m_transport;}
+               inline auto reserved() const noexcept { return m_reserved;}
 
-               template< typename A>
-               void serialize( A& archive) const
+               // We mimic buffer::Payload and only send 'transport' portion of memory
+               CASUAL_CONST_CORRECT_SERIALIZE_WRITE(
                {
-                  archive << payload().type;
-                  archive << transport;
-                  archive.append( std::begin( payload().memory), std::begin( payload().memory) + transport);
-               }
+                  CASUAL_SERIALIZE_NAME( payload().type, "type");
+                  CASUAL_SERIALIZE_NAME( m_transport, "size"); // size of the memory
+                  CASUAL_SERIALIZE_NAME( view::binary::make( std::begin( payload().memory), m_transport), "memory");
+               })
 
                friend std::ostream& operator << ( std::ostream& out, const Send& value);
 
             private:
                std::reference_wrapper< const Payload> m_payload;
+               size_type m_transport = 0;
+               size_type m_reserved = 0;
             };
 
          } // payload
@@ -131,17 +140,18 @@ namespace casual
             Buffer& operator = ( const Buffer&) = delete;
 
             platform::binary::size::type transport( platform::binary::size::type user_size) const;
-
             platform::binary::size::type reserved() const;
+
+            CASUAL_CONST_CORRECT_SERIALIZE_WRITE(
+            {
+               CASUAL_SERIALIZE( payload);
+            })
 
             Payload payload;
          };
 
       } // buffer
    } // common
-
-
-
 
 } // casual
 

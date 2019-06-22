@@ -49,7 +49,7 @@ namespace casual
 
          bool empty( const Uuid& uuid)
          {
-            return  uuid == uuid::empty();
+            return uuid == uuid::empty();
          }
 
       } // uuid
@@ -118,13 +118,17 @@ namespace casual
          return uuid_compare( lhs, rhs.get()) == 0;
       }
 
-
       std::ostream& operator << ( std::ostream& out, const Uuid& uuid)
       {
-         return out << transcode::hex::encode( uuid.m_uuid);
+         return transcode::hex::encode( out, uuid.m_uuid);
       }
 
    } // common
+
+   common::Uuid operator"" _uuid ( const char* data)
+   {
+      return common::Uuid{ common::view::String( data + 2)};
+   }
 } // casual
 
 

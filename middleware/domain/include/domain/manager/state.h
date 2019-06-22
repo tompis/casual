@@ -21,9 +21,7 @@
 
 #include "configuration/environment.h"
 
-
 #include "common/serialize/macro.h"
-#include "serviceframework/archive/archive.h"
 
 #include <unordered_map>
 #include <vector>
@@ -31,26 +29,6 @@
 
 namespace casual
 {
-
-   namespace serviceframework
-   {
-      namespace archive
-      {
-         template< typename I, typename T>
-         void serialize( Reader& archive, common::value::basic_id< I, T>& value, const char* name)
-         {
-            I integer;
-            archive >> name::value::pair::make( name, integer);
-            value = common::value::basic_id< I, T>{ integer};
-         }
-
-         template< typename I, typename T>
-         void serialize( Writer& archive, const common::value::basic_id< I, T>& value, const char* name)
-         {
-            archive << name::value::pair::make( name, value.value());
-         }
-      } // archive
-   } // serviceframework
 
    namespace domain
    {
@@ -69,8 +47,6 @@ namespace casual
                using type = common::value::basic_id< size_type, common::value::id::policy::unique_initialize< size_type, Tag, 0>>;
                
             } // id
-
-
 
             struct Group
             {
@@ -91,10 +67,7 @@ namespace casual
 
                friend bool operator == ( const Group& lhs, Group::id_type id) { return lhs.id == id;}
                friend bool operator == ( Group::id_type id, const Group& rhs) { return id == rhs.id;}
-
                friend bool operator == ( const Group& lhs, const std::string& name) { return lhs.name == name;}
-
-               friend std::ostream& operator << ( std::ostream& out, const Group& value);
 
                struct boot
                {
@@ -104,12 +77,9 @@ namespace casual
                   };
                };
 
-
                inline friend bool operator < ( const Group& l, const Group& r) { return l.id < r.id;}
 
-               //!
                //! For persistent state
-               //!
                CASUAL_CONST_CORRECT_SERIALIZE
                (
                   CASUAL_SERIALIZE( id);
@@ -137,22 +107,17 @@ namespace casual
 
                struct
                {
-                  std::vector< std::string> variables;
+                  std::vector< common::environment::Variable> variables;
                } environment;
-
 
                bool restart = false;
 
-               //!
                //! Number of instances that has been restarted
-               //!
                size_type restarts = 0;
 
                inline friend bool operator < ( const Process& l, const Process& r) { return l.id < r.id;}
 
-               //!
                //! For persistent state
-               //!
                CASUAL_CONST_CORRECT_SERIALIZE
                (
                   CASUAL_SERIALIZE( id);
@@ -162,7 +127,7 @@ namespace casual
                   CASUAL_SERIALIZE( note);
 
                   CASUAL_SERIALIZE( memberships);
-                  archive & serviceframework::name::value::pair::make(  "environment_variables", environment.variables);
+                  CASUAL_SERIALIZE_NAME( environment.variables, "environment_variables");
                   CASUAL_SERIALIZE( restart);
                   CASUAL_SERIALIZE( restarts);
                )
@@ -201,14 +166,10 @@ namespace casual
                friend bool operator == ( const Instance& lhs, common::strong::process::id pid) { return lhs.handle == pid;}
                friend bool operator < ( const Instance& lhs, const Instance& rhs) { return lhs.state < rhs.state;}
 
-
-
-               friend std::ostream& operator << ( std::ostream& out, const Instance& value)
-               {
-                  return out << "{ handle: " << value.handle
-                        << ", state: " << value.state
-                        << '}';
-               }
+               CASUAL_CONST_CORRECT_SERIALIZE({
+                  CASUAL_SERIALIZE( handle);
+                  CASUAL_SERIALIZE( state);
+               })
             };
 
 
@@ -240,17 +201,12 @@ namespace casual
                const_instances_range shutdownable() const;
 
                void scale( size_type instances);
-
                void remove( pid_type instance);
 
-
-               //!
-               //! @return true if number of instances >= configured_instances
-               //!
-               //bool complete() const;
-
-               friend std::ostream& operator << ( std::ostream& out, const Executable& value);
-
+               CASUAL_CONST_CORRECT_SERIALIZE({
+                  Process::serialize( archive);
+                  CASUAL_SERIALIZE( instances);
+               })
             };
 
             struct Server : Process
@@ -276,14 +232,10 @@ namespace casual
 
                std::vector< instance_type> instances;
 
-               //!
                //! Resources bound explicitly to this executable (if it's a server)
-               //!
                std::vector< std::string> resources;
 
-               //!
                //! If it's a server, the service restrictions. What will, at most, be advertised.
-               //!
                std::vector< std::string> restrictions;
 
                instances_range spawnable();
@@ -298,13 +250,9 @@ namespace casual
 
                bool connect( common::process::Handle process);
 
-               friend std::ostream& operator << ( std::ostream& out, const Server& value);
-
                friend bool operator == ( const Server& lhs, common::strong::process::id rhs);
 
-               //!
                //! For persistent state
-               //!
                template< typename A>
                void serialize( A& archive)
                {
@@ -342,7 +290,10 @@ namespace casual
 
                void log( std::ostream& out, const State& state) const;
 
-               friend std::ostream& operator << ( std::ostream& out, const Batch& value);
+               CASUAL_CONST_CORRECT_SERIALIZE_WRITE({
+                  CASUAL_SERIALIZE( executables);
+                  CASUAL_SERIALIZE( servers);
+               })
             };
             static_assert( common::traits::is_movable< Batch>::value, "not movable");
 
@@ -360,43 +311,36 @@ namespace casual
                error,
             };
 
-
             std::vector< state::Server> servers;
             std::vector< state::Executable> executables;
             std::vector< state::Group> groups;
 
             std::map< common::Uuid, common::process::Handle> singletons;
 
-            
-
             struct
             {
-               std::vector< common::message::pending::Message> replies;
                std::vector< common::message::domain::process::lookup::Request> lookup;
             } pending;
 
-
-            //!
             //! check if task are done, and if so, start the next task
-            //!
             bool execute();
             task::Queue tasks;
 
-            //!
             //! Processes that register but is not direct children of
             //! this process.
-            //!
             std::vector< common::process::Handle> grandchildren;
 
-
-            //!
             //! executable id of this domain manager
-            //!
             state::Server::id_type manager_id;
 
-            //!
+            struct 
+            {
+               //! process for casual-domain-pending-message
+               common::Process pending;
+            } process;
+           
+
             //! Group id:s
-            //!
             struct
             {
                using id_type = state::Group::id_type;
@@ -409,9 +353,7 @@ namespace casual
 
                id_type gateway;
 
-               //!
                //! For persistent state
-               //!
                CASUAL_CONST_CORRECT_SERIALIZE
                (
                   CASUAL_SERIALIZE( master);
@@ -422,8 +364,6 @@ namespace casual
                )
 
             } group_id;
-
-
 
             common::event::dispatch::Collection<
                common::message::event::process::Spawn,
@@ -437,20 +377,13 @@ namespace casual
                common::message::event::domain::server::Connect
             > event;
 
-
-            //!
             //! global/default environment variables
-            //!
             casual::configuration::Environment environment;
 
-            //!
             //! this domain's original configuration.
-            //!
             common::message::domain::configuration::Domain configuration;
 
-            //!
             //! Runlevel can only "go forward"
-            //!
             //! @{
             inline Runlevel runlevel() const noexcept { return m_runlevel;}
             void runlevel( Runlevel runlevel) noexcept;
@@ -459,20 +392,14 @@ namespace casual
             std::vector< state::Batch> bootorder();
             std::vector< state::Batch> shutdownorder();
 
-            //!
             //! Cleans up an exit (server or executable).
             //!
             //! @param pid
             //! @return pointer to Server and Executable which is not null if we gonna restart them.
-            //!
             std::tuple< state::Server*, state::Executable*> remove( common::strong::process::id pid);
 
-            //!
             //! @return environment variables for the process, including global/default variables
-            //!
-            std::vector< std::string> variables( const state::Process& process);
-
-
+            std::vector< common::environment::Variable> variables( const state::Process& process);
 
             state::Group& group( state::Group::id_type id);
             const state::Group& group( state::Group::id_type id) const;
@@ -488,25 +415,16 @@ namespace casual
 
             common::process::Handle grandchild( common::strong::process::id pid) const noexcept;
 
-
             common::process::Handle singleton( const common::Uuid& id) const noexcept;
 
-
-            //!
             //! Extract all resources (names) configured to a specific process (server)
             //!
             //! @param pid process id
             //! @return resource names
-            //!
             std::vector< std::string> resources( common::strong::process::id pid);
 
 
-            friend std::ostream& operator << ( std::ostream& out, const State& state);
-
-
-            //!
             //! For persistent state
-            //!
             CASUAL_CONST_CORRECT_SERIALIZE
             (
                CASUAL_SERIALIZE( manager_id);
@@ -523,10 +441,7 @@ namespace casual
 
          private:
             Runlevel m_runlevel = Runlevel::startup;
-
-
          };
-
 
       } // manager
    } // domain

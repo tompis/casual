@@ -50,52 +50,90 @@ namespace casual
 
                } // complement
 
-               void validate( const Manager& settings)
+               void validate( const Manager& configuration)
                {
-
-               }
-
-               template< typename LHS, typename RHS>
-               void replace_or_add( LHS& lhs, RHS&& rhs)
-               {
-                  for( auto& value : rhs)
+                  // make sure a group is only defined once
                   {
-                     auto found = algorithm::find( lhs, value);
+                     auto groups = range::to_reference( configuration.groups);
+                     auto duplicates = algorithm::duplicates( algorithm::sort( groups));
 
-                     if( found)
+                     if( duplicates)
                      {
-                        *found = std::move( value);
+                        auto names = algorithm::transform( duplicates, []( auto& g){ return g.get().name;});
+
+                        throw exception::system::invalid::Argument{ string::compose( "the following groups are defined more than once: ", names)};
                      }
-                     else
+                  }
+
+                  // make sure servers and executables has a PATH
+                  {
+                     auto validate_path = []( auto& e)
                      {
-                        lhs.push_back( std::move( value));
+                        if( e.path.empty())
+                        {
+                           throw exception::system::invalid::Argument{ "servers and executables need to have a path"};
+                        }
+                     };
+
+                     algorithm::for_each( configuration.executables, validate_path);
+                     algorithm::for_each( configuration.servers, validate_path);
+                  }
+
+                  // make sure we have unique aliases
+                  {
+                     auto executables = range::to_reference( configuration.executables);
+
+                     // add servers to the same range
+                     algorithm::copy( configuration.servers, executables);
+
+                     auto has_alias = []( const Executable& e){
+                        return e.alias.has_value() && ! e.alias.value().empty();
+                     };
+
+                     auto interesting = algorithm::filter( executables, has_alias);
+
+                     auto alias_less = []( const Executable& l, const Executable& r){
+                        return l.alias < r.alias;
+                     };
+                     auto alias_equal = []( const Executable& l, const Executable& r){
+                        return l.alias == r.alias;
+                     };
+
+                     auto duplicates = algorithm::duplicates( algorithm::sort( interesting, alias_less), alias_equal);
+
+                     if( duplicates)
+                     {
+                        auto aliases = algorithm::transform( duplicates, []( const Executable& e){ return e.alias.value();});
+
+                        throw exception::system::invalid::Argument{ string::compose( "defined aliases are used more than once: ", aliases)};
                      }
                   }
                }
 
+
                template< typename D>
                Manager& append( Manager& lhs, D&& rhs)
                {
-                  if( lhs.name.empty()) { lhs.name = std::move( rhs.name);}
+                  lhs.name = coalesce( std::move( rhs.name), std::move( lhs.name));
 
-                  local::replace_or_add( lhs.transaction.resources, rhs.transaction.resources);
-                  local::replace_or_add( lhs.groups, rhs.groups);
-                  local::replace_or_add( lhs.executables, rhs.executables);
-                  local::replace_or_add( lhs.servers, rhs.servers);
-                  local::replace_or_add( lhs.services, rhs.services);
+                  lhs.manager_default += std::move( rhs.manager_default);
 
+                  lhs.transaction += std::move( rhs.transaction);
                   lhs.gateway += std::move( rhs.gateway);
                   lhs.queue += std::move( rhs.queue);
+
+                  algorithm::append( rhs.groups, lhs.groups);
+                  algorithm::append( rhs.executables, lhs.executables);
+                  algorithm::append( rhs.servers, lhs.servers);
+                  algorithm::append( rhs.services, lhs.services);
 
                   return lhs;
                }
 
-               Manager get( Manager domain, const std::string& file)
+               Manager get( Manager current, const std::string& file)
                {
-
-                  //
+                  Manager domain;
                   // Create the archive and deserialize configuration
-                  //
                   common::file::Input stream( file);
                   auto archive = common::serialize::create::reader::consumed::from( stream.extension(), stream);
                   archive >> CASUAL_MAKE_NVP( domain);
@@ -105,7 +143,10 @@ namespace casual
 
                   finalize( domain);
 
-                  return domain;
+                  // accumulate it to current
+                  current += std::move( domain);
+
+                  return current;
 
                }
 
@@ -115,13 +156,17 @@ namespace casual
 
          namespace manager
          {
-            Default::Default()
+            Default& Default::operator += ( const Default& rhs)
             {
-               server.instances.emplace( 1);
-               executable.instances.emplace( 1);
-               service.timeout.emplace( "0s");
+               // we accumulate environment
+               environment += rhs.environment;
+               
+               service = rhs.service;
+               executable = rhs.executable;
+               server = rhs.server;               
+               
+               return *this;
             }
-
          } // domain
 
 
@@ -136,37 +181,36 @@ namespace casual
             return local::append( *this, std::move( rhs));
          }
 
-         Manager operator + ( const Manager& lhs, const Manager& rhs)
+         Manager operator + ( Manager lhs, const Manager& rhs)
          {
-            auto result = lhs;
-            result += rhs;
-            return result;
+            lhs += rhs;
+            return lhs;
          }
 
          void finalize( Manager& configuration)
          {
-            //
             // Complement with default values
-            //
             local::complement::default_values( configuration);
 
-            //
             // Make sure we've got valid configuration
-            //
             local::validate( configuration);
 
             configuration.transaction.finalize();
             configuration.gateway.finalize();
             configuration.queue.finalize();
-
          }
 
 
          Manager get( const std::vector< std::string>& files)
          {
-            common::Trace trace{ "configuration::domain::get"};
+            Trace trace{ "configuration::domain::get"};
 
             auto domain = algorithm::accumulate( files, Manager{}, &local::get);
+
+            // finalize the complete domain configuration
+            finalize( domain);
+
+            log::line( verbose::log, "domain: ", domain);
 
             return domain;
 

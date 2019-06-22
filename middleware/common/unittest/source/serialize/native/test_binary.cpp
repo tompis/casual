@@ -210,7 +210,7 @@ namespace casual
                using input_type = typename TestFixture::input_type;
                using output_type = typename TestFixture::output_type;
 
-               auto xid_source = transaction::ID::create();
+               auto xid_source = transaction::id::create();
 
                platform::binary::type buffer;
                auto output = output_type{}( buffer);
@@ -282,7 +282,7 @@ namespace casual
                   input >> message;
 
                   EXPECT_TRUE( message.buffer.type == type);
-                  EXPECT_TRUE( message.buffer.memory.size() == 100);
+                  EXPECT_TRUE( message.buffer.memory.size() == 100) << "message.buffer.memory.size(): " << message.buffer.memory.size();
                   EXPECT_TRUE( message.buffer.memory.data() == info)  << " message.buffer.memory.data(): " <<  message.buffer.memory.data();
 
                   // header

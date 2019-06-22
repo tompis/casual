@@ -13,6 +13,7 @@
 #include "common/serialize/archive.h"
 
 #include "common/pimpl.h"
+#include "common/uuid.h"
 
 #include <functional>
 
@@ -101,13 +102,14 @@ value:
          std::string m_string;
          std::vector< SimpleVO> m_values;
          std::tuple< int, std::string, SimpleVO> m_tuple;
-
+         common::Uuid m_uuid = 0x626b039950df4021892e8e7b94806374_uuid;
 
          CASUAL_CONST_CORRECT_SERIALIZE
          (
             CASUAL_SERIALIZE( m_string);
             CASUAL_SERIALIZE( m_values);
             CASUAL_SERIALIZE( m_tuple);
+            CASUAL_SERIALIZE( m_uuid);
          )
       };
 

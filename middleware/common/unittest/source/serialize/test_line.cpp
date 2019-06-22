@@ -56,7 +56,7 @@ namespace casual
             std::ostringstream out;
             out << "value: " << value;
 
-            EXPECT_TRUE( out.str() == "value: { long_value: 42, short_value: 2}") << value;
+            EXPECT_TRUE( out.str() == "value: { \"long_value\": 42, \"short_value\": 2}") << value;
          }
 
          TEST( casual_serialize_line, serialize_overridden_ostream_stream_operator)

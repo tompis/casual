@@ -100,10 +100,7 @@ namespace casual
             return out << "0x" << std::hex << flags.m_flags << std::dec;
          }
 
-         CASUAL_CONST_CORRECT_SERIALIZE(
-            CASUAL_SERIALIZE( m_flags);
-         )
-
+         CASUAL_FORWARD_SERIALIZE( m_flags)
 
       private:
 

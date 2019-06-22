@@ -10,6 +10,7 @@
 
 #include "common/serialize/macro.h"
 #include "common/platform.h"
+#include "common/process.h"
 
 
 namespace casual
@@ -58,7 +59,6 @@ namespace casual
 
                struct ConcurrentVO : Base
                {
-
                };
 
             } // instance

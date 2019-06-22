@@ -25,9 +25,7 @@ namespace casual
             {
                Trace trace{ "common::domain::event::error::send"};
 
-               //
                // We block all signals but SIG_INT
-               //
                signal::thread::scope::Mask block{ signal::set::filled( signal::Type::interrupt)};
 
                message::event::domain::Error error;
@@ -35,6 +33,7 @@ namespace casual
                error.severity = severity;
                error.executable = process::basename();
                error.pid = process::id();
+               error.process = process::handle();
 
                communication::ipc::blocking::send( communication::instance::outbound::domain::manager::device(), error);
             }

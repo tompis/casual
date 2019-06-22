@@ -14,10 +14,9 @@
 #include "common/process.h"
 #include "common/exception/system.h"
 #include "common/exception/handle.h"
+#include "common/serialize/log.h"
 #include "configuration/resource/property.h"
 
-
-#include "serviceframework/log.h"
 
 #include <string>
 #include <iostream>
@@ -43,7 +42,7 @@ namespace casual
                      {
                         out << license::c << R"(
 
-#include <transaction/resource/proxy_server.h>
+#include <transaction/resource/proxy/server.h>
 #include <xa.h>
 
 #ifdef __cplusplus
@@ -217,7 +216,7 @@ int main( int argc, char** argv)
 
                            if( settings.verbose)
                            {
-                              std::cout << '\n' << CASUAL_MAKE_NVP( settings);
+                              std::cout << '\n'; //common::serialize::log::writer( std::cout) << CASUAL_MAKE_NVP( settings);
                            }
                         }
 
@@ -225,7 +224,7 @@ int main( int argc, char** argv)
 
                         if( settings.verbose)
                         {
-                           std::cout << '\n' << CASUAL_MAKE_NVP( xa_switch) << '\n';
+                           std::cout << '\n'; // common::serialize::log::writer( std::cout) << CASUAL_MAKE_NVP( xa_switch) << '\n';
                         }
 
                         if( settings.output.empty())
@@ -233,9 +232,7 @@ int main( int argc, char** argv)
                            settings.output = xa_switch.server;
                         }
 
-                        //
                         // Generate file
-                        //
                         common::file::scoped::Path path( common::file::name::unique( "rm_proxy_", ".cpp"));
 
                         {

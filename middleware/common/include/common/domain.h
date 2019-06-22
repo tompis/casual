@@ -36,8 +36,6 @@ namespace casual
                CASUAL_SERIALIZE( name);
             })
 
-            friend std::ostream& operator << ( std::ostream& out, const Identity& value);
-
             friend bool operator == ( const Identity& lhs, const Identity& rhs);
             inline friend bool operator != ( const Identity& lhs, const Identity& rhs) { return ! ( lhs == rhs);}
             friend bool operator < ( const Identity& lhs, const Identity& rhs);
@@ -46,14 +44,11 @@ namespace casual
 
          const Identity& identity();
 
-         //!
          //! sets the domain identity
          //! Should only be used by casual-domain
          //!
          //! @param value the new identity
-         //!
          void identity( Identity value);
-
 
          namespace singleton
          {
@@ -64,16 +59,14 @@ namespace casual
                process::Handle process;
                Identity identity;
 
-               friend std::ostream& operator << ( std::ostream& out, const Result& value);
+               CASUAL_CONST_CORRECT_SERIALIZE_WRITE({
+                  CASUAL_SERIALIZE( process);
+                  CASUAL_SERIALIZE( identity);
+               })
             };
 
-            Result read( const std::string& path, process::pattern::Sleep retries);
             Result read( const std::string& path);
-
-            Result read( process::pattern::Sleep retries);
             Result read();
-
-            
 
          } // singleton
 

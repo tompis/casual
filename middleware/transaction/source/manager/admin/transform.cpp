@@ -60,33 +60,49 @@ namespace casual
                   return local::metrics< state::Metrics>( value);
                }
 
-               struct Transaction
+               struct Branch
                {
                   struct ID
                   {
-                     admin::Transaction::ID operator () ( const common::transaction::ID& id) const
+                     admin::Branch::ID operator () ( const common::transaction::ID& id) const
                      {
-                        admin::Transaction::ID result;
+                        admin::Branch::ID result;
 
                         result.owner = id.owner();
                         result.type = id.xid.formatID;
-                        result.global = common::transcode::hex::encode( common::transaction::global( id));
-                        result.branch = common::transcode::hex::encode( common::transaction::branch( id));
+                        result.global = common::transcode::hex::encode( common::transaction::id::range::global( id));
+                        result.branch = common::transcode::hex::encode( common::transaction::id::range::branch( id));
 
                         return result;
                      }
                   };
 
-                  admin::Transaction operator () ( const manager::Transaction& transaction) const
+                  admin::Branch operator () ( const manager::Transaction::Branch& branch) const
                   {
-                     admin::Transaction result;
+                     admin::Branch result;
 
-                     common::algorithm::transform( transaction.resources, result.resources, []( const manager::Transaction::Resource& r){
+                     common::algorithm::transform( branch.resources, result.resources, []( auto& r)
+                     {
                         return r.id;
                      });
 
-                     result.trid = ID{}( transaction.trid);
+                     result.trid = ID{}( branch.trid);
+                     result.state = static_cast< long>( branch.results());
+
+                     return result;
+                  }
+               };
+
+               struct Transaction 
+               {
+                  admin::Transaction operator () ( const manager::Transaction& transaction) const
+                  {
+                     admin::Transaction result;
+                     result.global.id = common::transcode::hex::encode( transaction.global.global());
+                     result.global.owner = transaction.owner();
                      result.state = static_cast< long>( transaction.results());
+
+                     common::algorithm::transform( transaction.branches, result.branches, Branch{});
 
                      return result;
                   }
@@ -117,6 +133,7 @@ namespace casual
                      result.key = value.key;
                      result.openinfo = value.openinfo;
                      result.closeinfo = value.closeinfo;
+                     result.concurency = value.concurency;
                      result.metrics = transform::metrics( value.metrics);
 
                      common::algorithm::transform( value.instances, result.instances, Instance{});
@@ -144,18 +161,17 @@ namespace casual
 
                   struct Reply
                   {
-                     admin::pending::Reply operator () ( const state::pending::Reply& value) const
+                     admin::pending::Reply operator () ( const common::message::pending::Message& value) const
                      {
                         admin::pending::Reply result;
 
-                        result.queue = value.target;
-                        result.type = common::message::convert::type( value.message.type);
-                        result.correlation = value.message.correlation;
+                        result.destinations = value.destinations;
+                        result.type = common::message::convert::type( value.complete.type);
+                        result.correlation = value.complete.correlation;
 
                         return result;
                      }
                   };
-
                } // pending
 
 
@@ -170,8 +186,6 @@ namespace casual
                   return result;
                }
 
-
-
                admin::State state( const manager::State& state)
                {
                   admin::State result;
@@ -180,10 +194,9 @@ namespace casual
                   common::algorithm::transform( state.transactions, result.transactions, transform::Transaction{});
 
                   common::algorithm::transform( state.pending.requests, result.pending.requests, transform::pending::Request{});
-                  common::algorithm::transform( state.persistent.requests, result.persistent.requests, transform::pending::Request{});
                   common::algorithm::transform( state.persistent.replies, result.persistent.replies, transform::pending::Reply{});
 
-                  result.log = transform::log( state.persistent_log.stats());
+                  result.log = transform::log( state.persistent.log.stats());
 
                   return result;
                }

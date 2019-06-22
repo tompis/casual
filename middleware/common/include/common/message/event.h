@@ -11,6 +11,7 @@
 #include "common/message/type.h"
 
 #include "common/domain.h"
+#include "common/code/xatmi.h"
 
 namespace casual
 {
@@ -20,31 +21,30 @@ namespace casual
       {
          namespace event
          {
+            inline namespace v1 {
+
+            template< common::message::Type type> 
+            using basic_event = common::message::basic_request< type>;
 
             namespace subscription
             {
-               inline namespace v1
+
+               using base_begin = basic_event< common::message::Type::event_subscription_begin>;
+               struct Begin : base_begin
                {
-                  using base_begin = common::message::basic_request< common::message::Type::event_subscription_begin>;
-                  struct Begin : base_begin
-                  {
-                     std::vector< common::message::Type> types;
+                  std::vector< common::message::Type> types;
 
-                     CASUAL_CONST_CORRECT_SERIALIZE(
-                        base_begin::serialize( archive);
-                        CASUAL_SERIALIZE( types);
-                     )
+                  CASUAL_CONST_CORRECT_SERIALIZE(
+                     base_begin::serialize( archive);
+                     CASUAL_SERIALIZE( types);
+                  )
+               };
 
-                     friend std::ostream& operator << ( std::ostream& out, const Begin& value);
-                  };
-
-                  using base_end = common::message::basic_request< common::message::Type::event_subscription_end>;
-                  struct End : base_end
-                  {
-
-                     friend std::ostream& operator << ( std::ostream& out, const End& value);
-                  };
-               }
+               using base_end = basic_event< common::message::Type::event_subscription_end>;
+               struct End : base_end
+               {
+               };
+               
 
             } // subscription
 
@@ -52,89 +52,90 @@ namespace casual
             {
                namespace server
                {
-                  inline namespace v1
+                  using base_connect = basic_event< common::message::Type::event_domain_server_connect>;
+                  struct Connect : base_connect
                   {
-                     using base_connect = common::message::basic_message< common::message::Type::event_domain_server_connect>;
-                     struct Connect : base_connect
-                     {
-                        common::process::Handle process;
-                        common::Uuid identification;
+                     common::Uuid identification;
 
+                     CASUAL_CONST_CORRECT_SERIALIZE(
+                        base_connect::serialize( archive);
+                        CASUAL_SERIALIZE( identification);
+                     )
 
-                        CASUAL_CONST_CORRECT_SERIALIZE(
-                           base_connect::serialize( archive);
-                           CASUAL_SERIALIZE( process);
-                           CASUAL_SERIALIZE( identification);
-                        )
-
-                     };
-                  }
+                  };                  
 
                } // server
 
-               inline namespace v1
+               using base_error = basic_event< common::message::Type::event_domain_error>;
+               struct Error : base_error
                {
-                  using base_error = common::message::basic_message< common::message::Type::event_domain_error>;
-                  struct Error : base_error
+                  enum class Severity : short
                   {
-                     std::string message;
-                     std::string executable;
-                     strong::process::id pid;
-                     std::vector< std::string> details;
-
-                     enum class Severity : char
-                     {
-                        fatal, // shutting down
-                        error, // keep going
-                        warning
-                     } severity = Severity::error;
-
-                     CASUAL_CONST_CORRECT_SERIALIZE(
-                        base_error::serialize( archive);
-                        CASUAL_SERIALIZE( message);
-                        CASUAL_SERIALIZE( executable);
-                        CASUAL_SERIALIZE( pid);
-                        CASUAL_SERIALIZE( details);
-                        CASUAL_SERIALIZE( severity);
-                     )
-
-                     friend std::ostream& operator << ( std::ostream& out, Severity value);
-                     friend std::ostream& operator << ( std::ostream& out, const Error& value);
+                     fatal, // shutting down
+                     error, // keep going
+                     warning
                   };
 
-
-
-                  using base_group = common::message::basic_message< common::message::Type::event_domain_group>;
-                  struct Group : base_group
+                  inline friend std::ostream& operator << ( std::ostream& out, Severity value)
                   {
-                     enum class Context : int
+                     switch( value)
                      {
-                        boot_start,
-                        boot_end,
-                        shutdown_start,
-                        shutdown_end,
-                     };
+                        case Severity::fatal: return out << "fatal";
+                        case Severity::error: return out << "error";
+                        case Severity::warning: return out << "warning";
+                        default: return out << "unknown";
+                     }
+                  }
 
-                     platform::size::type id = 0;
-                     std::string name;
-                     Context context;
+                  std::string message;
+                  std::string executable;
+                  strong::process::id pid;
+                  std::vector< std::string> details;
 
-                     CASUAL_CONST_CORRECT_SERIALIZE(
-                        base_group::serialize( archive);
-                        CASUAL_SERIALIZE( id);
-                        CASUAL_SERIALIZE( name);
-                        CASUAL_SERIALIZE( context);
-                     )
+                  Severity severity = Severity::error;
+
+                  CASUAL_CONST_CORRECT_SERIALIZE(
+                     base_error::serialize( archive);
+                     CASUAL_SERIALIZE( message);
+                     CASUAL_SERIALIZE( executable);
+                     CASUAL_SERIALIZE( pid);
+                     CASUAL_SERIALIZE( details);
+                     CASUAL_SERIALIZE( severity);
+                  )
+               };
+
+               using base_group = basic_event< common::message::Type::event_domain_group>;
+               struct Group : base_group
+               {
+
+                  enum class Context : int
+                  {
+                     boot_start,
+                     boot_end,
+                     shutdown_start,
+                     shutdown_end,
                   };
-               }
+
+                  platform::size::type id = 0;
+                  std::string name;
+                  Context context;
+
+                  CASUAL_CONST_CORRECT_SERIALIZE(
+                     base_group::serialize( archive);
+                     CASUAL_SERIALIZE( id);
+                     CASUAL_SERIALIZE( name);
+                     CASUAL_SERIALIZE( context);
+                  )
+
+               };
 
                template< common::message::Type type>
-               struct basic_procedure : common::message::basic_message< type>
+               struct basic_procedure : basic_event< type>
                {
                   common::domain::Identity domain;
 
                   CASUAL_CONST_CORRECT_SERIALIZE(
-                     common::message::basic_message< type>::serialize( archive);
+                     basic_event< type>::serialize( archive);
                      CASUAL_SERIALIZE( domain);
                   )
                };
@@ -142,85 +143,71 @@ namespace casual
 
                namespace boot
                {
-                  inline namespace v1
-                  {
                   struct Begin : basic_procedure< common::message::Type::event_domain_boot_begin>{};
                   struct End : basic_procedure< common::message::Type::event_domain_boot_end>{};
-                  }
                } // boot
 
                namespace shutdown
                {
-                  inline namespace v1
-                  {
                   struct Begin : basic_procedure< common::message::Type::event_domain_shutdown_begin>{};
                   struct End : basic_procedure< common::message::Type::event_domain_shutdown_end>{};
-                  }
                } // shutdown
-
 
             } // domain
 
 
             namespace process
             {
-               inline namespace v1
+               using base_spawn = basic_event< common::message::Type::event_process_spawn>;
+               struct Spawn : base_spawn
                {
-                  using base_spawn = common::message::basic_message< common::message::Type::event_process_spawn>;
-                  struct Spawn : base_spawn
-                  {
-                     std::string alias;
-                     std::string path;
-                     std::vector< strong::process::id> pids;
+                  std::string alias;
+                  std::string path;
+                  std::vector< strong::process::id> pids;
 
-                     CASUAL_CONST_CORRECT_SERIALIZE(
-                        base_spawn::serialize( archive);
-                        CASUAL_SERIALIZE( alias);
-                        CASUAL_SERIALIZE( path);
-                        CASUAL_SERIALIZE( pids);
-                     )
+                  CASUAL_CONST_CORRECT_SERIALIZE(
+                     base_spawn::serialize( archive);
+                     CASUAL_SERIALIZE( alias);
+                     CASUAL_SERIALIZE( path);
+                     CASUAL_SERIALIZE( pids);
+                  )
+               };
 
-                     friend std::ostream& operator << ( std::ostream& out, const Spawn& value);
-                  };
+               using base_exit = basic_event< common::message::Type::event_process_exit>;
+               struct Exit : base_exit
+               {
+                  Exit() = default;
+                  Exit( common::process::lifetime::Exit state) : state( std::move( state)) {}
 
-                  using base_exit = common::message::basic_message< common::message::Type::event_process_exit>;
-                  struct Exit : base_exit
-                  {
-                     Exit() = default;
-                     Exit( common::process::lifetime::Exit state) : state( std::move( state)) {}
+                  common::process::lifetime::Exit state;
 
-                     common::process::lifetime::Exit state;
-
-                     CASUAL_CONST_CORRECT_SERIALIZE(
-                        base_exit::serialize( archive);
-                        CASUAL_SERIALIZE( state);
-                     )
-
-                     friend std::ostream& operator << ( std::ostream& out, const Exit& value);
-                  };
-                  static_assert( traits::is_movable< Exit>::value, "not movable");
-               }
+                  CASUAL_CONST_CORRECT_SERIALIZE(
+                     base_exit::serialize( archive);
+                     CASUAL_SERIALIZE( state);
+                  )
+               };
 
             } // process
 
             namespace service
             {
-               inline namespace v1
-               {
-               struct Call : basic_message< Type::event_service_call>
+               struct Metric 
                {
                   std::string service;
                   std::string parent;
                   common::process::Handle process;
-
+                  common::Uuid execution;
                   common::transaction::ID trid;
 
                   common::platform::time::point::type start;
                   common::platform::time::point::type end;
 
+                  common::code::xatmi code;
+
+                  auto duration() const noexcept { return end - start;}
+
                   CASUAL_CONST_CORRECT_SERIALIZE
                   (
-                     base_type::serialize( archive);
                      CASUAL_SERIALIZE( service);
                      CASUAL_SERIALIZE( parent);
                      CASUAL_SERIALIZE( process);
@@ -228,17 +215,35 @@ namespace casual
                      CASUAL_SERIALIZE( trid);
                      CASUAL_SERIALIZE( start);
                      CASUAL_SERIALIZE( end);
+                     CASUAL_SERIALIZE( code);
                   )
-
-                  friend std::ostream& operator << ( std::ostream& out, const Call& value);
                };
-               }
-               static_assert( traits::is_movable< Call>::value, "not movable");
 
+               struct Call : basic_event< Type::event_service_call>
+               {
+                  Metric metric;
+
+                  CASUAL_CONST_CORRECT_SERIALIZE
+                  (
+                     basic_event< Type::event_service_call>::serialize( archive);
+                     CASUAL_SERIALIZE( metric);
+                  )
+               };
+
+               struct Calls : basic_event< Type::event_service_calls>
+               {
+                  std::vector< Metric> metrics;
+
+                  CASUAL_CONST_CORRECT_SERIALIZE
+                  (
+                     basic_event< Type::event_service_calls>::serialize( archive);
+                     CASUAL_SERIALIZE( metrics);
+                  )
+               };
+        
             } // service
 
-
-
+            } // inline v1
          } // event
 
          namespace is

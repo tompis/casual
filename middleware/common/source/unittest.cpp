@@ -7,12 +7,11 @@
 
 #include "common/unittest.h"
 
-#include "common/signal.h"
 
-#include "common/message/event.h"
-#include "common/message/handle.h"
+//#include "common/message/event.h"
+//#include "common/message/handle.h"
 
-#include "common/exception/casual.h"
+#include "common/exception/system.h"
 
 // std
 #include <random>
@@ -23,14 +22,6 @@ namespace casual
    {
       namespace unittest
       {
-         namespace clean
-         {
-
-            Scope::Scope() { signal::clear();}
-            Scope::~Scope() { signal::clear();}
-
-         } // clean
-
          namespace local
          {
             namespace
@@ -115,49 +106,6 @@ namespace casual
             }
          } // random
 
-         namespace domain
-         {
-            namespace manager
-            {
-
-               void wait( communication::ipc::inbound::Device& device)
-               {
-                  struct wait_done{};
-
-
-                  auto handler = device.handler(
-                     []( const message::event::domain::boot::End&){
-                        throw wait_done{};
-                     },
-                     []( const message::event::domain::Error& error){
-                        if( error.severity == message::event::domain::Error::Severity::fatal)
-                        {
-                           throw exception::casual::Shutdown{ string::compose( "fatal error: ", error)};
-                        }
-                     },
-                     common::message::handle::Discard< common::message::event::domain::Group>{},
-                     common::message::handle::Discard< common::message::event::domain::boot::Begin>{},
-                     common::message::handle::Discard< common::message::event::domain::shutdown::Begin>{},
-                     common::message::handle::Discard< common::message::event::domain::shutdown::End>{},
-                     common::message::handle::Discard< common::message::event::domain::server::Connect>{},
-                     common::message::handle::Discard< common::message::event::process::Spawn>{},
-                     common::message::handle::Discard< common::message::event::process::Exit>{}
-                  );
-
-                  try
-                  {
-                     message::dispatch::blocking::pump( handler, device);
-                  }
-                  catch( const wait_done&)
-                  {
-                     log::line( log::debug, "domain manager booted");
-                     // no-op
-                  }
-               }
-
-            } // manager
-
-         } // domain
       } // unittest
    } // common
 } // casual
